@@ -30,7 +30,7 @@ Success means, for every resource:
 | Decision | Choice |
 | --- | --- |
 | Implementation | Resource code is hand-written. Spec-driven provider generators (Speakeasy, tfplugingen-openapi) were rejected: they would force the API's shape to change (durations, dashboards as one JSON blob, client-supplied widget ids). |
-| Nothing hand-synced with the spec | Everything the API spec states (fields, types, required/optional, read-only, write-only, nullable, enums, defaults, descriptions) is generated from honeybadger's bundle. Only Terraform behaviour is hand-written (section 3.3). |
+| Nothing hand-synced with the spec | Everything the API spec states (fields, types, required/optional, read-only, write-only, nullable, enums, defaults, descriptions) is generated from honeybadger's bundle. What's hand-written is Terraform behaviour, plus a short list of overrides where the bundle doesn't yet state a fact; each such gap is fixed in honeybadger's spec, which removes the override (sections 3.3, 5.2). |
 | Spec source | honeybadger's generated bundle (`bin/rails openapi:bundle`), copied into the provider. api-go doesn't serve the spec (section 3.3). |
 | Framework | `terraform-plugin-framework` (protocol 6), not SDKv2. Current stable versions. |
 | API client | api-go's `apiv3` package. The provider makes no HTTP calls of its own. |
@@ -104,40 +104,60 @@ Rules:
 
 The provider generates schema data from the spec, not resource code.
 
-- **Source:** honeybadger's generated bundle, `openapi/v3/bundled.yaml`, built
-  by `bin/rails openapi:bundle`. The provider keeps a copy at
-  `openapi/bundled.yaml`, with `openapi/README.md` recording the source branch,
-  commit and sha256, as api-go does for its own copy. `make update-spec` copies
-  the bundle from the honeybadger checkout (`../../honeybadger`) and records
-  the provenance. The copy is never edited by hand.
-- **Same spec as the client:** the provider's sha256 must equal api-go's
-  `openapi/bundled.yaml.sha256` for the api-go version in use (through
-  `go.work`, the local checkout). Otherwise the provider's schemas and
-  `apiv3`'s types could disagree, for example a field the provider exposes but
-  the client can't send. `make generate` checks this and fails on a mismatch.
+- **Source and release flow:** honeybadger owns the OpenAPI spec. When it
+  changes, honeybadger regenerates the bundle (`bin/rails openapi:bundle`,
+  `openapi/v3/bundled.yaml`) and the bundle is copied to each downstream
+  project: api-go, docs and the provider. Each project regenerates, and if
+  anything changed, rebuilds and releases a new version. A problem in the spec
+  is fixed in honeybadger and flows down the same way; downstream projects
+  never patch their copy.
+- **The provider's copy:** `openapi/bundled.yaml`, with `openapi/README.md`
+  recording the source branch, commit and sha256, as api-go does for its own
+  copy. `make update-spec` copies the bundle from the honeybadger checkout
+  (`../../honeybadger`) and records the provenance.
+- **Same bundle as the client:** the provider builds on `apiv3`'s types, so a
+  spec change that affects them reaches api-go first. `make generate` fails
+  unless the provider's sha256 equals api-go's `openapi/bundled.yaml.sha256`
+  for the api-go in use (through `go.work`, the local checkout; at release,
+  the tagged version). This proves both copies are the same bundle. That
+  api-go's generated types match its copy is api-go's own check
+  (`make verify-generated`).
 - **Generator:** `internal/specgen`, run by `go generate`, loads the copy with
-  kin-openapi (pinned to the version api-go's `internal/tools` uses, since the
-  bundle is OpenAPI 3.1). It resolves `$ref`, flattens `allOf`, and writes
-  `internal/provider/spec/schemas_gen.go`: for every component schema and each
-  of its fields, the JSON name, type and format, required, nullable (3.1
-  `type: [x, 'null']`, and `oneOf`/`anyOf` null unions), readOnly, writeOnly,
-  enum values (including through `$ref`), default, description,
-  `uniqueItems`, pattern and bounds, and the item or nested schema. It also
-  writes a table from operationId to request body schema and success
-  response schema, so resources name operations, not schemas. It emits data
-  only, never Terraform types.
-- **Builder:** `internal/provider/schemabuild` turns a resource's read, create
-  and update schemas into framework attributes by the rules in section 5.2,
-  applying the resource's hand-written overrides.
-- **Hand-written per resource, because the spec can't say it:** the
-  operations it uses, the omit list (fields left out, each with a reason),
-  plan modifiers, custom types, `Sensitive` on credentials the API returns, and
-  the import format. Overrides refer to generated field constants, so a field
-  the spec drops becomes a compile error.
-- **Descriptions** come from the read schema's field, falling back to the
-  input's. Input descriptions are written for API callers ("send null to
-  reset"); read descriptions describe the value. `tfplugindocs` turns them into
-  the registry docs.
+  kin-openapi. kin-openapi is a normal module dependency (the generator is a
+  main package in this module), pinned to the version api-go's
+  `internal/tools` uses, since the bundle is OpenAPI 3.1. The generator
+  resolves `$ref`, flattens `allOf`, and writes
+  `internal/provider/spec/schemas_gen.go`:
+  - for every component schema and each of its fields: the JSON name, type and
+    format, required, nullable (3.1 `type: [x, 'null']`, and `oneOf`/`anyOf`
+    null unions), readOnly, writeOnly, enum values (through `$ref` and
+    `allOf`), default (through `$ref` and `allOf`), description,
+    `uniqueItems`, pattern and bounds, and the item or nested schema;
+  - a constant per field, per schema, for overrides to refer to;
+  - a table from operationId to its request body schema and the schema of the
+    success response's `data` property (responses are `{data, meta}`
+    envelopes; deletes have no body). Generation fails if an operation the
+    table lists doesn't have that shape.
+
+  It emits data only, never Terraform types, and knows nothing about
+  resources. It fails only on a parse error or the sha256 mismatch.
+- **Builder:** `internal/provider/schemabuild` turns a resource's operations
+  into framework attributes by the merge rule and table in section 5.2,
+  applying the resource's overrides. It fails when a writable field is
+  neither mapped nor omitted, or when an override names a field that isn't in
+  the operation schema it targets. Each resource has a unit test that calls
+  the builder, so those failures are test failures.
+- **Hand-written per resource:** the operations it uses (create, read, update,
+  delete), the overrides of section 5.2, plan modifiers, custom types, and the
+  import format. Overrides name generated field constants, so a field the spec
+  drops is a compile error.
+- **Descriptions:** a configurable attribute takes its input field's
+  description, where constraints live (`cron_timezone`'s input says Rails zone
+  names are required); a computed-only attribute takes its read field's. The
+  builder sets them as `MarkdownDescription`, since the bundle's descriptions
+  use Markdown, and `tfplugindocs` renders them into the registry docs.
+  Wording written only for API callers ("send null to reset") is fixed in
+  honeybadger's spec.
 
 ### 3.4 Repository layout
 
@@ -163,8 +183,9 @@ GNUmakefile                      test, testacc, docs, lint
 LICENSE                          MPL-2.0
 ```
 
-One `provider` package to start with, as HashiCorp's scaffolding does. Split
-only if it grows past what one package holds comfortably.
+Resources and helpers share the `provider` package, as HashiCorp's
+scaffolding does; generated data, the builder and custom types each get
+their own package, as listed.
 
 ## 4. Provider configuration
 
@@ -195,7 +216,8 @@ provider "honeybadger" {
 2. Returns an attribute error for an attribute set to an empty string.
 3. Falls back to the environment variables for null attributes.
 4. Returns an attribute error on `api_token` if no token was found.
-5. Builds one `apiv3.Client`, with `WithRetry` turned on (section 6.3), and
+5. Builds one `apiv3.Client`, with `WithRetry` turned on (section 6.3; added
+   in phase 2), and
    hands it to every resource and data source.
 
 ## 5. Resource conventions
@@ -213,17 +235,43 @@ Every resource follows these rules; phase specs only document the deviations.
 
 ### 5.2 Mapping the schema
 
-`schemabuild` applies these rules from the generated spec data. A resource
-overrides a row only where the spec can't express the answer: credentials
-read back from the API, path identifiers, create-only fields, fields the API
-refuses to change, and custom types.
+`schemabuild` merges a resource's operation schemas into one attribute set:
+
+1. **Fields:** every field of the read schema, plus path parameters
+   (`project_id`). A field only in an input (e.g. `team_id` on project create)
+   must be omitted or overridden; the builder fails otherwise.
+2. **Required or optional:** from the create input's `required` list. The
+   update input's own `required` list doesn't make an attribute Required.
+3. **Updatable:** a field in the update input can change in place; one only in
+   the create input forces replacement.
+4. **Clearable:** a field nullable in the update input can be cleared with
+   `null` (section 5.3).
+5. **Computed:** a read field in neither input, or marked readOnly.
+6. Then the table below, then the resource's overrides.
+
+Overrides exist where the bundle doesn't state the fact. Each kind:
+
+- **Omit,** with a reason: input-only fields, and computed fields that change
+  on their own and would only add noise to state (e.g. `fault_count`).
+- **Sensitive** on a credential the API returns (project `token`, project key
+  value). writeOnly fields are Sensitive without an override.
+- **Path identifier** (`project_id`): Required and forces replacement.
+- **Refuses to change** (e.g. environment name): forces replacement.
+- **Server-filled:** an optional field the server assigns a value to when it's
+  omitted, which the bundle can't yet tell apart from one that stays empty
+  (`purge_days` versus `language`). Requested as a spec marker from
+  honeybadger (section 10).
+- **Temporary defaults:** reset values the bundle states only in prose. The
+  four today are listed below; each goes away when honeybadger adds
+  `default:`.
+- **Custom type** (check-in periods) and **plan modifiers.**
 
 | Spec | Terraform |
 | --- | --- |
 | required in the create input | Required |
-| optional, nullable, no server default (null clears) | Optional |
-| optional, nullable, with a spec `default:` that doesn't depend on the account or plan | Optional + Computed + schema `Default` set to the spec's value, no `UseStateForUnknown` |
-| optional, server picks a value with no fixed default, or the default depends on the account or plan (e.g. `purge_days`) | Optional + Computed + `UseStateForUnknown`; removing it from config keeps the current value (documented per attribute) |
+| optional, no default, not server-filled (null clears, if nullable) | Optional |
+| optional, with a spec `default:` that doesn't depend on the account or plan, nullable or not (e.g. `schedule_type`, `default: simple`) | Optional + Computed + schema `Default` set to the spec's value, no `UseStateForUnknown` |
+| optional and server-filled, or its default depends on the account or plan (e.g. `purge_days`) | Optional + Computed + `UseStateForUnknown`; removing it from config keeps the current value (documented per attribute) |
 | readOnly | Computed |
 | readOnly credential (project `token`, project key value) | Computed + Sensitive |
 | path identifier (`project_id`) | Required + `RequiresReplace` |
@@ -257,10 +305,6 @@ Consequences of a `Default`, all intended:
   or plan. `purge_days`, for example, answers 403 `feature_unavailable` for
   any value other than the current one on accounts without custom retention,
   so a `Default` would make every create fail there.
-
-Computed fields that change on their own and would only add noise to state
-(e.g. `fault_count`, `last_notice_at`) are left out, unless a phase spec makes a
-case for one.
 
 ### 5.3 Create, read, update, delete
 
@@ -385,8 +429,9 @@ A POST that fails with a 503, hits its attempt deadline, or loses its
 connection may or may not have created the object. So may a 502 or 504 from a
 load balancer, and a 2xx whose body
 can't be read or has no usable result. A request that was never sent (DNS
-failure, connection refused, an untrusted TLS certificate, cancellation before
-sending) has a known outcome: nothing was created. For an unknown outcome, the provider:
+failure, connection refused, an untrusted TLS certificate) has a known
+outcome: nothing was created. A cancellation doesn't count as never sent: it
+can land after the request reached the server. For an unknown outcome, the provider:
 
 - fails the create with an error saying the object may have been created,
   naming the parent (project) and, when the resource has one, the configured
@@ -434,8 +479,9 @@ Known API gaps the phase specs must handle:
 
 - Each resource gets a `TF_ACC` lifecycle test: create, plan with no changes,
   update every mutable attribute, remove every Optional attribute (checking it
-  clears or returns to its default), import with a plan showing no changes,
-  destroy. Plus a check that a resource deleted outside Terraform is removed
+  clears or returns to its default), import with a plan showing no changes
+  (or, for an object with a non-default value in a defaulted attribute, only
+  the documented reset; section 5.2), destroy. Plus a check that a resource deleted outside Terraform is removed
   from state.
 - They run locally against a Honeybadger stack. Production is a pre-release
   smoke test only (phase 7).
@@ -457,13 +503,14 @@ Known API gaps the phase specs must handle:
 
 ### 8.2 Unit tests (only where the real API can't help)
 
-Using `resource.UnitTest` and `httptest`, only for behaviour the real API can't
-trigger on demand: the unknown-outcome create error, mapping each error code
-to its diagnostic, and the exact wire body of clears (explicit `null` for
-Optional attributes, the default value for defaulted ones) and omissions. The
-fake server is not a general API emulator. Plain Go tests (no Terraform) cover
-the period parser and the provider's helpers. Retry behaviour is tested in
-api-go, next to the policy.
+Only for behaviour the real API can't trigger on demand, using `httptest`.
+Plain Go tests cover the provider's helpers: error mapping, unknown outcomes
+(phase 1), the period parser, and the builder. `resource.UnitTest` covers a
+resource's exact wire body for clears (explicit `null` for Optional
+attributes, the default value for defaulted ones) and omissions, and that
+each `RequiresReplace` attribute plans a replacement. The fake server is not
+a general API emulator. Retry behaviour is tested in api-go, next to the
+policy.
 
 `resource.UnitTest` runs the Terraform CLI, as acceptance tests do. Locally it
 uses `terraform` on `PATH`; CI installs it with `hashicorp/setup-terraform`.
@@ -473,13 +520,14 @@ uses `terraform` on `PATH`; CI installs it with `hashicorp/setup-terraform`.
 There is no separate drift test: the schemas are generated, so they can't
 drift. What keeps everything in step:
 
-- **Same spec as the client:** `make generate` fails if the provider's copy of
-  the bundle doesn't match api-go's recorded sha256 (section 3.3).
+- **Same bundle as the client:** `make generate` fails if the provider's copy
+  of the bundle doesn't match api-go's recorded sha256 (section 3.3).
 - **Generated code is current:** `make generate` followed by a clean
   `git status`. A changed spec copy without regenerating fails.
 - **Overrides still match the spec:** overrides use generated field
-  constants, so a field the spec removes is a compile error. The generator
-  also fails on any writable field a resource neither maps nor omits.
+  constants, so a field the spec removes is a compile error. Each resource's
+  builder test fails on a writable field it neither maps nor omits, and on an
+  override naming a field missing from the operation schema it targets.
 - **Behaviour the data can't show:** unit tests plan a change to each
   `RequiresReplace` attribute and check that a replacement is planned.
   Acceptance tests (section 8.1) cover the rest against the real API.
@@ -518,11 +566,16 @@ work; the provider doesn't work around it.
 - **Reset defaults exist only in prose.** `disable_public_links`,
   `resolve_errors_on_deploy`, `grace_period` and `cron_timezone` need a
   `default:` in the spec so the provider can generate them (section 5.2).
+- **No marker for server-filled optional fields** (section 5.2).
+- **Descriptions with API-caller wording** ("send null to reset"), and
+  `cron_timezone`'s read example contradicting its input (IANA versus Rails
+  zone names).
+- **`Project.links`** is server-set but not marked readOnly.
 
 ## 11. Out of scope
 
 - Any API operation that isn't configuration: faults, notices, comments,
   Insights queries, deploys.
 - Running the acceptance stack in CI.
-- Generating provider code from the spec.
+- Generating resource code from the spec (schema data is generated; section 3.3).
 - An idempotency key in the API.
