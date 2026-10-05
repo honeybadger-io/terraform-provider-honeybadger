@@ -224,6 +224,37 @@ func TestIsUnknownOutcomeForTruncatedSuccess(t *testing.T) {
 	}
 }
 
+// A cancellation while a 2xx body is being read doesn't make the outcome
+// known: the server had already accepted the write.
+func TestIsUnknownOutcomeForCancelledSuccessBody(t *testing.T) {
+	flushed := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Length", "1000")
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{"data":{"id":"p1"`))
+		w.(http.Flusher).Flush()
+		close(flushed)
+		<-r.Context().Done()
+	}))
+	t.Cleanup(srv.Close)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go func() {
+		<-flushed
+		time.Sleep(100 * time.Millisecond)
+		cancel()
+	}()
+	client := apiv3.NewClient().WithBaseURL(srv.URL).WithBearerToken("hbt_test")
+	_, err := client.Projects.Get(ctx, "p1")
+	if err == nil {
+		t.Fatal("Get succeeded on a cancelled body read")
+	}
+	if !isUnknownOutcome(err) {
+		t.Errorf("isUnknownOutcome(%v) = false, want true", err)
+	}
+}
+
 // A 2xx with a body that isn't usable (malformed JSON, or no data) also means
 // the write happened but no id came back.
 func TestIsUnknownOutcomeForUnusableSuccess(t *testing.T) {

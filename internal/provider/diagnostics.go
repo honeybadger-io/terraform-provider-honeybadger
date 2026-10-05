@@ -103,7 +103,7 @@ func fieldPath(ctx context.Context, schema attributeTypes, field string) (path.P
 // a 502 or 504 from a load balancer, and a 2xx whose body couldn't be read or
 // decoded. A request that was never sent has a known outcome: nothing changed.
 func isUnknownOutcome(err error) bool {
-	if err == nil || errors.Is(err, context.Canceled) {
+	if err == nil {
 		return false
 	}
 	var apiErr *apiv3.Error
@@ -114,7 +114,8 @@ func isUnknownOutcome(err error) bool {
 		}
 		return apiErr.StatusCode >= 200 && apiErr.StatusCode < 300
 	}
-	return !neverSent(err)
+	// A cancellation with no response was raised before anything was sent.
+	return !errors.Is(err, context.Canceled) && !neverSent(err)
 }
 
 // neverSent reports errors raised before the request reached the server: the
