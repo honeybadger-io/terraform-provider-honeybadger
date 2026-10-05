@@ -31,7 +31,8 @@ jobs:
       - name: Docs are current
         run: |
           go generate ./...
-          git diff --exit-code
+          git status --porcelain
+          test -z "$(git status --porcelain)"
 
   test:
     needs: build

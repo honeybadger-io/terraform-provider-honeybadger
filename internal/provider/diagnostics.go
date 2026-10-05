@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -66,12 +67,16 @@ func addAPIError(ctx context.Context, diags *diag.Diagnostics, schema attributeT
 			"The API token covers more than one Honeybadger account. Use a token for a single account."))
 	case apiErr.Code == apiv3.CodeRateLimitExceeded:
 		msg := "The Honeybadger API rate limit was reached."
-		if apiErr.RateLimit != nil {
+		// apiv3 reports a missing X-RateLimit-Reset header as the Unix epoch.
+		if apiErr.RateLimit != nil && apiErr.RateLimit.Reset.Unix() > 0 {
 			msg += " It resets at " + apiErr.RateLimit.Reset.UTC().Format(time.RFC3339) + "."
 		}
 		diags.AddError(summary, detail(msg))
 	default:
-		diags.AddError(summary, detail(apiErr.Error()))
+		// Error() ends with the request id too; detail adds it on its own line.
+		withoutID := *apiErr
+		withoutID.RequestID = ""
+		diags.AddError(summary, detail(withoutID.Error()))
 	}
 }
 
@@ -119,10 +124,16 @@ func isUnknownOutcome(err error) bool {
 }
 
 // neverSent reports errors raised before the request reached the server: the
-// host didn't resolve, or the connection was never made.
+// host didn't resolve, the connection was never made, or the server's
+// certificate wasn't trusted, which fails the handshake before anything is
+// written.
 func neverSent(err error) bool {
 	var dnsErr *net.DNSError
 	if errors.As(err, &dnsErr) {
+		return true
+	}
+	var certErr *tls.CertificateVerificationError
+	if errors.As(err, &certErr) {
 		return true
 	}
 	var opErr *net.OpError

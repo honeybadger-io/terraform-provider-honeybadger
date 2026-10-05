@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -149,15 +151,25 @@ func TestErrorCodesBecomeSpecificDiagnostics(t *testing.T) {
 	}
 }
 
-func TestRequestIDIsIncludedWhenPresent(t *testing.T) {
+func TestRequestIDIsIncludedOnceWhenPresent(t *testing.T) {
 	with := apiErrorDiags(&apiv3.Error{StatusCode: 500, Message: "boom", RequestID: "req_42"})
-	if !strings.Contains(with[0].Detail(), "req_42") {
-		t.Errorf("detail %q doesn't include the request id", with[0].Detail())
+	if got, want := with[0].Detail(), "honeybadger: 500: boom\n\nRequest ID: req_42"; got != want {
+		t.Errorf("detail = %q, want %q", got, want)
 	}
 
 	without := apiErrorDiags(&apiv3.Error{StatusCode: 500, Message: "boom"})
-	if strings.Contains(without[0].Detail(), "Request ID") {
-		t.Errorf("detail %q mentions a request id the error didn't have", without[0].Detail())
+	if got, want := without[0].Detail(), "honeybadger: 500: boom"; got != want {
+		t.Errorf("detail = %q, want %q", got, want)
+	}
+}
+
+// apiv3 reports a missing X-RateLimit-Reset header as the Unix epoch, which
+// isn't a reset time worth showing.
+func TestRateLimitWithoutResetTimeOmitsIt(t *testing.T) {
+	diags := apiErrorDiags(&apiv3.Error{StatusCode: 429, Code: apiv3.CodeRateLimitExceeded,
+		RateLimit: &apiv3.RateLimit{Limit: 360, Reset: time.Unix(0, 0)}})
+	if got, want := diags[0].Detail(), "The Honeybadger API rate limit was reached."; got != want {
+		t.Errorf("detail = %q, want %q", got, want)
 	}
 }
 
@@ -206,6 +218,27 @@ func TestIsUnknownOutcome(t *testing.T) {
 
 // A 2xx whose body was cut off means the write happened but its result is
 // unknown. apiv3 reports it as an *Error wrapping the read failure.
+// A certificate the client doesn't trust fails the TLS handshake, before any
+// request is written, so nothing can have been created.
+func TestUntrustedCertificateIsAKnownOutcome(t *testing.T) {
+	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("request reached the server despite the untrusted certificate")
+	}))
+	// The failed handshake is the point of the test; keep it out of the output.
+	srv.Config.ErrorLog = log.New(io.Discard, "", 0)
+	srv.StartTLS()
+	t.Cleanup(srv.Close)
+
+	client := apiv3.NewClient().WithBaseURL(srv.URL).WithBearerToken("hbt_test")
+	_, err := client.Projects.Create(context.Background(), apiv3.ProjectCreateParams{Name: "p"})
+	if err == nil {
+		t.Fatal("Create succeeded against an untrusted certificate")
+	}
+	if isUnknownOutcome(err) {
+		t.Errorf("isUnknownOutcome(%v) = true, want false", err)
+	}
+}
+
 func TestIsUnknownOutcomeForTruncatedSuccess(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", "1000")
