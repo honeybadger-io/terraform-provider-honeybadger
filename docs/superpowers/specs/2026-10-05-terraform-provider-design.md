@@ -256,10 +256,14 @@ Overrides exist where the bundle doesn't state the fact. Each kind:
 
 - **Omit,** with a reason: input-only fields, and computed fields that change
   on their own and would only add noise to state (e.g. `fault_count`).
-- **Sensitive** on a credential the API returns (project `token`, project key
-  value). A writeOnly field that is never read back must be listed here (a
-  secret) or omitted: writeOnly also marks create-only flags that simply
-  aren't stored (`disable_email_notifications`), which aren't secrets.
+- **Sensitive,** as a fallback only. A field the spec marks
+  `format: password` (the standard OpenAPI secret marker) is Sensitive without
+  an override, whether it's writable, computed or write-only. The `sensitive`
+  list covers secrets the spec hasn't marked yet; generation warns when it
+  names a field the spec already marks, so the list shrinks to nothing. A
+  writeOnly field that is never read back is kept from config if it's a
+  secret, and must be omitted otherwise: writeOnly also marks create-only
+  flags that simply aren't stored (`disable_email_notifications`).
 - **Path identifier** (`project_id`): Required and forces replacement.
 - **Refuses to change** (e.g. environment name): forces replacement.
 - **Server-filled:** an optional field the server assigns a value to when it's
@@ -279,7 +283,9 @@ Overrides exist where the bundle doesn't state the fact. Each kind:
 | readOnly | Computed |
 | readOnly credential (project `token`, project key value) | Computed + Sensitive |
 | path identifier (`project_id`) | Required + `RequiresReplace` |
-| writeOnly (secrets) | Optional + Sensitive, kept from config, never read back (section 5.5) |
+| `format: password` | Sensitive |
+| writeOnly and `format: password` | Optional + Sensitive, kept from config, never read back (section 5.5) |
+| writeOnly, not a secret | Omitted |
 | enum | `stringvalidator.OneOf` with the spec's values |
 | `uniqueItems: true` array | Set |
 | ordered array | List |
@@ -567,6 +573,9 @@ work; the provider doesn't work around it.
   no alarm.
 - **A retried alarm delete can fail and leave the alarm undeletable** if Opticon
   already deleted its observer.
+- **Secrets aren't all marked `format: password`.** Requested: the integration
+  secrets, `StatusPageInput.password`, `Project.token`, `ProjectKey.key` and
+  the credential webhook URLs. Until then those use the `sensitive` fallback.
 
 ## 11. Out of scope
 
