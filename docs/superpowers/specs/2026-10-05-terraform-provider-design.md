@@ -1,7 +1,7 @@
 # Honeybadger Terraform Provider: Design
 
 Date: 2026-10-05
-Status: Draft for review (revised after Codex and Fable reviews)
+Status: Draft for review (revised after two rounds of Codex and Fable reviews)
 
 This is the umbrella spec. It covers architecture, how the provider relates to
 api-go and the OpenAPI spec, the conventions every resource follows, testing,
@@ -20,7 +20,8 @@ Success means, for every resource:
 - Changing or removing an attribute in config updates the resource in place, or
   replaces it when the API can't change that field.
 - `terraform import` adopts an existing object, and a plan right after import
-  shows no changes, apart from documented write-only secrets.
+  shows no changes, apart from documented write-only secrets and defaulted
+  attributes whose server value differs from the default (section 5.2).
 - `destroy` deletes it, and a resource deleted outside Terraform is dropped from
   state instead of failing the run.
 
@@ -39,6 +40,8 @@ Success means, for every resource:
 | Idempotency | The v3 API has no Idempotency-Key, and adding one everywhere was judged too much work. The provider is built so it never needs one (sections 6.3 and 6.4). |
 | Read 404 | Means deleted: the resource is removed from state (section 5.3). |
 | Project team | `honeybadger_project` has no `team_id`; team membership belongs to the teams resource (phase 5). |
+| Omitted defaulted attribute | Means the default. Config is the source of truth, so leaving out an attribute with a fixed default sets it to that default (section 5.2). |
+| Retrying a PATCH after an unknown outcome | Allowed, but only for resources whose phase spec confirms a repeated PATCH has no further effect (section 6.3). |
 
 ## 3. Architecture
 
@@ -76,8 +79,8 @@ Rules:
   whose transport retries (section 6.3), via `WithHTTPClient`. That
   `http.Client` sets **no** `Timeout`: `Client.Timeout` bounds the whole call,
   including the transport's waits between retries, so it would cut a
-  `Retry-After` wait short. The transport applies a 30-second deadline to each
-  attempt instead, matching `apiv3.NewClient`'s default.
+  `Retry-After` wait short. The transport applies a deadline to each attempt
+  instead (section 6.3).
 
 ### 3.2 Depending on api-go
 
@@ -184,8 +187,8 @@ Every resource follows these rules; phase specs only document the deviations.
 | --- | --- |
 | required in the create input | Required |
 | optional, nullable, no server default (null clears) | Optional |
-| optional, nullable, null resets to a documented fixed default | Optional + Computed + schema `Default` set to that value, no `UseStateForUnknown` |
-| optional, server picks a value with no fixed default | Optional + Computed + `UseStateForUnknown`; removing it from config keeps the current value (documented per attribute) |
+| optional, nullable, null resets to a documented fixed default that doesn't depend on the account or plan | Optional + Computed + schema `Default` set to that value, no `UseStateForUnknown` |
+| optional, server picks a value with no fixed default, or the default depends on the account or plan (e.g. `purge_days`) | Optional + Computed + `UseStateForUnknown`; removing it from config keeps the current value (documented per attribute) |
 | readOnly | Computed |
 | readOnly credential (project `token`, project key value) | Computed + Sensitive |
 | path identifier (`project_id`) | Required + `RequiresReplace` |
@@ -204,6 +207,19 @@ value as the schema `Default` makes removal plan the default, the update sends
 it, and plan and state agree. The drift test checks each `Default` against the
 spec's documented default (section 8.3).
 
+Consequences of a `Default`, all intended:
+
+- Leaving the attribute out of config means the default, so it is always
+  known and always sent on create.
+- After import, an object whose server value differs from the default plans a
+  change back to the default. Each resource's import docs list its defaulted
+  attributes and tell users to copy the current values into config before
+  applying.
+- A `Default` is never used where the accepted value depends on the account
+  or plan. `purge_days`, for example, answers 403 `feature_unavailable` for
+  any value other than the current one on accounts without custom retention,
+  so a `Default` would make every create fail there.
+
 Computed fields that change on their own and would only add noise to state
 (e.g. `fault_count`, `last_notice_at`) are left out, unless a phase spec makes a
 case for one.
@@ -211,13 +227,14 @@ case for one.
 ### 5.3 Create, read, update, delete
 
 - **Create** sends only known values. Null and unknown attributes are left out
-  so server defaults apply. State is set from the create response, not from the
-  plan.
+  so server defaults apply; attributes with a schema `Default` are always known
+  and always sent. State is set from the create response, not from the plan.
 - **Read** maps the GET response into state. A 404 removes the resource from
   state, which tells Terraform it was deleted outside Terraform. The API also
   answers 404 for objects a restricted token can't see. The provider docs
   therefore require the configured token to see every object it manages; a
-  narrower token will plan to recreate objects it can't see.
+  narrower token will plan to recreate objects it can't see, and its deletes
+  will report success while the object survives (see Delete).
 - **Update** relies on the API's PATCH merge. For each writable attribute,
   comparing the plan with the prior state:
   - known value that differs from state: send it;
@@ -228,7 +245,15 @@ case for one.
   - unknown: leave it out.
 
   `apiv3`'s `nullable.Nullable` fields carry all three states.
-- **Delete** treats 404 as success.
+- **Fields the API changes as a side effect:** some writes change fields the
+  request didn't touch. Switching a check-in between `simple` and `cron`
+  clears `report_period` or `cron_schedule` and resets `cron_timezone`. The
+  plan must predict every such field (in `ModifyPlan`), or the configuration
+  that would trigger the change is rejected with a validation error. Either
+  way, the state after apply matches the plan. Each phase spec lists its
+  resources' coupled fields and which approach each uses.
+- **Delete** treats 404 as success. The same token-visibility requirement
+  applies: a token that can't see an object gets 404 on delete too.
 - **Whole-value fields:** where the API replaces a field whole (alarm
   `trigger_config`, integration `filters`, dashboard `widgets`), send the full
   planned value, never a merge.
@@ -261,12 +286,13 @@ The API never returns write-only secrets, or returns them masked (e.g.
 - Omitting a secret on update keeps it on the server, so removing a secret from
   config needs its own handling. Each phase spec decides, per secret, between:
   - sending the API's clear (null), where the spec allows it;
-  - forcing replacement, where the secret can't be cleared but the object
-    can't work without one;
-  - rejecting the removal with a validation error, where neither applies.
+  - rejecting the removal, where it doesn't. Detecting a value going to null
+    needs the prior state, which validators don't see, so this is a plan
+    modifier that returns an error diagnostic.
 
-  Silently dropping the secret from state while it stays on the server is never
-  allowed.
+  Forcing replacement is not an option: the replacement would be created
+  without the secret it needs. Silently dropping the secret from state while it
+  stays on the server is never allowed.
 
 ## 6. Errors, retries and creates
 
@@ -280,30 +306,46 @@ The API never returns write-only secrets, or returns them masked (e.g.
 | 403 `access_denied` / 401 | Credential error pointing at `api_token`. |
 | 422 `ambiguous_account` | Error saying the token covers several accounts and a single-account token is needed. |
 | 429 after retries | Error with the rate-limit reset time from `Error.RateLimit`. |
-| anything else | General error including `Error.RequestID`, for support. |
+| anything else | General error, including `Error.RequestID` when the response carried one, for support. |
 
 ### 6.2 Request ids
 
 `WithRequestIDHook` logs request ids at debug level through `tflog`. This is
 best effort: the hook fires only when a response body carries
-`meta.request_id`, so successful deletes (empty 204s) log nothing. Failed
-requests always carry their id in `Error.RequestID`, which every general error
-diagnostic includes (section 6.1).
+`meta.request_id`, so successful deletes (empty 204s) log nothing. A failed
+request has an id only when its response had a readable body with `meta`;
+connection errors and unparseable responses have none. Diagnostics include the
+id when there is one (section 6.1).
 
 ### 6.3 Retries
 
 The API has no idempotency key, so the transport resends a request only when
 resending can't cause a second effect.
 
-| Failure | POST (create) | GET, PATCH, DELETE |
-| --- | --- | --- |
-| 429 | retry: the rate limiter rejects before the action runs | retry |
-| 503 | **no retry**: it can come after the action took effect (an alarm create can store the Opticon observer, then time out into a 503) | retry |
-| attempt deadline or dropped connection | **no retry**: whether it took effect is unknown | retry |
-| any other status | no retry | no retry |
+| Failure | POST | GET | PATCH | DELETE |
+| --- | --- | --- | --- | --- |
+| 429 | retry | retry | retry | retry |
+| 503 | **no retry** | retry | retry if verified | retry |
+| attempt deadline or dropped connection | **no retry** | retry | retry if verified | **no retry** |
+| any other status | no retry | no retry | no retry | no retry |
 
-PATCH is safe to resend because the provider sends the same values each time,
-and DELETE because a 404 counts as success.
+- **429 is safe for every method.** The rate limit is enforced in
+  `authenticate_api!`, a prepended `before_action`
+  (`honeybadger/app/controllers/v3/base_controller.rb:520`), so the action never
+  runs.
+- **POST 503 is not safe.** It can come after the action took effect: an alarm
+  create can store the Opticon observer, then time out into a 503.
+- **PATCH is retried only where verified.** Each phase spec confirms, per
+  resource, that its update controller has no effect beyond storing the values
+  (no notifications, no state resets), so repeating the same body is harmless.
+  Check-ins are verified: a repeated PATCH doesn't re-trigger `reset_state`.
+  Resources that fail the check get no retry after an unknown outcome.
+- **DELETE is retried after a 503**, where a repeat answers 404, which counts
+  as success. It is **not** retried after a deadline: a project delete cascades
+  synchronously through its sites, check-ins, dashboards and tokens, and a
+  retry would race the delete still running. The error says the delete may
+  still be in progress and to run `terraform destroy` again, which then sees
+  404.
 
 v3 allows 360 requests per hour per credential owner. A refresh is one GET per
 resource, so large configurations can use a meaningful share of that. When the
@@ -315,7 +357,15 @@ transport does retry, it:
 - returns the response straight away if `Retry-After` is over 60 seconds,
   instead of sitting through an hourly reset that looks like a hung apply;
 - stops waiting when the request's context ends;
-- applies a 30-second deadline to each attempt (section 3.1).
+- applies a deadline to each attempt: 30 seconds (matching
+  `apiv3.NewClient`'s default), and 5 minutes for DELETE.
+
+The attempt deadline runs until the response body is closed, not until
+`RoundTrip` returns: `apiv3` reads the body after the transport hands back the
+response, so cancelling on return would fail every successful read. The
+transport wraps the response body so `Close` releases the deadline, and
+releases it straight away when the attempt fails or is retried. A stall while
+reading the body surfaces from `apiv3` as an error and is not retried.
 
 ### 6.4 Creates with an unknown outcome
 
@@ -323,8 +373,11 @@ A POST that fails with a 503, hits its attempt deadline, or loses its
 connection may or may not have created the object. The provider:
 
 - fails the create with an error saying the object may have been created,
-  naming the parent (project) and the configured name, and giving the
-  `terraform import` command and ID format to adopt it;
+  naming the parent (project) and, when the resource has one, the configured
+  name or label. Check-ins can be unnamed and project keys unlabelled, so the
+  error always also says how to find the object (the list for that project)
+  and gives the `terraform import` command with an ID placeholder in the
+  resource's format (e.g. `<project_id>/<id>`);
 - does not search for the object by name to adopt it automatically: most names
   aren't unique, so it could attach to the wrong object.
 
@@ -389,9 +442,11 @@ Known API gaps the phase specs must handle:
 ### 8.2 Unit tests (only where the real API can't help)
 
 Using `resource.UnitTest` and `httptest`, only for behaviour the real API can't
-trigger on demand: retry and no-retry decisions per method and status, the
-unknown-outcome create error, mapping each error code to its diagnostic, and
-the exact wire body of clears (explicit `null`) and omissions. The fake server
+trigger on demand: retry and no-retry decisions per method and status, a
+server that sends headers then stalls mid-body, the unknown-outcome create
+error, mapping each error code to its diagnostic, and the exact wire body of
+clears (explicit `null` for Optional attributes, the default value for
+defaulted ones) and omissions. The fake server
 is not a general API emulator. Plain Go tests (no Terraform) cover the retry
 transport and the period parser.
 
@@ -417,14 +472,21 @@ and no network:
      which must be Required and force replacement;
    - a writeOnly field isn't Sensitive;
    - a nullable, optional field can't be cleared (it's Required);
-   - a `uniqueItems` array isn't a set;
-   - a schema `Default` differs from the spec's documented default.
+   - a `uniqueItems` array isn't a set.
 
-`GetProviderSchema` returns attribute shapes only, not validators or plan
-modifiers. So enum checks and `RequiresReplace` checks run in the same package
-against the framework schemas directly (each resource's `Schema` method), which
-do carry validators and plan modifiers. Enum checks compare each
-`stringvalidator.OneOf` with the spec's enum.
+`GetProviderSchema` returns attribute shapes only: no validators, plan
+modifiers or defaults. The remaining checks work around that:
+
+- **Enums:** each resource declares its enum values once, as exported lists in
+  its own code. It builds its `stringvalidator.OneOf` validators from those
+  lists, and the drift test compares the same lists with the spec's enums. The
+  validator's own values are unexported, so they are never inspected directly.
+- **Defaults:** read from each resource's framework `Schema` (the attribute's
+  `Default` is exported and returns its value) and compared with the spec's
+  documented default.
+- **`RequiresReplace`:** not inspected. Plan modifiers expose no "requires
+  replace" accessor, so unit tests plan a change to each such attribute and
+  check that a replacement is planned.
 
 The comparison uses the bundled spec as published, not api-go's
 `overlay.yaml`, which holds Go-specific mappings for code generation.
@@ -458,6 +520,11 @@ honeybadger app or spec, not worked around here.
   leaving an observer no alarm references.
 - **Alarm trigger updates that silently do nothing** (section 7), pending
   Opticon's `observer-26-field-threshold` branch.
+- **Retried alarm deletes answer 500.** `v3/alarms_controller.rb` deletes the
+  Opticon observer, then the alarm. If the request times out between the two,
+  a retry gets a 404 from Opticon, which the controller doesn't rescue, so it
+  answers 500 and the alarm row stays. Treating an Opticon 404 on destroy as
+  already deleted would let the retry finish the local delete.
 
 ## 11. Out of scope
 
