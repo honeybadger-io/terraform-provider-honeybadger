@@ -257,14 +257,17 @@ Overrides exist where the bundle doesn't state the fact. Each kind:
 - **Omit,** with a reason: input-only fields, and computed fields that change
   on their own and would only add noise to state (e.g. `fault_count`).
 - **Sensitive** on a credential the API returns (project `token`, project key
-  value). writeOnly fields are Sensitive without an override.
+  value). A writeOnly field that is never read back must be listed here (a
+  secret) or omitted: writeOnly also marks create-only flags that simply
+  aren't stored (`disable_email_notifications`), which aren't secrets.
 - **Path identifier** (`project_id`): Required and forces replacement.
 - **Refuses to change** (e.g. environment name): forces replacement.
 - **Server-filled:** an optional field the server assigns a value to when it's
   omitted, which the bundle doesn't distinguish from one that stays empty
   (`purge_days` versus `language`). A short hand-written list, `purge_days`
-  today; honeybadger chose not to add a spec marker for it, and will revisit
-  if the list grows.
+  and check-in `slug` ("generated from the name when omitted") today;
+  honeybadger chose not to add a spec marker for it, and will revisit if the
+  list grows.
 - **Custom type** (check-in periods) and **plan modifiers.**
 
 | Spec | Terraform |
@@ -321,7 +324,9 @@ Consequences of a `Default`, all intended:
   - null in the plan with a value in prior state (an Optional attribute removed
     from config): send JSON `null`, which clears it. v3 accepts null only for
     fields marked nullable and rejects it with 422 elsewhere, so a non-nullable
-    Optional field is mapped as Optional + Computed instead (section 5.2);
+    scalar Optional field is mapped as Optional + Computed instead (section
+    5.2). A non-nullable array stays Optional: removing it sends `[]`, which
+    clears it;
   - unknown: leave it out.
 
   `apiv3`'s `nullable.Nullable` fields carry all three states.
@@ -534,10 +539,11 @@ drift. What keeps everything in step:
 
 The workflow runs `go build`, `go vet`, golangci-lint, unit tests (with
 `setup-terraform`), and a check that generated code (spec data and
-`tfplugindocs` output) is current, all with `GOWORK=off`. CI can't see the local api-go, so it is
-meaningful only once the provider repo has a remote and `go.mod` requires a
-pushed api-go, at the latest for a release (section 3.2). Until then the same
-checks run locally through `go.work`. Acceptance tests run locally until a
+`tfplugindocs` output) is current, all with `GOWORK=off`. CI can't see the
+local api-go, so it is meaningful only once the provider repo has a remote and
+`go.mod` requires a pushed api-go, at the latest for a release (section 3.2).
+Until then the workflow runs on manual dispatch only, and the same checks run
+locally through `go.work`. Acceptance tests run locally until a
 CI-hosted stack exists; that is out of scope here.
 
 ## 9. Open decisions
