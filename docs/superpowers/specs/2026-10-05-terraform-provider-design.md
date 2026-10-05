@@ -41,7 +41,9 @@ Success means, for every resource:
 | Read 404 | Means deleted: the resource is removed from state (section 5.3). |
 | Project team | `honeybadger_project` has no `team_id`; team membership belongs to the teams resource (phase 5). |
 | Omitted defaulted attribute | Means the default. Config is the source of truth, so leaving out an attribute with a fixed default sets it to that default (section 5.2). |
-| Retrying a PATCH after an unknown outcome | Allowed, but only for resources whose phase spec confirms a repeated PATCH has no further effect (section 6.3). |
+| Retries | api-go's `apiv3` owns them, as the opt-in `WithRetry` policy shared with the MCP server. The provider turns it on and has no retry code of its own (section 6.3). |
+| Environment variables | Token from `api_token`, then `HONEYBADGER_API_TOKEN`, then `HONEYBADGER_PERSONAL_AUTH_TOKEN` (the MCP server's name); URL from `api_url`, then `HONEYBADGER_API_URL`. Implemented in phase 1 (section 4). |
+| Depending on api-go | Develop against the local api-go through `go.work`, as the MCP server does. Only a release needs a tagged api-go (section 3.2). |
 
 ## 3. Architecture
 
@@ -75,32 +77,25 @@ Rules:
   handling is limited to Terraform concerns: semantic equality, plan modifiers,
   sensitivity. Server-side problems found along the way go on a list for
   honeybadger (section 10).
-- **One HTTP-level addition.** The provider passes `apiv3` an `http.Client`
-  whose transport retries (section 6.3), via `WithHTTPClient`. That
-  `http.Client` sets **no** `Timeout`: `Client.Timeout` bounds the whole call,
-  including the transport's waits between retries, so it would cut a
-  `Retry-After` wait short. The transport applies a deadline to each attempt
-  instead (section 6.3).
+- **No HTTP-level additions.** Retries are an `apiv3` client option
+  (section 6.3); the provider only turns it on.
 
 ### 3.2 Depending on api-go
 
-- **Local development:** `honeybadger/mcp/go.work` lists `./api-go`,
-  `./honeybadger-mcp-server` and `./terraform-provider-honeybadger`, so the
-  provider builds against the local api-go checkout, including commits that
-  aren't pushed.
-- **go.mod:** until api-go is tagged, require a pseudo-version of the `api-v3`
-  branch, as the MCP server does. No `replace` directive: it breaks goreleaser
-  and registry builds outside the workspace.
-- **Phase 2 prerequisite:** the nullable request types the provider relies on
-  (section 5.3) arrived in api-go `9b759df`, which is only local. The current
-  pin (`c934ab8`) has the older non-nullable types, so `go mod tidy`,
-  `GOWORK=off` builds and standalone CI compile against the wrong contract.
-  Before phase 2 lands, Kevin pushes `api-v3` at or after `9b759df` and
-  `go.mod` is bumped to that commit. Until then, phase 1 work builds only
-  inside `go.work`, and CI waits for the push.
-- **Release prerequisite:** the first provider release requires api-go's v3 work
-  merged and tagged (planned v0.10.0), and the provider's `go.mod` requiring
-  that tag. A release build runs with `GOWORK=off`.
+- **Development uses the local api-go.** `honeybadger/mcp/go.work` lists
+  `./api-go`, `./honeybadger-mcp-server` and `./terraform-provider-honeybadger`,
+  so the provider builds against whatever is in the local api-go checkout,
+  pushed or not, the same way the MCP server does. New api-go features (the
+  nullable request types, `WithRetry`) are usable as soon as they're in that
+  checkout.
+- **go.mod lags until release.** It requires some pseudo-version of api-go's
+  `api-v3` branch and isn't bumped as the local checkout moves. A checkout
+  outside the workspace, or a `GOWORK=off` build, may therefore fail between
+  releases; nothing depends on that. No `replace` directive: it would break
+  release builds.
+- **A release needs a tagged api-go.** Before a release, api-go's v3 work is
+  merged and tagged, the provider's `go.mod` requires that tag, and the release
+  builds with `GOWORK=off` (phase 7).
 
 ### 3.3 Where the OpenAPI spec fits
 
@@ -122,7 +117,6 @@ Rules:
 main.go                          providerserver.Serve, protocol 6
 internal/provider/
   provider.go                    provider schema, Configure, resource registry
-  retry.go                       retry transport (section 6.3)
   diagnostics.go                 apiv3.Error -> diag.Diagnostics
   nullable.go                    types.* <-> nullable.Nullable helpers
   <name>_resource.go             one file per resource, plus _test.go
@@ -157,16 +151,21 @@ provider "honeybadger" {
   `http://localhost:3001`. The `/v3` segment is optional; `apiv3` adds it.
 - No `region` attribute. api-go treats regions as base URLs, and a second way
   to say the same thing isn't worth hard-coding the EU host.
-- Environment variable names: see open decision D1.
+- Environment variables: `HONEYBADGER_API_TOKEN`, then
+  `HONEYBADGER_PERSONAL_AUTH_TOKEN`, for the token; `HONEYBADGER_API_URL` for
+  the URL. They apply only when the attribute is left out: an explicit empty
+  string is an error.
 
 `Configure`, in order:
 
 1. If either attribute is unknown (e.g. from a value not yet computed), it
    returns an attribute error saying the value must be known when the provider
    is configured, instead of treating it as missing.
-2. Falls back to the environment variables for null attributes.
-3. Returns an attribute error on `api_token` if no token was found.
-4. Builds one `apiv3.Client` and hands it to every resource and data source.
+2. Returns an attribute error for an attribute set to an empty string.
+3. Falls back to the environment variables for null attributes.
+4. Returns an attribute error on `api_token` if no token was found.
+5. Builds one `apiv3.Client`, with `WithRetry` turned on (section 6.3), and
+   hands it to every resource and data source.
 
 ## 5. Resource conventions
 
@@ -253,7 +252,10 @@ case for one.
   way, the state after apply matches the plan. Each phase spec lists its
   resources' coupled fields and which approach each uses.
 - **Delete** treats 404 as success. The same token-visibility requirement
-  applies: a token that can't see an object gets 404 on delete too.
+  applies: a token that can't see an object gets 404 on delete too. Under
+  retries, a delete can also report success for an object that never existed
+  (a 503, then 404 on the retry). That's harmless here, because 404 already
+  means deleted; import checks existence with a read, never a delete.
 - **Whole-value fields:** where the API replaces a field whole (alarm
   `trigger_config`, integration `filters`, dashboard `widgets`), send the full
   planned value, never a merge.
@@ -319,58 +321,33 @@ id when there is one (section 6.1).
 
 ### 6.3 Retries
 
-The API has no idempotency key, so the transport resends a request only when
-resending can't cause a second effect.
+Retries belong to api-go: `apiv3`'s opt-in `WithRetry` policy, shared with the
+MCP server. Which requests are safe to resend depends on how the server
+behaves, so the rules live with the client, not in the provider.
 
-| Failure | POST | GET | PATCH | DELETE |
-| --- | --- | --- | --- | --- |
-| 429 | retry | retry | retry | retry |
-| 503 | **no retry** | retry | retry if verified | retry |
-| attempt deadline or dropped connection | **no retry** | retry | retry if verified | **no retry** |
-| any other status | no retry | no retry | no retry | no retry |
+The provider turns the policy on in `Configure` with
+`apiv3.RetryPolicy{MaxAttempts: 4, MaxWait: 60 * time.Second}`, and passes no
+`http.Client` with a `Timeout` of its own, which would cap every attempt.
 
-- **429 is safe for every method.** The rate limit is enforced in
-  `authenticate_api!`, a prepended `before_action`
-  (`honeybadger/app/controllers/v3/base_controller.rb:520`), so the action never
-  runs.
-- **POST 503 is not safe.** It can come after the action took effect: an alarm
-  create can store the Opticon observer, then time out into a 503.
-- **PATCH is retried only where verified.** Each phase spec confirms, per
-  resource, that its update controller has no effect beyond storing the values
-  (no notifications, no state resets), so repeating the same body is harmless.
-  Check-ins are verified: a repeated PATCH doesn't re-trigger `reset_state`.
-  Resources that fail the check get no retry after an unknown outcome.
-- **DELETE is retried after a 503**, where a repeat answers 404, which counts
-  as success. It is **not** retried after a deadline: a project delete cascades
-  synchronously through its sites, check-ins, dashboards and tokens, and a
-  retry would race the delete still running. The error says the delete may
-  still be in progress and to run `terraform destroy` again, which then sees
-  404.
+What the provider relies on:
 
-v3 allows 360 requests per hour per credential owner. A refresh is one GET per
-resource, so large configurations can use a meaningful share of that. When the
-transport does retry, it:
-
-- waits for `Retry-After` (seconds or HTTP date), or backs off exponentially
-  from 1 second without one;
-- tries at most 4 times, then returns the last response;
-- returns the response straight away if `Retry-After` is over 60 seconds,
-  instead of sitting through an hourly reset that looks like a hung apply;
-- stops waiting when the request's context ends;
-- applies a deadline to each attempt: 30 seconds (matching
-  `apiv3.NewClient`'s default), and 5 minutes for DELETE.
-
-The attempt deadline runs until the response body is closed, not until
-`RoundTrip` returns: `apiv3` reads the body after the transport hands back the
-response, so cancelling on return would fail every successful read. The
-transport wraps the response body so `Close` releases the deadline, and
-releases it straight away when the attempt fails or is retried. A stall while
-reading the body surfaces from `apiv3` as an error and is not retried.
+- **Creates (POST) are retried only after a 429,** which the server rejects
+  before acting. Any other failure leaves the outcome unknown (section 6.4).
+- **Updates and deletes are retried** after transient failures. A repeated
+  delete that finds nothing counts as deleted (section 5.3).
+- **A long wait is reported, not slept through.** v3 allows 360 requests per
+  hour per credential owner. When the server asks for a wait longer than the
+  maximum, the error comes back straight away instead of sitting through an
+  hourly reset that looks like a hung apply.
 
 ### 6.4 Creates with an unknown outcome
 
 A POST that fails with a 503, hits its attempt deadline, or loses its
-connection may or may not have created the object. The provider:
+connection may or may not have created the object. So may a 502 or 504 from a
+load balancer, and a 2xx whose body
+can't be read or has no usable result. A request that was never sent (DNS
+failure, connection refused, an untrusted TLS certificate, cancellation before
+sending) has a known outcome: nothing was created. For an unknown outcome, the provider:
 
 - fails the create with an error saying the object may have been created,
   naming the parent (project) and, when the resource has one, the configured
@@ -388,22 +365,22 @@ leaves behind (section 8.1).
 
 | Phase | Contents | Waits on |
 | --- | --- | --- |
-| 1. Foundation | Provider config, retry transport, diagnostics, nullable helpers, test harness, release skeleton (manifest, goreleaser, Makefile) | nothing (builds inside `go.work`) |
-| 2. Ready resources | `honeybadger_project`, `honeybadger_project_key`, `honeybadger_check_in` | `api-v3` pushed at or after `9b759df` and `go.mod` bumped (section 3.2) |
+| 1. Foundation | **Done.** Provider config, diagnostics, nullable helpers, release skeleton (manifest, goreleaser, Makefile, CI, docs) | — |
+| 2. Ready resources | Turn on `WithRetry` in `Configure`; `honeybadger_project`, `honeybadger_project_key`, `honeybadger_check_in`; the acceptance-test harness | nothing (local api-go) |
 | 3. Drift guard | `internal/specdrift`, wired into CI, covering phase 2 | phase 2 |
-| 4. Contract-dependent | `honeybadger_alarm`, `honeybadger_integration` | honeybadger #6729 and #6730 merged and re-vendored into api-go |
+| 4. Contract-dependent | `honeybadger_alarm`, `honeybadger_integration` | the integration and alarm contract in api-go's vendored spec |
 | 5. New api-go services | environments, sites, teams (including project membership), status pages | api-go services written; the sites spec branch for sites |
 | 6. Dashboards | `honeybadger_dashboard` | phase 4 conventions settled |
-| 7. Release | Production smoke test, GPG signing, registry publishing, docs | api-go tagged; open decisions D3 and D4 |
+| 7. Release | Production smoke test, GPG signing, registry publishing, docs; `go.mod` bumped to a tagged api-go | api-go tagged; open decisions D3 and D4 |
 
 Each phase starts with its own short spec (schemas, deviations from section 5,
 tests), then an implementation plan.
 
 Known API gaps the phase specs must handle:
 
-- **Integrations:** until #6729 merges, creating a check-in or site appends it to
-  every integration's lists, so a managed list drifts. Phase 4 uses
-  `all_sites`/`all_check_ins`. OAuth types (Slack, GitHub) can be created but
+- **Integrations:** without the `all_sites`/`all_check_ins` flags, creating a
+  check-in or site appends it to every integration's lists, so a managed list
+  drifts. Phase 4 uses the flags. OAuth types (Slack, GitHub) can be created but
   start inactive until someone connects them in the web UI.
 - **Alarms:** an invalid `trigger_config` on update answers 200 and keeps the
   old trigger (Opticon), until Opticon's `observer-26-field-threshold` branch
@@ -442,13 +419,12 @@ Known API gaps the phase specs must handle:
 ### 8.2 Unit tests (only where the real API can't help)
 
 Using `resource.UnitTest` and `httptest`, only for behaviour the real API can't
-trigger on demand: retry and no-retry decisions per method and status, a
-server that sends headers then stalls mid-body, the unknown-outcome create
-error, mapping each error code to its diagnostic, and the exact wire body of
-clears (explicit `null` for Optional attributes, the default value for
-defaulted ones) and omissions. The fake server
-is not a general API emulator. Plain Go tests (no Terraform) cover the retry
-transport and the period parser.
+trigger on demand: the unknown-outcome create error, mapping each error code
+to its diagnostic, and the exact wire body of clears (explicit `null` for
+Optional attributes, the default value for defaulted ones) and omissions. The
+fake server is not a general API emulator. Plain Go tests (no Terraform) cover
+the period parser and the provider's helpers. Retry behaviour is tested in
+api-go, next to the policy.
 
 `resource.UnitTest` runs the Terraform CLI, as acceptance tests do. Locally it
 uses `terraform` on `PATH`; CI installs it with `hashicorp/setup-terraform`.
@@ -459,9 +435,8 @@ uses `terraform` on `PATH`; CI installs it with `hashicorp/setup-terraform`.
 and no network:
 
 1. Finds the api-go module directory (`go list -m`) and loads
-   `openapi/bundled.yaml`. Outside `go.work` this reads the pinned version, so
-   it is only meaningful once that pin includes the contract the provider
-   targets (section 3.2).
+   `openapi/bundled.yaml`. Through `go.work` that's the local api-go, the
+   same code the provider builds against (section 3.2).
 2. Gets the provider's schemas in-process through `GetProviderSchema`.
 3. For each resource, uses a declared mapping (its read schema, create input
    and update input in the spec, plus an explicit list of skipped fields, each
@@ -493,38 +468,35 @@ The comparison uses the bundled spec as published, not api-go's
 
 ### 8.4 CI
 
-On every push: `go build`, `go vet`, golangci-lint, unit tests (with
+The workflow runs `go build`, `go vet`, golangci-lint, unit tests (with
 `setup-terraform`), the spec drift test, and a check that `tfplugindocs` output
-is current, all with `GOWORK=off`. CI is turned on once the api-go pin
-resolves to the contract the provider targets (section 3.2). Acceptance tests
-run locally until a CI-hosted stack exists; that is out of scope here.
+is current, all with `GOWORK=off`. CI can't see the local api-go, so it is
+meaningful only once the provider repo has a remote and `go.mod` requires a
+pushed api-go, at the latest for a release (section 3.2). Until then the same
+checks run locally through `go.work`. Acceptance tests run locally until a
+CI-hosted stack exists; that is out of scope here.
 
 ## 9. Open decisions
 
 | # | Decision | Recommendation |
 | --- | --- | --- |
-| D1 | Environment variable names for token and URL | Read `HONEYBADGER_API_TOKEN` first, then `HONEYBADGER_PERSONAL_AUTH_TOKEN` (the MCP server's name). "Personal" is wrong for `hba_` tokens, and the fallback keeps MCP setups working. URL: `HONEYBADGER_API_URL`. |
 | D2 | Local stack setup: which services, start commands, rate-limit override | Kevin or v3-terraform-readiness supplies them; recorded in `CONTRIBUTING.md` in phase 1. |
 | D3 | Production test account for the pre-release smoke test | Choose before phase 7. |
 | D4 | Registry namespace and GPG signing key | `honeybadger-io`; key owner chosen before phase 7. |
 | D5 | Data sources | Only where users reference objects they don't manage: `honeybadger_project` (by name) and `honeybadger_streams` (for alarms). Decided in the phase 2 and phase 4 specs. |
 | D6 | Integration shape: one resource per type, or one resource with a typed block per type | Decided in the phase 4 spec. |
 
-## 10. Issues for honeybadger
+## 10. API issues the provider runs into
 
-Server-side problems found while designing the provider. They are fixed in the
-honeybadger app or spec, not worked around here.
+Server-side behaviour that affects the provider. Fixing it is honeybadger's
+work; the provider doesn't work around it.
 
-- **Orphaned Opticon observers.** An alarm create that times out after Opticon
-  stored the observer answers 503, and the alarm may not exist in honeybadger,
-  leaving an observer no alarm references.
-- **Alarm trigger updates that silently do nothing** (section 7), pending
-  Opticon's `observer-26-field-threshold` branch.
-- **Retried alarm deletes answer 500.** `v3/alarms_controller.rb` deletes the
-  Opticon observer, then the alarm. If the request times out between the two,
-  a retry gets a 404 from Opticon, which the controller doesn't rescue, so it
-  answers 500 and the alarm row stays. Treating an Opticon 404 on destroy as
-  already deleted would let the retry finish the local delete.
+- **Alarm trigger updates can silently do nothing:** an invalid trigger answers
+  200 and keeps the old one (section 7).
+- **An alarm create that times out can leave an Opticon observer behind** with
+  no alarm.
+- **A retried alarm delete can fail and leave the alarm undeletable** if Opticon
+  already deleted its observer.
 
 ## 11. Out of scope
 
