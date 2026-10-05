@@ -116,10 +116,13 @@ The provider generates schema data from the spec, not resource code.
   copy. `make update-spec` copies the bundle from the honeybadger checkout
   (`../../honeybadger`) and records the provenance.
 - **Same bundle as the client:** the provider builds on `apiv3`'s types, so a
-  spec change that affects them reaches api-go first. `make generate` fails
-  unless the provider's sha256 equals api-go's `openapi/bundled.yaml.sha256`
-  for the api-go in use (through `go.work`, the local checkout; at release,
-  the tagged version). This proves both copies are the same bundle. That
+  spec change that affects them reaches api-go first. `make generate` warns
+  when the provider's sha256 differs from api-go's `openapi/bundled.yaml.sha256`
+  for the api-go in use (through `go.work`, the local checkout), since
+  honeybadger can briefly be ahead of one downstream project; compiling
+  against the local `apiv3` and the acceptance tests catch real mismatches. At
+  release, `make check-spec-release` fails on a mismatch against the tagged
+  api-go. This proves both copies are the same bundle. That
   api-go's generated types match its copy is api-go's own check
   (`make verify-generated`).
 - **Generator:** `internal/specgen`, run by `make generate`, loads the copy
@@ -464,7 +467,7 @@ leaves behind (section 8.1).
 | 4. Contract-dependent | `honeybadger_alarm`, `honeybadger_integration` | the integration and alarm contract in api-go's vendored spec |
 | 5. New api-go services | environments, sites, teams (including project membership), status pages | api-go services written; the sites spec branch for sites |
 | 6. Dashboards | `honeybadger_dashboard` | phase 4 conventions settled |
-| 7. Release | Production smoke test, GPG signing, registry publishing, docs; `go.mod` bumped to a tagged api-go | api-go tagged; open decisions D3 and D4 |
+| 7. Release | Production smoke test, GPG signing, registry publishing, docs; `go.mod` bumped to a tagged api-go; `make check-spec-release` passes | api-go tagged; open decisions D3 and D4 |
 
 Each phase starts with its own short spec (schemas, deviations from section 5,
 tests), then an implementation plan.
@@ -529,8 +532,9 @@ uses `terraform` on `PATH`; CI installs it with `hashicorp/setup-terraform`.
 There is no separate drift test: the schemas are generated, so they can't
 drift. What keeps everything in step:
 
-- **Same bundle as the client:** `make generate` fails if the provider's copy
-  of the bundle doesn't match api-go's recorded sha256 (section 3.3).
+- **Same bundle as the client:** `make generate` warns, and the release check
+  fails, if the provider's copy of the bundle doesn't match api-go's recorded
+  sha256 (section 3.3).
 - **Generated code is current:** `make generate` followed by a clean
   `git status`. A changed spec copy without regenerating fails.
 - **Overrides still match the spec:** generation fails on a writable field a
