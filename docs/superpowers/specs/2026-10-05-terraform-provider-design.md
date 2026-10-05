@@ -30,7 +30,7 @@ Success means, for every resource:
 | Decision | Choice |
 | --- | --- |
 | Implementation | Resource code is hand-written. Spec-driven provider generators (Speakeasy, tfplugingen-openapi) were rejected: they would force the API's shape to change (durations, dashboards as one JSON blob, client-supplied widget ids). |
-| Nothing hand-synced with the spec | Everything the API spec states (fields, types, required/optional, read-only, write-only, nullable, enums, defaults, descriptions) is generated from honeybadger's bundle. What's hand-written is Terraform behaviour, plus a short list of overrides where the bundle doesn't yet state a fact; each such gap is fixed in honeybadger's spec, which removes the override (sections 3.3, 5.2). |
+| Nothing hand-synced with the spec | Everything the API spec states (fields, types, required/optional, read-only, write-only, nullable, enums, defaults, descriptions) is generated from honeybadger's bundle. What's hand-written is Terraform behaviour, plus a short list of overrides for facts the bundle doesn't state, such as fields the server fills in (sections 3.3, 5.2). |
 | Spec source | honeybadger's generated bundle (`bin/rails openapi:bundle`), copied into the provider. api-go doesn't serve the spec (section 3.3). |
 | Framework | `terraform-plugin-framework` (protocol 6), not SDKv2. Current stable versions. |
 | API client | api-go's `apiv3` package. The provider makes no HTTP calls of its own. |
@@ -156,8 +156,10 @@ The provider generates schema data from the spec, not resource code.
   names are required); a computed-only attribute takes its read field's. The
   builder sets them as `MarkdownDescription`, since the bundle's descriptions
   use Markdown, and `tfplugindocs` renders them into the registry docs.
-  Wording written only for API callers ("send null to reset") is fixed in
-  honeybadger's spec.
+  Input descriptions keep sentences that start "Send null to …", because the
+  spec is the API reference first. The builder drops those sentences: in
+  Terraform, removing the attribute is how a value is cleared or reset, and
+  the reset value comes from `default:`.
 
 ### 3.4 Repository layout
 
@@ -258,12 +260,10 @@ Overrides exist where the bundle doesn't state the fact. Each kind:
 - **Path identifier** (`project_id`): Required and forces replacement.
 - **Refuses to change** (e.g. environment name): forces replacement.
 - **Server-filled:** an optional field the server assigns a value to when it's
-  omitted, which the bundle can't yet tell apart from one that stays empty
-  (`purge_days` versus `language`). Requested as a spec marker from
-  honeybadger (section 10).
-- **Temporary defaults:** reset values the bundle states only in prose. The
-  four today are listed below; each goes away when honeybadger adds
-  `default:`.
+  omitted, which the bundle doesn't distinguish from one that stays empty
+  (`purge_days` versus `language`). A short hand-written list, `purge_days`
+  today; honeybadger chose not to add a spec marker for it, and will revisit
+  if the list grows.
 - **Custom type** (check-in periods) and **plan modifiers.**
 
 | Spec | Terraform |
@@ -287,11 +287,8 @@ config plans the old value again, so the update sends nothing and the old value
 stays. Fields like `disable_public_links`, `resolve_errors_on_deploy`,
 `grace_period` and `cron_timezone` reset to a known value on null. Using that
 value as the schema `Default` makes removal plan the default, the update sends
-it, and plan and state agree. The value comes from the spec's `default:`.
-Today those four fields state their reset value only in prose ("send null to
-reset to false"), which a generator can't read. That's a spec gap to fix in
-honeybadger (section 10); until it's fixed, those defaults are hand-written
-overrides, and the only ones.
+it, and plan and state agree. The value comes from the spec's `default:`,
+which honeybadger's spec now carries for all four.
 
 Consequences of a `Default`, all intended:
 
@@ -563,14 +560,6 @@ work; the provider doesn't work around it.
   no alarm.
 - **A retried alarm delete can fail and leave the alarm undeletable** if Opticon
   already deleted its observer.
-- **Reset defaults exist only in prose.** `disable_public_links`,
-  `resolve_errors_on_deploy`, `grace_period` and `cron_timezone` need a
-  `default:` in the spec so the provider can generate them (section 5.2).
-- **No marker for server-filled optional fields** (section 5.2).
-- **Descriptions with API-caller wording** ("send null to reset"), and
-  `cron_timezone`'s read example contradicting its input (IANA versus Rails
-  zone names).
-- **`Project.links`** is server-set but not marked readOnly.
 
 ## 11. Out of scope
 
