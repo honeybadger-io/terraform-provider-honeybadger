@@ -62,7 +62,7 @@ honeybadger                       api-go                                   provi
 openapi/v3/** --bundle--+--> openapi/bundled.yaml --oapi-codegen--> internal/gen --> apiv3 --+
                         |         (sha256 recorded)                                           |
                         |               ^ must match                                          v
-                        +--> openapi/bundled.yaml --specgen--> spec/schemas_gen.go --> internal/provider
+                        +--> openapi/bundled.yaml --specgen (+ resources.yaml)--> *_resource_gen.go --> internal/provider
 ```
 
 The provider names generated types only through `apiv3`'s exported aliases. A
@@ -122,42 +122,43 @@ The provider generates schema data from the spec, not resource code.
   the tagged version). This proves both copies are the same bundle. That
   api-go's generated types match its copy is api-go's own check
   (`make verify-generated`).
-- **Generator:** `internal/specgen`, run by `go generate`, loads the copy with
-  kin-openapi. kin-openapi is a normal module dependency (the generator is a
-  main package in this module), pinned to the version api-go's
-  `internal/tools` uses, since the bundle is OpenAPI 3.1. The generator
-  resolves `$ref`, flattens `allOf`, and writes
-  `internal/provider/spec/schemas_gen.go`:
-  - for every component schema and each of its fields: the JSON name, type and
-    format, required, nullable (3.1 `type: [x, 'null']`, and `oneOf`/`anyOf`
-    null unions), readOnly, writeOnly, enum values (through `$ref` and
-    `allOf`), default (through `$ref` and `allOf`), description,
-    `uniqueItems`, pattern and bounds, and the item or nested schema;
-  - a constant per field, per schema, for overrides to refer to;
-  - a table from operationId to its request body schema and the schema of the
-    success response's `data` property (responses are `{data, meta}`
-    envelopes; deletes have no body). Generation fails if an operation the
-    table lists doesn't have that shape.
-
-  It emits data only, never Terraform types, and knows nothing about
-  resources. It fails only on a parse error or the sha256 mismatch.
-- **Builder:** `internal/provider/schemabuild` turns a resource's operations
-  into framework attributes by the merge rule and table in section 5.2,
-  applying the resource's overrides. It fails when a writable field is
-  neither mapped nor omitted, or when an override names a field that isn't in
-  the operation schema it targets. Each resource has a unit test that calls
-  the builder, so those failures are test failures.
-- **Hand-written per resource:** the operations it uses (create, read, update,
-  delete), the overrides of section 5.2, plan modifiers, custom types, and the
-  import format. Overrides name generated field constants, so a field the spec
-  drops is a compile error.
+- **Generator:** `internal/specgen`, run by `make generate`, loads the copy
+  with kin-openapi. kin-openapi is a normal module dependency (the generator is
+  a main package in this module), pinned to the version api-go's
+  `internal/tools` uses, since the bundle is OpenAPI 3.1. It resolves `$ref`
+  and `allOf`, and reads, for each field: type and format, required, nullable
+  (3.1 `type: [x, 'null']`, and `oneOf`/`anyOf` null unions), readOnly,
+  writeOnly, enum values, default, description, `uniqueItems`, pattern and
+  bounds. For each operation it finds the request body schema and the schema of
+  the success response's `data` property (responses are `{data, meta}`
+  envelopes; deletes have no body), and fails if an operation a resource uses
+  doesn't have that shape.
+- **Resource config:** `internal/provider/resources.yaml` names, per resource,
+  the operations it uses (create, read, update, delete), its import format,
+  and the overrides of section 5.2. It's the only hand-written input to the
+  generator.
+- **Generated code:** for each resource, the generator applies the merge rule
+  and table of section 5.2 plus the config's overrides, and writes
+  `internal/provider/<name>_resource_gen.go` with the resource's framework
+  schema function and its model struct (`tfsdk`-tagged fields, custom types
+  where configured). Like `tfplugindocs` output, it's committed and never
+  edited. Generation fails when a writable field is neither mapped nor
+  omitted, when an override names a field missing from the schema it targets,
+  or when the spec has a shape the generator doesn't support yet (nested
+  objects, for now). This is HashiCorp's `tfplugingen-framework` idea with
+  this design's merge rules; that tool (a tech preview, last released in 2024)
+  isn't used.
+- **Hand-written per resource:** the entry in `resources.yaml`, and the
+  resource's CRUD code: mapping the generated model to `apiv3` requests and
+  responses, plan modification for side effects (section 5.3), and the
+  unknown-outcome errors (section 6.4).
 - **Descriptions:** a configurable attribute takes its input field's
   description, where constraints live (`cron_timezone`'s input says Rails zone
   names are required); a computed-only attribute takes its read field's. The
-  builder sets them as `MarkdownDescription`, since the bundle's descriptions
+  generator sets them as `MarkdownDescription`, since the bundle's descriptions
   use Markdown, and `tfplugindocs` renders them into the registry docs.
   Input descriptions keep sentences that start "Send null to …", because the
-  spec is the API reference first. The builder drops those sentences: in
+  spec is the API reference first. The generator drops those sentences: in
   Terraform, removing the attribute is how a value is cleared or reset, and
   the reset value comes from `default:`.
 
@@ -172,8 +173,8 @@ internal/provider/
   <name>_resource.go             one file per resource, plus _test.go
   <name>_data_source.go          where a data source exists
 internal/provider/customtypes/   semantic-equality types (e.g. check-in periods)
-internal/provider/spec/          schemas_gen.go, generated schema data (section 3.3)
-internal/provider/schemabuild/   spec data + overrides -> framework attributes
+  resources.yaml                 per-resource operations and overrides (section 3.3)
+  <name>_resource_gen.go         generated schema and model, per resource
 internal/specgen/                the generator (kin-openapi)
 openapi/                         bundled.yaml copied from honeybadger, README with provenance
 examples/                        per-resource HCL, used by docs and tests
@@ -186,8 +187,8 @@ LICENSE                          MPL-2.0
 ```
 
 Resources and helpers share the `provider` package, as HashiCorp's
-scaffolding does; generated data, the builder and custom types each get
-their own package, as listed.
+scaffolding does; the generator and custom types each get their own
+package, as listed.
 
 ## 4. Provider configuration
 
@@ -237,11 +238,11 @@ Every resource follows these rules; phase specs only document the deviations.
 
 ### 5.2 Mapping the schema
 
-`schemabuild` merges a resource's operation schemas into one attribute set:
+The generator merges a resource's operation schemas into one attribute set:
 
 1. **Fields:** every field of the read schema, plus path parameters
    (`project_id`). A field only in an input (e.g. `team_id` on project create)
-   must be omitted or overridden; the builder fails otherwise.
+   must be omitted or overridden; generation fails otherwise.
 2. **Required or optional:** from the create input's `required` list. The
    update input's own `required` list doesn't make an attribute Required.
 3. **Updatable:** a field in the update input can change in place; one only in
@@ -447,7 +448,7 @@ leaves behind (section 8.1).
 | Phase | Contents | Waits on |
 | --- | --- | --- |
 | 1. Foundation | **Done.** Provider config, diagnostics, nullable helpers, release skeleton (manifest, goreleaser, Makefile, CI, docs) | — |
-| 2. Ready resources | Turn on `WithRetry` in `Configure`; the spec copy, generator and builder (section 3.3); then `honeybadger_project`, `honeybadger_project_key`, `honeybadger_check_in`; the acceptance-test harness | nothing (local api-go) |
+| 2. Ready resources | 2a: turn on `WithRetry`; the spec copy and checksum check; the generator (section 3.3); the check-in period custom type. 2b: `honeybadger_project`, `honeybadger_project_key`, `honeybadger_check_in`, and the acceptance-test harness | nothing (local api-go) |
 | 3. (folded into phase 2) | The drift test it held is replaced by generation (section 8.3) | — |
 | 4. Contract-dependent | `honeybadger_alarm`, `honeybadger_integration` | the integration and alarm contract in api-go's vendored spec |
 | 5. New api-go services | environments, sites, teams (including project membership), status pages | api-go services written; the sites spec branch for sites |
@@ -502,7 +503,7 @@ Known API gaps the phase specs must handle:
 
 Only for behaviour the real API can't trigger on demand, using `httptest`.
 Plain Go tests cover the provider's helpers: error mapping, unknown outcomes
-(phase 1), the period parser, and the builder. `resource.UnitTest` covers a
+(phase 1), the period parser, and the generator (golden-file tests). `resource.UnitTest` covers a
 resource's exact wire body for clears (explicit `null` for Optional
 attributes, the default value for defaulted ones) and omissions, and that
 each `RequiresReplace` attribute plans a replacement. The fake server is not
@@ -521,10 +522,10 @@ drift. What keeps everything in step:
   of the bundle doesn't match api-go's recorded sha256 (section 3.3).
 - **Generated code is current:** `make generate` followed by a clean
   `git status`. A changed spec copy without regenerating fails.
-- **Overrides still match the spec:** overrides use generated field
-  constants, so a field the spec removes is a compile error. Each resource's
-  builder test fails on a writable field it neither maps nor omits, and on an
-  override naming a field missing from the operation schema it targets.
+- **Overrides still match the spec:** generation fails on a writable field a
+  resource neither maps nor omits, and on an override naming a field missing
+  from the schema it targets. A field the spec drops disappears from the
+  generated model, so CRUD code still using it fails to compile.
 - **Behaviour the data can't show:** unit tests plan a change to each
   `RequiresReplace` attribute and check that a replacement is planned.
   Acceptance tests (section 8.1) cover the rest against the real API.
