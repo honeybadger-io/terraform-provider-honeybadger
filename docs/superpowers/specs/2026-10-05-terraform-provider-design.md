@@ -281,7 +281,7 @@ Overrides exist where the bundle doesn't state the fact. Each kind:
 | optional, with a spec `default:` that doesn't depend on the account or plan, nullable or not (e.g. `schedule_type`, `default: simple`) | Optional + Computed + schema `Default` set to the spec's value, no `UseStateForUnknown` |
 | optional and server-filled, or its default depends on the account or plan (e.g. `purge_days`) | Optional + Computed + `UseStateForUnknown`; removing it from config keeps the current value (documented per attribute) |
 | readOnly | Computed |
-| readOnly credential (project `token`, project key value) | Computed + Sensitive |
+| readOnly ingestion key (project `token`, project key value) | Computed, not Sensitive: they're meant to ship with the application |
 | path identifier (`project_id`) | Required + `RequiresReplace` |
 | `format: password` | Sensitive |
 | writeOnly and `format: password` | Optional + Sensitive, kept from config, never read back (section 5.5) |
@@ -573,9 +573,10 @@ work; the provider doesn't work around it.
   no alarm.
 - **A retried alarm delete can fail and leave the alarm undeletable** if Opticon
   already deleted its observer.
-- **Secrets aren't all marked `format: password`.** Requested: the integration
-  secrets, `StatusPageInput.password`, `Project.token`, `ProjectKey.key` and
-  the credential webhook URLs. Until then those use the `sensitive` fallback.
+- **Secrets marked `format: password`** (in progress in honeybadger): every
+  writeOnly integration secret, `StatusPageInput.password`, and the webhook
+  URLs that carry a credential. Until the new bundle is copied in, those use
+  the `sensitive` fallback.
 
 ## 11. Out of scope
 
