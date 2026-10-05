@@ -202,8 +202,9 @@ func TestIsUnknownOutcome(t *testing.T) {
 		{"422", &apiv3.Error{StatusCode: 422, Code: apiv3.CodeValidationError}, false},
 		{"404", &apiv3.Error{StatusCode: 404, Code: apiv3.CodeNotFound}, false},
 		{"429", &apiv3.Error{StatusCode: 429, Code: apiv3.CodeRateLimitExceeded}, false},
+		// A cancellation can land after the request reached the server.
+		{"cancelled", fmt.Errorf("creating: %w", context.Canceled), true},
 		// Never sent, so nothing was created.
-		{"cancelled", fmt.Errorf("creating: %w", context.Canceled), false},
 		{"DNS failure", &net.DNSError{Err: "no such host", Name: "nope.invalid"}, false},
 		{"connection refused", &net.OpError{Op: "dial", Net: "tcp", Err: errors.New("connection refused")}, false},
 	}
@@ -218,6 +219,34 @@ func TestIsUnknownOutcome(t *testing.T) {
 
 // A 2xx whose body was cut off means the write happened but its result is
 // unknown. apiv3 reports it as an *Error wrapping the read failure.
+// A create cancelled while waiting for the response may already have been
+// handled by the server, so its outcome is unknown.
+func TestCancelledAfterSendingIsAnUnknownOutcome(t *testing.T) {
+	received := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Reading the whole body lets the server notice the client hanging up.
+		_, _ = io.Copy(io.Discard, r.Body)
+		close(received)
+		<-r.Context().Done()
+	}))
+	t.Cleanup(srv.Close)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		<-received
+		cancel()
+	}()
+
+	client := apiv3.NewClient().WithBaseURL(srv.URL).WithBearerToken("hbt_test")
+	_, err := client.Projects.Create(ctx, apiv3.ProjectCreateParams{Name: "p"})
+	if err == nil {
+		t.Fatal("Create succeeded after cancellation")
+	}
+	if !isUnknownOutcome(err) {
+		t.Errorf("isUnknownOutcome(%v) = false, want true", err)
+	}
+}
+
 // A certificate the client doesn't trust fails the TLS handshake, before any
 // request is written, so nothing can have been created.
 func TestUntrustedCertificateIsAKnownOutcome(t *testing.T) {

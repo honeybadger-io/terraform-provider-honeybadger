@@ -104,9 +104,10 @@ func fieldPath(ctx context.Context, schema attributeTypes, field string) (path.P
 
 // isUnknownOutcome reports whether err leaves it unknown whether a write took
 // effect (spec section 6.4): the request may have reached the server, but no
-// usable answer came back. That covers a dropped connection or timeout, a 503,
-// a 502 or 504 from a load balancer, and a 2xx whose body couldn't be read or
-// decoded. A request that was never sent has a known outcome: nothing changed.
+// usable answer came back. That covers a dropped connection, timeout or
+// cancellation, a 503, a 502 or 504 from a load balancer, and a 2xx whose body
+// couldn't be read or decoded. A request that was never sent has a known
+// outcome: nothing changed.
 func isUnknownOutcome(err error) bool {
 	if err == nil {
 		return false
@@ -119,8 +120,9 @@ func isUnknownOutcome(err error) bool {
 		}
 		return apiErr.StatusCode >= 200 && apiErr.StatusCode < 300
 	}
-	// A cancellation with no response was raised before anything was sent.
-	return !errors.Is(err, context.Canceled) && !neverSent(err)
+	// A cancellation may land after the request reached the server, so only
+	// failures that provably happen before sending count as known.
+	return !neverSent(err)
 }
 
 // neverSent reports errors raised before the request reached the server: the
