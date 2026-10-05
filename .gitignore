@@ -1,0 +1,7 @@
+/terraform-provider-honeybadger
+/dist/
+*.test
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
