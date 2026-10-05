@@ -1,7 +1,7 @@
 # Honeybadger Terraform Provider: Design
 
 Date: 2026-10-05
-Status: Draft for review
+Status: Draft for review (revised after Codex and Fable reviews)
 
 This is the umbrella spec. It covers architecture, how the provider relates to
 api-go and the OpenAPI spec, the conventions every resource follows, testing,
@@ -36,16 +36,19 @@ Success means, for every resource:
 | Module path | `github.com/honeybadger-io/terraform-provider-honeybadger` (registry naming convention). |
 | Spec scope | This umbrella spec, then one spec per phase. |
 | Testing | Acceptance tests against a local Honeybadger stack are the main gate (section 8). |
+| Idempotency | The v3 API has no Idempotency-Key, and adding one everywhere was judged too much work. The provider is built so it never needs one (sections 6.3 and 6.4). |
+| Read 404 | Means deleted: the resource is removed from state (section 5.3). |
+| Project team | `honeybadger_project` has no `team_id`; team membership belongs to the teams resource (phase 5). |
 
 ## 3. Architecture
 
 ### 3.1 How api-go fits in
 
 The provider is a plain consumer of `apiv3`. HTTP, Bearer auth, pagination,
-typed errors (`*apiv3.Error` with `Code`, `FieldErrors`, `RequiredScope`), and
-the request/response types all come from api-go. The provider adds only
-Terraform logic: schemas, mapping between state and API types, plan
-modifiers, and diagnostics.
+typed errors (`*apiv3.Error` with `Code`, `FieldErrors`, `RequiredScope`,
+`RequestID`), and the request/response types all come from api-go. The
+provider adds only Terraform logic: schemas, mapping between state and API
+types, plan modifiers, and diagnostics.
 
 ```
 honeybadger repo                api-go                         provider
@@ -53,6 +56,10 @@ openapi/v3/** --bundle--> openapi/bundled.yaml --oapi-codegen--> internal/gen
                                                   apiv3 (hand-written) --> internal/provider
                                  bundled.yaml -------------------------------> spec drift test (8.3)
 ```
+
+The provider names generated types only through `apiv3`'s exported aliases. A
+type `apiv3` doesn't alias is used through its fields or converted
+(e.g. `string(checkIn.State)`), never imported from `internal/gen`.
 
 Rules:
 
@@ -63,9 +70,14 @@ Rules:
 - **Spec problems get fixed at the source.** An awkward or wrong API shape is
   fixed in the honeybadger spec, not hidden in provider code. Provider-side
   handling is limited to Terraform concerns: semantic equality, plan modifiers,
-  sensitivity.
+  sensitivity. Server-side problems found along the way go on a list for
+  honeybadger (section 10).
 - **One HTTP-level addition.** The provider passes `apiv3` an `http.Client`
-  whose transport retries 429 and 503 (section 6.3), via `WithHTTPClient`.
+  whose transport retries (section 6.3), via `WithHTTPClient`. That
+  `http.Client` sets **no** `Timeout`: `Client.Timeout` bounds the whole call,
+  including the transport's waits between retries, so it would cut a
+  `Retry-After` wait short. The transport applies a 30-second deadline to each
+  attempt instead, matching `apiv3.NewClient`'s default.
 
 ### 3.2 Depending on api-go
 
@@ -76,6 +88,13 @@ Rules:
 - **go.mod:** until api-go is tagged, require a pseudo-version of the `api-v3`
   branch, as the MCP server does. No `replace` directive: it breaks goreleaser
   and registry builds outside the workspace.
+- **Phase 2 prerequisite:** the nullable request types the provider relies on
+  (section 5.3) arrived in api-go `9b759df`, which is only local. The current
+  pin (`c934ab8`) has the older non-nullable types, so `go mod tidy`,
+  `GOWORK=off` builds and standalone CI compile against the wrong contract.
+  Before phase 2 lands, Kevin pushes `api-v3` at or after `9b759df` and
+  `go.mod` is bumped to that commit. Until then, phase 1 work builds only
+  inside `go.work`, and CI waits for the push.
 - **Release prerequisite:** the first provider release requires api-go's v3 work
   merged and tagged (planned v0.10.0), and the provider's `go.mod` requiring
   that tag. A release build runs with `GOWORK=off`.
@@ -100,7 +119,7 @@ Rules:
 main.go                          providerserver.Serve, protocol 6
 internal/provider/
   provider.go                    provider schema, Configure, resource registry
-  retry.go                       429/503 retry transport
+  retry.go                       retry transport (section 6.3)
   diagnostics.go                 apiv3.Error -> diag.Diagnostics
   nullable.go                    types.* <-> nullable.Nullable helpers
   <name>_resource.go             one file per resource, plus _test.go
@@ -129,8 +148,7 @@ provider "honeybadger" {
 ```
 
 - `api_token`: sensitive. Accepts `hbt_` personal, `hba_` account, and OAuth
-  access tokens, all sent as Bearer. A missing token is a configuration error
-  with an attribute diagnostic, raised in `Configure`.
+  access tokens, all sent as Bearer.
 - `api_url`: defaults to US production. EU is
   `api_url = "https://eu-app.honeybadger.io"`, and a local stack is
   `http://localhost:3001`. The `/v3` segment is optional; `apiv3` adds it.
@@ -138,8 +156,14 @@ provider "honeybadger" {
   to say the same thing isn't worth hard-coding the EU host.
 - Environment variable names: see open decision D1.
 
-`Configure` builds one `apiv3.Client` and hands it to every resource and data
-source.
+`Configure`, in order:
+
+1. If either attribute is unknown (e.g. from a value not yet computed), it
+   returns an attribute error saying the value must be known when the provider
+   is configured, instead of treating it as missing.
+2. Falls back to the environment variables for null attributes.
+3. Returns an attribute error on `api_token` if no token was found.
+4. Builds one `apiv3.Client` and hands it to every resource and data source.
 
 ## 5. Resource conventions
 
@@ -150,7 +174,8 @@ Every resource follows these rules; phase specs only document the deviations.
 - IDs are strings everywhere; site ids are UUIDs, still strings.
 - Account-level resources (projects, teams, status pages) import by `id`.
 - Project-scoped resources import by `project_id/id`. `project_id` is a
-  required attribute that forces replacement.
+  Required attribute that forces replacement, even though the spec marks it
+  read-only in response bodies (it is a path parameter on writes).
 - `id` is Computed with `UseStateForUnknown`.
 
 ### 5.2 Mapping the schema
@@ -158,15 +183,26 @@ Every resource follows these rules; phase specs only document the deviations.
 | Spec | Terraform |
 | --- | --- |
 | required in the create input | Required |
-| optional, no server default | Optional |
-| optional, server fills a default | Optional + Computed, `UseStateForUnknown` |
+| optional, nullable, no server default (null clears) | Optional |
+| optional, nullable, null resets to a documented fixed default | Optional + Computed + schema `Default` set to that value, no `UseStateForUnknown` |
+| optional, server picks a value with no fixed default | Optional + Computed + `UseStateForUnknown`; removing it from config keeps the current value (documented per attribute) |
 | readOnly | Computed |
-| writeOnly (secrets) | Optional + Sensitive, kept from config, never read back |
+| readOnly credential (project `token`, project key value) | Computed + Sensitive |
+| path identifier (`project_id`) | Required + `RequiresReplace` |
+| writeOnly (secrets) | Optional + Sensitive, kept from config, never read back (section 5.5) |
 | enum | `stringvalidator.OneOf` with the spec's values |
 | `uniqueItems: true` array | Set |
 | ordered array | List |
-| create-only field | `RequiresReplace`, or omitted when it isn't stored (documented per resource) |
+| create-only, never returned (e.g. `disable_email_notifications`) | Left out by default. A phase spec may include one only as Optional, never sent on update, with a plan modifier that keeps the prior state value, and documented as having no effect after create. |
 | field the API refuses to change (e.g. environment name) | `RequiresReplace` |
+
+Why the fixed-default row: with `UseStateForUnknown`, removing an attribute from
+config plans the old value again, so the update sends nothing and the old value
+stays. Fields like `disable_public_links`, `resolve_errors_on_deploy`,
+`grace_period` and `cron_timezone` reset to a known value on null. Using that
+value as the schema `Default` makes removal plan the default, the update sends
+it, and plan and state agree. The drift test checks each `Default` against the
+spec's documented default (section 8.3).
 
 Computed fields that change on their own and would only add noise to state
 (e.g. `fault_count`, `last_notice_at`) are left out, unless a phase spec makes a
@@ -178,12 +214,17 @@ case for one.
   so server defaults apply. State is set from the create response, not from the
   plan.
 - **Read** maps the GET response into state. A 404 removes the resource from
-  state, which tells Terraform it was deleted outside Terraform.
-- **Update** relies on the API's PATCH merge. For each writable attribute:
-  - known value: send it;
-  - null in config with a value in prior state: send JSON `null`, which clears
-    or resets it (v3 accepts null only for fields marked nullable; others
-    reject it with 422, so a non-nullable Optional field is Optional + Computed);
+  state, which tells Terraform it was deleted outside Terraform. The API also
+  answers 404 for objects a restricted token can't see. The provider docs
+  therefore require the configured token to see every object it manages; a
+  narrower token will plan to recreate objects it can't see.
+- **Update** relies on the API's PATCH merge. For each writable attribute,
+  comparing the plan with the prior state:
+  - known value that differs from state: send it;
+  - null in the plan with a value in prior state (an Optional attribute removed
+    from config): send JSON `null`, which clears it. v3 accepts null only for
+    fields marked nullable and rejects it with 422 elsewhere, so a non-nullable
+    Optional field is mapped as Optional + Computed instead (section 5.2);
   - unknown: leave it out.
 
   `apiv3`'s `nullable.Nullable` fields carry all three states.
@@ -194,20 +235,40 @@ case for one.
 
 ### 5.4 Values the API rewrites
 
-When the API stores a value in canonical form (check-in periods: "1 week" reads
-back as "7 days"), the attribute uses a custom type with semantic equality, so
-an equivalent value doesn't show as a diff. Config keeps whatever the user
-wrote.
+When the API stores a value in canonical form, the attribute uses a custom type
+with semantic equality, so an equivalent value doesn't show as a diff. Config
+keeps whatever the user wrote.
+
+Check-in periods are the known case. The API accepts ChronicDuration formats
+(`<n> <second|minute|hour|day|week|month|year>[s]`, repeated, or `HH:MM:SS`) and
+reads them back in ChronicDuration's long form (`1 week` reads as `7 days`; a
+zero grace period reads as `00:00:00`). Go's `time.ParseDuration` reads neither
+form, so the custom type has its own parser using ChronicDuration's unit table
+(a month is 30 days, a year is ChronicDuration's constant). The phase 2 spec
+lists the exact unit table and the round-trip cases its tests cover.
 
 ### 5.5 Secrets
 
 The API never returns write-only secrets, or returns them masked (e.g.
-`og-SEC****`). The provider keeps the configured value in state, marks it
-Sensitive, never overwrites it from a read, and sends it only when config
-changes it. Import can't recover a secret; the docs say so, and the first apply
-after import sends it.
+`og-SEC****`).
 
-## 6. Errors and rate limits
+- The provider keeps the configured value in state, marks it Sensitive, never
+  overwrites it from a read, and sends it only when config changes it.
+- Sensitive hides the value in plan output only. It is still stored in state in
+  plain text, and the docs say so.
+- Import can't recover a secret. The docs say so, and the first apply after
+  import sends it.
+- Omitting a secret on update keeps it on the server, so removing a secret from
+  config needs its own handling. Each phase spec decides, per secret, between:
+  - sending the API's clear (null), where the spec allows it;
+  - forcing replacement, where the secret can't be cleared but the object
+    can't work without one;
+  - rejecting the removal with a validation error, where neither applies.
+
+  Silently dropping the secret from state while it stays on the server is never
+  allowed.
+
+## 6. Errors, retries and creates
 
 ### 6.1 Mapping errors to diagnostics
 
@@ -219,37 +280,66 @@ after import sends it.
 | 403 `access_denied` / 401 | Credential error pointing at `api_token`. |
 | 422 `ambiguous_account` | Error saying the token covers several accounts and a single-account token is needed. |
 | 429 after retries | Error with the rate-limit reset time from `Error.RateLimit`. |
-| anything else | General error including the request id, for support. |
+| anything else | General error including `Error.RequestID`, for support. |
 
 ### 6.2 Request ids
 
-`WithRequestIDHook` logs each request id at debug level through `tflog`, so
-`TF_LOG=debug` shows the id Honeybadger support can correlate.
+`WithRequestIDHook` logs request ids at debug level through `tflog`. This is
+best effort: the hook fires only when a response body carries
+`meta.request_id`, so successful deletes (empty 204s) log nothing. Failed
+requests always carry their id in `Error.RequestID`, which every general error
+diagnostic includes (section 6.1).
 
 ### 6.3 Retries
 
-v3 allows 360 requests per hour per credential owner. A refresh is one GET per
-resource, so large configurations can use up a meaningful share of that. The
-transport:
+The API has no idempotency key, so the transport resends a request only when
+resending can't cause a second effect.
 
-- retries 429 and 503, which both answer before the request takes effect, so
-  writes are safe to resend;
-- waits for `Retry-After` (seconds or HTTP date), or backs off exponentially from
-  1 second without it;
+| Failure | POST (create) | GET, PATCH, DELETE |
+| --- | --- | --- |
+| 429 | retry: the rate limiter rejects before the action runs | retry |
+| 503 | **no retry**: it can come after the action took effect (an alarm create can store the Opticon observer, then time out into a 503) | retry |
+| attempt deadline or dropped connection | **no retry**: whether it took effect is unknown | retry |
+| any other status | no retry | no retry |
+
+PATCH is safe to resend because the provider sends the same values each time,
+and DELETE because a 404 counts as success.
+
+v3 allows 360 requests per hour per credential owner. A refresh is one GET per
+resource, so large configurations can use a meaningful share of that. When the
+transport does retry, it:
+
+- waits for `Retry-After` (seconds or HTTP date), or backs off exponentially
+  from 1 second without one;
 - tries at most 4 times, then returns the last response;
-- returns the 429 straight away if `Retry-After` is over 60 seconds, instead of
-  sitting through an hourly reset that looks like a hung apply;
-- stops waiting when the context ends.
+- returns the response straight away if `Retry-After` is over 60 seconds,
+  instead of sitting through an hourly reset that looks like a hung apply;
+- stops waiting when the request's context ends;
+- applies a 30-second deadline to each attempt (section 3.1).
+
+### 6.4 Creates with an unknown outcome
+
+A POST that fails with a 503, hits its attempt deadline, or loses its
+connection may or may not have created the object. The provider:
+
+- fails the create with an error saying the object may have been created,
+  naming the parent (project) and the configured name, and giving the
+  `terraform import` command and ID format to adopt it;
+- does not search for the object by name to adopt it automatically: most names
+  aren't unique, so it could attach to the wrong object.
+
+In acceptance tests, the `tf-acc-` sweeper removes anything such a failure
+leaves behind (section 8.1).
 
 ## 7. Phases
 
 | Phase | Contents | Waits on |
 | --- | --- | --- |
-| 1. Foundation | Provider config, retry transport, diagnostics, nullable helpers, test harness, release skeleton (manifest, goreleaser, Makefile) | nothing |
-| 2. Ready resources | `honeybadger_project`, `honeybadger_project_key`, `honeybadger_check_in` | nothing (api-go `9b759df`) |
+| 1. Foundation | Provider config, retry transport, diagnostics, nullable helpers, test harness, release skeleton (manifest, goreleaser, Makefile) | nothing (builds inside `go.work`) |
+| 2. Ready resources | `honeybadger_project`, `honeybadger_project_key`, `honeybadger_check_in` | `api-v3` pushed at or after `9b759df` and `go.mod` bumped (section 3.2) |
 | 3. Drift guard | `internal/specdrift`, wired into CI, covering phase 2 | phase 2 |
 | 4. Contract-dependent | `honeybadger_alarm`, `honeybadger_integration` | honeybadger #6729 and #6730 merged and re-vendored into api-go |
-| 5. New api-go services | environments, sites, teams, status pages | api-go services written; the sites spec branch for sites |
+| 5. New api-go services | environments, sites, teams (including project membership), status pages | api-go services written; the sites spec branch for sites |
 | 6. Dashboards | `honeybadger_dashboard` | phase 4 conventions settled |
 | 7. Release | Production smoke test, GPG signing, registry publishing, docs | api-go tagged; open decisions D3 and D4 |
 
@@ -274,9 +364,10 @@ Known API gaps the phase specs must handle:
 ### 8.1 Acceptance tests (the main gate)
 
 - Each resource gets a `TF_ACC` lifecycle test: create, plan with no changes,
-  update every mutable attribute, clear every clearable attribute, import with
-  a plan showing no changes, destroy. Plus a check that a resource deleted
-  outside Terraform is removed from state.
+  update every mutable attribute, remove every Optional attribute (checking it
+  clears or returns to its default), import with a plan showing no changes,
+  destroy. Plus a check that a resource deleted outside Terraform is removed
+  from state.
 - They run locally against a Honeybadger stack. Production is a pre-release
   smoke test only (phase 7).
 - They use a dedicated `terraform-acc` account, never a personal dev account,
@@ -289,7 +380,8 @@ Known API gaps the phase specs must handle:
 - A second, narrower token checks the `insufficient_scope` diagnostic.
 - Every test creates its own project and resources, named with a `tf-acc-`
   prefix. A sweeper (`go test -sweep`) deletes any `tf-acc-` objects that
-  failed runs left behind.
+  failed runs left behind, including objects from creates with an unknown
+  outcome (section 6.4).
 - Alarm tests need Opticon running locally (503 without it).
 - To test phase 4 early, the local honeybadger app can run on
   `feat/terraform-3-v3-contract` (after `bin/rails db:migrate`).
@@ -297,9 +389,14 @@ Known API gaps the phase specs must handle:
 ### 8.2 Unit tests (only where the real API can't help)
 
 Using `resource.UnitTest` and `httptest`, only for behaviour the real API can't
-trigger on demand: retry and backoff, mapping each error code to its
-diagnostic, and the exact wire body of clears (explicit `null`) and omissions.
-The fake server is not a general API emulator.
+trigger on demand: retry and no-retry decisions per method and status, the
+unknown-outcome create error, mapping each error code to its diagnostic, and
+the exact wire body of clears (explicit `null`) and omissions. The fake server
+is not a general API emulator. Plain Go tests (no Terraform) cover the retry
+transport and the period parser.
+
+`resource.UnitTest` runs the Terraform CLI, as acceptance tests do. Locally it
+uses `terraform` on `PATH`; CI installs it with `hashicorp/setup-terraform`.
 
 ### 8.3 Spec drift test
 
@@ -307,28 +404,38 @@ The fake server is not a general API emulator.
 and no network:
 
 1. Finds the api-go module directory (`go list -m`) and loads
-   `openapi/bundled.yaml`.
+   `openapi/bundled.yaml`. Outside `go.work` this reads the pinned version, so
+   it is only meaningful once that pin includes the contract the provider
+   targets (section 3.2).
 2. Gets the provider's schemas in-process through `GetProviderSchema`.
 3. For each resource, uses a declared mapping (its read schema, create input
    and update input in the spec, plus an explicit list of skipped fields, each
    with a reason) and fails when:
    - a writable spec field is neither mapped nor skipped;
    - a mapped field no longer exists in the spec;
-   - a readOnly field isn't Computed;
+   - a readOnly field isn't Computed, except path identifiers (`project_id`),
+     which must be Required and force replacement;
    - a writeOnly field isn't Sensitive;
    - a nullable, optional field can't be cleared (it's Required);
-   - an enum's values differ from its validator;
-   - a `uniqueItems` array isn't a set.
+   - a `uniqueItems` array isn't a set;
+   - a schema `Default` differs from the spec's documented default.
+
+`GetProviderSchema` returns attribute shapes only, not validators or plan
+modifiers. So enum checks and `RequiresReplace` checks run in the same package
+against the framework schemas directly (each resource's `Schema` method), which
+do carry validators and plan modifiers. Enum checks compare each
+`stringvalidator.OneOf` with the spec's enum.
 
 The comparison uses the bundled spec as published, not api-go's
-`overlay.yaml`, which holds Go-specific mappings for code generation (open
-decision D5).
+`overlay.yaml`, which holds Go-specific mappings for code generation.
 
 ### 8.4 CI
 
-On every push: `go build`, `go vet`, golangci-lint, unit tests, the spec drift
-test, and a check that `tfplugindocs` output is current. Acceptance tests run
-locally until a CI-hosted stack exists; that is out of scope here.
+On every push: `go build`, `go vet`, golangci-lint, unit tests (with
+`setup-terraform`), the spec drift test, and a check that `tfplugindocs` output
+is current, all with `GOWORK=off`. CI is turned on once the api-go pin
+resolves to the contract the provider targets (section 3.2). Acceptance tests
+run locally until a CI-hosted stack exists; that is out of scope here.
 
 ## 9. Open decisions
 
@@ -338,13 +445,24 @@ locally until a CI-hosted stack exists; that is out of scope here.
 | D2 | Local stack setup: which services, start commands, rate-limit override | Kevin or v3-terraform-readiness supplies them; recorded in `CONTRIBUTING.md` in phase 1. |
 | D3 | Production test account for the pre-release smoke test | Choose before phase 7. |
 | D4 | Registry namespace and GPG signing key | `honeybadger-io`; key owner chosen before phase 7. |
-| D5 | Drift test reads the spec with or without api-go's overlay | Without the overlay (the published contract). |
-| D6 | Data sources | Only where users reference objects they don't manage: `honeybadger_project` (by name) and `honeybadger_streams` (for alarms). Decided in the phase 2 and phase 4 specs. |
-| D7 | Integration shape: one resource per type, or one resource with a typed block per type | Decided in the phase 4 spec. |
+| D5 | Data sources | Only where users reference objects they don't manage: `honeybadger_project` (by name) and `honeybadger_streams` (for alarms). Decided in the phase 2 and phase 4 specs. |
+| D6 | Integration shape: one resource per type, or one resource with a typed block per type | Decided in the phase 4 spec. |
 
-## 10. Out of scope
+## 10. Issues for honeybadger
+
+Server-side problems found while designing the provider. They are fixed in the
+honeybadger app or spec, not worked around here.
+
+- **Orphaned Opticon observers.** An alarm create that times out after Opticon
+  stored the observer answers 503, and the alarm may not exist in honeybadger,
+  leaving an observer no alarm references.
+- **Alarm trigger updates that silently do nothing** (section 7), pending
+  Opticon's `observer-26-field-threshold` branch.
+
+## 11. Out of scope
 
 - Any API operation that isn't configuration: faults, notices, comments,
   Insights queries, deploys.
 - Running the acceptance stack in CI.
 - Generating provider code from the spec.
+- An idempotency key in the API.
