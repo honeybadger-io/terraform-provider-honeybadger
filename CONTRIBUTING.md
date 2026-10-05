@@ -4,8 +4,10 @@
 
 The provider lives in `honeybadger/mcp/terraform-provider-honeybadger`, next to
 `api-go` and `honeybadger-mcp-server`. `../go.work` lists all three, so a local
-build uses your api-go checkout, including commits that aren't pushed. CI and
-releases build with `GOWORK=off` against the api-go version in `go.mod`.
+build uses your api-go checkout, including commits that aren't pushed. That's
+the normal way to work: `go.mod` isn't bumped as api-go moves, so a build
+outside the workspace (`GOWORK=off`, or CI) may not compile between releases.
+A release bumps `go.mod` to a tagged api-go and builds with `GOWORK=off`.
 
 Design: `docs/superpowers/specs/2026-10-05-terraform-provider-design.md`.
 
@@ -16,9 +18,6 @@ Design: `docs/superpowers/specs/2026-10-05-terraform-provider-design.md`.
     make lint       # golangci-lint
     make generate   # regenerate docs/ with tfplugindocs; commit the result
     make testacc    # acceptance tests against a Honeybadger stack
-
-Run `GOWORK=off make test` before pushing, to catch code that only builds
-against an unpushed api-go.
 
 ## Acceptance tests
 
