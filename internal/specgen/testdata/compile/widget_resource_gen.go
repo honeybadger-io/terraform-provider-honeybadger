@@ -20,6 +20,11 @@ import (
 func widgetResourceSchema() schema.Schema {
 	return schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"badges": schema.SetAttribute{
+				ElementType:         types.StringType,
+				MarkdownDescription: "Badges awarded to the widget.",
+				Optional:            true,
+			},
 			"color": schema.StringAttribute{
 				MarkdownDescription: "The widget's color, as a hex code.",
 				Optional:            true,
@@ -89,6 +94,7 @@ func widgetResourceSchema() schema.Schema {
 }
 
 type widgetResourceModel struct {
+	Badges    types.Set               `tfsdk:"badges"`
 	Color     types.String            `tfsdk:"color"`
 	CreatedAt types.String            `tfsdk:"created_at"`
 	ID        types.String            `tfsdk:"id"`

@@ -147,6 +147,10 @@ func Merge(doc *openapi3.T, name string, rc ResourceConfig) (Resource, error) {
 			}
 		}
 
+		if writable && inU && !inC && !writeOnly {
+			return fail("%s is updatable but create can't set it: omit it, or extend the resource to set it after create", f)
+		}
+
 		a := Attribute{Name: f}
 		var src Field
 		switch {
@@ -194,6 +198,11 @@ func Merge(doc *openapi3.T, name string, rc ResourceConfig) (Resource, error) {
 			}
 		}
 
+		// A collection the read schema calls unordered is a set, even when an
+		// input doesn't say so.
+		if inR && rf.UniqueItems {
+			src.UniqueItems = true
+		}
 		if err := setKind(&a, src); err != nil {
 			return fail("%s: %v", f, err)
 		}
@@ -246,6 +255,9 @@ func setKind(a *Attribute, f Field) error {
 		elem, ok := scalar[f.Items.Type]
 		if !ok {
 			return fmt.Errorf("arrays of %s aren't supported yet; omit it or extend specgen", f.Items.Type)
+		}
+		if len(f.Items.Enum) > 0 || f.Items.Pattern != "" {
+			return fmt.Errorf("enums and patterns on array items aren't supported yet; omit it or extend specgen")
 		}
 		a.Kind, a.ElemKind = "list", elem
 		if f.UniqueItems {

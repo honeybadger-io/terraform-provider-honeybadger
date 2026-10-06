@@ -67,7 +67,7 @@ paths:
         content:
           application/json:
             schema:
-              "$ref": "#/components/schemas/WidgetInput"
+              "$ref": "#/components/schemas/WidgetUpdateInput"
       responses:
         '200':
           description: ok
@@ -138,6 +138,23 @@ components:
           items:
             type: string
           description: Labels
+        badges:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Badges awarded
+        events:
+          type: array
+          items:
+            type: string
+            enum:
+            - spun
+            - stopped
+          description: Events to notify on
+        archived:
+          type: boolean
+          description: Whether the widget is archived
         period:
           type:
           - string
@@ -191,6 +208,19 @@ components:
           items:
             type: string
           description: Labels on the widget.
+        badges:
+          type: array
+          items:
+            type: string
+          description: Badges awarded to the widget.
+        events:
+          type: array
+          items:
+            type: string
+            enum:
+            - spun
+            - stopped
+          description: Events to notify on.
         period:
           type:
           - string
@@ -203,6 +233,14 @@ components:
           format: password
           writeOnly: true
           description: Webhook signing secret.
+    WidgetUpdateInput:
+      allOf:
+      - "$ref": "#/components/schemas/WidgetInput"
+      - type: object
+        properties:
+          archived:
+            type: boolean
+            description: Archive or unarchive the widget.
     WidgetCreateInput:
       allOf:
       - "$ref": "#/components/schemas/WidgetInput"

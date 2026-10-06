@@ -21,6 +21,7 @@ func TestMergeFollowsTheMergeRule(t *testing.T) {
 		t.Fatalf("Merge: %v", err)
 	}
 	want := []Attribute{
+		{Name: "badges", Kind: "set", ElemKind: "string", Optional: true, Description: "Badges awarded to the widget."},
 		{Name: "color", Kind: "string", Optional: true, Pattern: "^#[0-9a-f]{6}$",
 			Description: "The widget's color, as a hex code."},
 		{Name: "created_at", Kind: "string", Computed: true, UseStateForUnknown: true,
@@ -73,6 +74,8 @@ func TestMergeErrors(t *testing.T) {
 		wantErr string
 	}{
 		{"input-only field not omitted", func(rc *ResourceConfig) { delete(rc.Omit, "note") }, "note"},
+		{"array item enum not omitted", func(rc *ResourceConfig) { delete(rc.Omit, "events") }, "events"},
+		{"update-only field not omitted", func(rc *ResourceConfig) { delete(rc.Omit, "archived") }, "archived"},
 		{"writeOnly non-secret not omitted", func(rc *ResourceConfig) { delete(rc.Omit, "quiet") }, "quiet"},
 		{"server_filled on a computed field", func(rc *ResourceConfig) { rc.ServerFilled = append(rc.ServerFilled, "token") }, "token"},
 		{"use_state_for_unknown on a defaulted field", func(rc *ResourceConfig) { rc.UseStateForUnknown = append(rc.UseStateForUnknown, "shape") }, "shape"},

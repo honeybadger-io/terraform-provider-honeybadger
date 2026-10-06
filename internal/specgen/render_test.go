@@ -76,3 +76,32 @@ func TestGenerateRemovesStaleFiles(t *testing.T) {
 		t.Error("generated file lacks the generated-code header")
 	}
 }
+
+// A validator's message is shown to users on every bad value, so it describes
+// the format rather than printing a long regex.
+func TestPatternMessages(t *testing.T) {
+	long := `^(\d+ (second|minute|hour|day|week|month|year)s?)( \d+ (second|minute|hour|day|week|month|year)s?)*$|^\d\d:\d\d:\d\d$`
+	tests := []struct {
+		name string
+		attr Attribute
+		want string
+	}{
+		{"custom type", Attribute{Name: "grace_period", Kind: "string", Pattern: long, CustomType: "period"},
+			`must be a period such as \"5 minutes\", \"1 hour 30 minutes\" or \"01:30:00\"`},
+		{"short pattern", Attribute{Name: "color", Kind: "string", Pattern: "^#[0-9a-f]{6}$"},
+			`must match ^#[0-9a-f]{6}$`},
+		{"long pattern", Attribute{Name: "code", Kind: "string", Pattern: long},
+			`isn't in the format the Honeybadger API accepts; see the attribute's description`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			src, err := Render(Resource{Name: "widget", Attributes: []Attribute{tt.attr}})
+			if err != nil {
+				t.Fatalf("Render: %v", err)
+			}
+			if !strings.Contains(string(src), tt.want) {
+				t.Errorf("rendered code doesn't contain %s:\n%s", tt.want, src)
+			}
+		})
+	}
+}

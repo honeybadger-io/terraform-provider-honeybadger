@@ -109,7 +109,7 @@ func Render(r Resource) ([]byte, error) {
 		}
 		if a.Pattern != "" {
 			validators = append(validators, fmt.Sprintf("stringvalidator.RegexMatches(regexp.MustCompile(%q), %q)",
-				a.Pattern, "must match "+a.Pattern))
+				a.Pattern, patternMessage(a)))
 			imports["github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"] = true
 			imports["regexp"] = true
 		}
@@ -177,6 +177,24 @@ func Render(r Resource) ([]byte, error) {
 		return nil, fmt.Errorf("resource %s: formatting generated code: %w\n%s", r.Name, err, out.String())
 	}
 	return src, nil
+}
+
+// customTypeMessages describe each custom type's format for validation errors.
+var customTypeMessages = map[string]string{
+	"period": `must be a period such as "5 minutes", "1 hour 30 minutes" or "01:30:00"`,
+}
+
+// patternMessage is the error users see for a value that doesn't match. A
+// short pattern is readable as is; a long one isn't, so the message points at
+// the description instead.
+func patternMessage(a Attribute) string {
+	if msg, ok := customTypeMessages[a.CustomType]; ok {
+		return msg
+	}
+	if len(a.Pattern) <= 40 {
+		return "must match " + a.Pattern
+	}
+	return "isn't in the format the Honeybadger API accepts; see the attribute's description"
 }
 
 func literal(kind string, v any) (string, error) {
