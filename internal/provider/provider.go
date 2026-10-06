@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -86,7 +87,12 @@ func (p *honeybadgerProvider) Configure(ctx context.Context, req provider.Config
 		return
 	}
 
-	client := apiv3.NewClient().WithBearerToken(token).WithRequestIDHook(logRequestID)
+	// Retries are api-go's (spec section 6.3). No http.Client with a Timeout:
+	// it would cap every attempt, including long deletes.
+	client := apiv3.NewClient().
+		WithBearerToken(token).
+		WithRequestIDHook(logRequestID).
+		WithRetry(apiv3.RetryPolicy{MaxAttempts: 4, MaxWait: time.Minute})
 	if url != "" {
 		client = client.WithBaseURL(url)
 	}

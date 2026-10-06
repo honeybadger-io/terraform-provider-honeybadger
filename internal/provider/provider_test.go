@@ -269,3 +269,33 @@ func TestConfigureRejectsUnknownValues(t *testing.T) {
 		t.Error("a client was configured from an unknown URL")
 	}
 }
+
+func TestConfiguredClientRetriesRateLimits(t *testing.T) {
+	clearEnv(t)
+	var calls int
+	var mu sync.Mutex
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		calls++
+		n := calls
+		mu.Unlock()
+		if n == 1 {
+			w.Header().Set("Retry-After", "0")
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"id":"p1","name":"Project"}}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	resp := configure(t, stringValueOf("hbt_config"), stringValueOf(srv.URL))
+	assertNoDiags(t, resp.Diagnostics)
+	getProject(t, resp)
+
+	mu.Lock()
+	defer mu.Unlock()
+	if calls != 2 {
+		t.Errorf("requests = %d, want 2 (one 429, one retry)", calls)
+	}
+}
