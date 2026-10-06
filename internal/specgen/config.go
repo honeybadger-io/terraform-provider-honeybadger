@@ -33,6 +33,7 @@ type ResourceConfig struct {
 	FindHint           string            `yaml:"find_hint"`         // for the unknown-outcome error
 	ConfigValidators   string            `yaml:"config_validators"` // hand-written func returning []resource.ConfigValidator
 	CRUD               string            `yaml:"crud"`              // "" or "generated" (wrapper generated), or "manual"
+	Variants           string            `yaml:"variants"`          // discriminator: one resource per create branch
 }
 
 // APIConfig names the apiv3 types a resource's operations use.

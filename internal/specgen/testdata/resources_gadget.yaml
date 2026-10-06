@@ -1,0 +1,15 @@
+resources:
+  gadget:
+    create: createGadget
+    read: getGadget
+    update: updateGadget
+    delete: deleteGadget
+    import: "<project_id>/<id>"
+    variants: type
+    service: Gadgets
+    api:
+      model: Gadget
+      create_params: GadgetCreateParams
+      update_params: GadgetUpdateParams
+    find_hint: the project's gadgets
+    server_filled: [events]

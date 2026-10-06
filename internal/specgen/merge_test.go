@@ -1,6 +1,7 @@
 package specgen
 
 import (
+	"github.com/getkin/kin-openapi/openapi3"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -292,5 +293,100 @@ func TestSetKindCollections(t *testing.T) {
 	d := Attribute{Name: "tags", Default: []any{"x"}}
 	if err := setKind(&d, Field{Type: "array", Items: &Field{Type: "string"}}); err == nil {
 		t.Error("a non-empty collection default: want an error")
+	}
+}
+
+func gadgetConfig(t *testing.T) ResourceConfig {
+	t.Helper()
+	cfg, err := LoadConfig("testdata/resources_gadget.yaml")
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	return cfg.Resources["gadget"]
+}
+
+func TestMergeAllVariants(t *testing.T) {
+	rs, err := MergeAll(loadFixture(t), "gadget", gadgetConfig(t))
+	if err != nil {
+		t.Fatalf("MergeAll: %v", err)
+	}
+	var names []string
+	for _, r := range rs {
+		names = append(names, r.Name)
+	}
+	if !reflect.DeepEqual(names, []string{"gadget_alpha", "gadget_beta", "gadget_gamma"}) {
+		t.Fatalf("names = %v", names)
+	}
+	attr := func(r Resource, n string) Attribute {
+		for _, a := range r.Attributes {
+			if a.Name == n {
+				return a
+			}
+		}
+		t.Fatalf("%s has no %s", r.Name, n)
+		return Attribute{}
+	}
+	alpha, beta, gamma := rs[0], rs[1], rs[2]
+	if alpha.Variant == nil || *alpha.Variant != (VariantInfo{Field: "type", Const: "Alpha"}) {
+		t.Errorf("alpha variant = %+v", alpha.Variant)
+	}
+	for _, a := range alpha.Attributes {
+		if a.Name == "type" {
+			t.Error("the discriminator is an attribute")
+		}
+	}
+	if c := attr(alpha, "config"); !c.Required || len(c.Attributes) != 2 {
+		t.Errorf("alpha config = %+v, want required with url and token", c)
+	}
+	if c := attr(beta, "config"); c.Required || !c.Computed {
+		t.Errorf("beta config = %+v, want optional and computed (not nullable on update)", c)
+	}
+	if e := attr(alpha, "events"); !reflect.DeepEqual(e.ElemEnum, []string{"spun", "stopped"}) {
+		t.Errorf("alpha events enum = %v", e.ElemEnum)
+	}
+	if e := attr(gamma, "events"); e.MaxItems == nil || *e.MaxItems != 0 {
+		t.Errorf("gamma events maxItems = %v", e.MaxItems)
+	}
+	if a := attr(gamma, "active"); a.Default != false {
+		t.Errorf("gamma active default = %v", a.Default)
+	}
+	if l := attr(alpha, "links"); !l.Computed || l.Kind != "object" {
+		t.Errorf("links = %+v", l)
+	}
+}
+
+func TestSnake(t *testing.T) {
+	for in, want := range map[string]string{
+		"WebHook": "web_hook", "OpsGenieV2": "ops_genie_v2", "IncidentIo": "incident_io",
+		"Github": "github", "MicrosoftTeamsV2": "microsoft_teams_v2", "CampfireV3": "campfire_v3",
+		"ClickUpChat": "click_up_chat", "Alpha": "alpha",
+	} {
+		if got := snake(in); got != want {
+			t.Errorf("snake(%s) = %s, want %s", in, got, want)
+		}
+	}
+}
+
+func TestMergeAllRejectsConstOutsideEnum(t *testing.T) {
+	doc := loadFixture(t)
+	disc := doc.Components.Schemas["GadgetCreateInput"].Value.Properties["type"].Value
+	orig := disc.Enum
+	disc.Enum = []any{"Alpha", "Beta"}
+	defer func() { disc.Enum = orig }()
+	if _, err := MergeAll(doc, "gadget", gadgetConfig(t)); err == nil || !strings.Contains(err.Error(), "Gamma") {
+		t.Errorf("err = %v, want one naming Gamma", err)
+	}
+}
+
+func TestMergeAllRejectsWidening(t *testing.T) {
+	doc := loadFixture(t)
+	gamma := doc.Components.Schemas["GadgetCreateInput"].Value.AllOf[2].Value.Then.Value
+	orig := gamma.Properties["events"]
+	widened := *orig.Value
+	widened.Type = &openapi3.Types{"string"}
+	gamma.Properties["events"] = &openapi3.SchemaRef{Value: &widened}
+	defer func() { gamma.Properties["events"] = orig }()
+	if _, err := MergeAll(doc, "gadget", gadgetConfig(t)); err == nil || !strings.Contains(err.Error(), "events") {
+		t.Errorf("err = %v, want one naming events", err)
 	}
 }

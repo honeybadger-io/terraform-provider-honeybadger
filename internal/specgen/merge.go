@@ -6,6 +6,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/getkin/kin-openapi/openapi3"
 )
@@ -44,9 +45,10 @@ type Resource struct {
 	Description string // the read model's description
 	Import      string
 	Attributes  []Attribute
-	Warnings    []string // overrides the spec has made redundant
-	Parents     []string // the create operation's path parameters, in order
-	IDParam     string   // the read operation's last path parameter
+	Warnings    []string     // overrides the spec has made redundant
+	Parents     []string     // the create operation's path parameters, in order
+	IDParam     string       // the read operation's last path parameter
+	Variant     *VariantInfo // set for a resource generated from a union branch
 }
 
 // customTypes are the custom types resources.yaml may name.
@@ -55,6 +57,12 @@ var customTypes = map[string]bool{"period": true}
 // Merge applies spec section 5.2's merge rule and table, then the config's
 // overrides, to one resource's operations.
 func Merge(doc *openapi3.T, name string, rc ResourceConfig) (Resource, error) {
+	return mergeWith(doc, name, rc, nil)
+}
+
+// mergeWith merges a resource; createObj, when set, replaces the create
+// operation's request object (a union branch's narrowed input).
+func mergeWith(doc *openapi3.T, name string, rc ResourceConfig, createObj *Object) (Resource, error) {
 	fail := func(format string, args ...any) (Resource, error) {
 		return Resource{}, fmt.Errorf("resource %s: "+format, append([]any{name}, args...)...)
 	}
@@ -93,6 +101,9 @@ func Merge(doc *openapi3.T, name string, rc ResourceConfig) (Resource, error) {
 		}
 	}
 	R, C, U := read.Response, create.Request, update
+	if createObj != nil {
+		C = createObj
+	}
 
 	parents := map[string]Param{}
 	var parentNames []string
@@ -420,4 +431,140 @@ func keys[V any](m map[string]V) []string {
 		out = append(out, k)
 	}
 	return out
+}
+
+// VariantInfo is the discriminator a variant resource sends and checks.
+type VariantInfo struct{ Field, Const string }
+
+// MergeAll merges a config entry: one resource, or one per branch when the
+// entry has variants (phase 4b spec, 3.1).
+func MergeAll(doc *openapi3.T, name string, rc ResourceConfig) ([]Resource, error) {
+	if rc.Variants == "" {
+		r, err := Merge(doc, name, rc)
+		if err != nil {
+			return nil, err
+		}
+		return []Resource{r}, nil
+	}
+	create, err := FindOperation(doc, rc.Create)
+	if err != nil {
+		return nil, fmt.Errorf("resource %s: create: %v", name, err)
+	}
+	vs, err := Variants(create.RequestSchema, rc.Variants)
+	if err != nil {
+		return nil, fmt.Errorf("resource %s: %v", name, err)
+	}
+	allowed := create.Request.Fields[rc.Variants].Enum
+	for _, v := range vs {
+		if len(allowed) > 0 && !slices.Contains(allowed, v.Const) {
+			return nil, fmt.Errorf("resource %s: branch %s isn't one of %s's values %v", name, v.Const, rc.Variants, allowed)
+		}
+	}
+	if len(vs) == 0 {
+		return nil, fmt.Errorf("resource %s: the create input has no branches on %s", name, rc.Variants)
+	}
+	var out []Resource
+	for _, v := range vs {
+		vrc := rc
+		vrc.Omit = map[string]string{rc.Variants: "the discriminator, fixed per resource"}
+		for k, why := range rc.Omit {
+			vrc.Omit[k] = why
+		}
+		narrowed, err := narrow(*create.Request, v.Then)
+		if err != nil {
+			return nil, fmt.Errorf("resource %s, %s branch: %v", name, v.Const, err)
+		}
+		r, err := mergeWith(doc, name+"_"+snake(v.Const), vrc, &narrowed)
+		if err != nil {
+			return nil, err
+		}
+		r.Variant = &VariantInfo{Field: rc.Variants, Const: v.Const}
+		out = append(out, r)
+	}
+	return out, nil
+}
+
+// narrow applies a branch to the shared create input. A branch narrows: it
+// can require more, type an untyped object, restrict an item enum, bound
+// sizes and declare defaults. Anything else is an error.
+func narrow(base, branch Object) (Object, error) {
+	out := Object{Name: base.Name, Description: base.Description, Required: map[string]bool{}, Fields: map[string]Field{}}
+	for k, v := range base.Required {
+		out.Required[k] = v
+	}
+	for k := range branch.Required {
+		if _, ok := base.Fields[k]; !ok {
+			return Object{}, fmt.Errorf("requires %s, which the shared input doesn't have", k)
+		}
+		out.Required[k] = true
+	}
+	for k, v := range base.Fields {
+		out.Fields[k] = v
+	}
+	for k, b := range branch.Fields {
+		f, ok := base.Fields[k]
+		if !ok {
+			return Object{}, fmt.Errorf("%s isn't in the shared input", k)
+		}
+		if b.Type != "" && b.Type != f.Type {
+			return Object{}, fmt.Errorf("%s: the branch changes its type from %s to %s", k, f.Type, b.Type)
+		}
+		if b.Properties != nil {
+			if f.Type != "object" || f.Properties != nil {
+				return Object{}, fmt.Errorf("%s: the branch types an object that's already typed or isn't one", k)
+			}
+			f.Properties = b.Properties
+			if b.Description != "" {
+				f.Description = b.Description
+			}
+		}
+		if b.Items != nil && len(b.Items.Enum) > 0 {
+			if f.Items == nil {
+				return Object{}, fmt.Errorf("%s: the branch restricts items it doesn't have", k)
+			}
+			if len(f.Items.Enum) > 0 {
+				for _, e := range b.Items.Enum {
+					if !slices.Contains(f.Items.Enum, e) {
+						return Object{}, fmt.Errorf("%s: the branch allows %q, which the shared input doesn't", k, e)
+					}
+				}
+			}
+			items := *f.Items
+			items.Enum = b.Items.Enum
+			f.Items = &items
+		}
+		if b.MaxItems != nil {
+			if f.MaxItems != nil && *b.MaxItems > *f.MaxItems {
+				return Object{}, fmt.Errorf("%s: the branch raises maxItems above the shared input's", k)
+			}
+			f.MaxItems = b.MaxItems
+		}
+		if b.MinItems > 0 || f.MinItems > 0 {
+			if b.MinItems < f.MinItems {
+				return Object{}, fmt.Errorf("%s: the branch lowers minItems below the shared input's", k)
+			}
+			f.MinItems = b.MinItems
+		}
+		if b.Default != nil {
+			f.Default = b.Default
+		}
+		if b.Description != "" && b.Properties == nil {
+			f.Description = b.Description
+		}
+		out.Fields[k] = f
+	}
+	return out, nil
+}
+
+// snake turns a type name into a resource name suffix: each capital starts
+// a word, and a version (V2) stays one word.
+func snake(camel string) string {
+	var b strings.Builder
+	for i, r := range camel {
+		if unicode.IsUpper(r) && i > 0 {
+			b.WriteByte('_')
+		}
+		b.WriteRune(unicode.ToLower(r))
+	}
+	return b.String()
 }
