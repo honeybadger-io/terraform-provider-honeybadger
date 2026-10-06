@@ -9,3 +9,8 @@ resource "honeybadger_site" "api" {
     Authorization = "Bearer ${var.health_check_token}"
   }
 }
+
+# The site's uptime history in Honeybadger.
+output "api_uptime_url" {
+  value = honeybadger_site.api.links.web
+}
