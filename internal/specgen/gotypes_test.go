@@ -93,7 +93,8 @@ func TestRealAPIShapes(t *testing.T) {
 	if err != nil || site["id"].Shape != "uuid" {
 		t.Errorf("Site.id = %+v, %v; want uuid", site["id"], err)
 	}
-	if site["request_headers"].Shape != "nullable_string_map" {
+	// The read is non-null (honeybadger 8167889fe2); the inputs stay nullable.
+	if site["request_headers"].Shape != "string_map" {
 		t.Errorf("Site.request_headers = %+v", site["request_headers"])
 	}
 	if site["frequency"].Shape != "int_enum" {
