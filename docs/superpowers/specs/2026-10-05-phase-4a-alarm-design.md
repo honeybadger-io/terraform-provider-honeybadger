@@ -87,7 +87,7 @@ Go shapes, extending the 2b shape table:
 
 | Go shape | Write | Read |
 | --- | --- | --- |
-| `[]T` | create, Required only | list or set of `T` |
+| `[]T` | not mapped yet: a plain slice on create or update fails generation | list or set of `T` |
 | `*[]T` | create: pointer when known; update: pointer when changed | list or set, null when nil |
 | `nullable.Nullable[[]T]` | create: set when known; update: set when changed, null when removed | list or set, null when unset or null |
 

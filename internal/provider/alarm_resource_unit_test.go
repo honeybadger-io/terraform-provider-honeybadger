@@ -148,8 +148,9 @@ func TestAlarmStreamsProvisioningExhausted(t *testing.T) {
 		ProtoV6ProviderFactories: testFactories,
 		Steps: []tfresource.TestStep{{
 			Config: alarmHCL(f.srv.URL, "10", ""),
-			// Terraform wraps long messages, so match the start of it.
-			ExpectError: regexp.MustCompile(`429 streams_provisioning: The project's streams`),
+			// Terraform wraps long messages, so match the start of it, under
+			// the plain error's summary rather than the unknown-outcome one.
+			ExpectError: regexp.MustCompile(`(?s)Error: Creating alarm.*429 streams_provisioning: The project's streams`),
 		}},
 	})
 }
