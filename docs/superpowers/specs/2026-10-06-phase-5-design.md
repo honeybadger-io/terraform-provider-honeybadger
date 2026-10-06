@@ -85,7 +85,14 @@ slice, with matching create, update and read conversions.
   any update that changes it; a map set in state and null in the plan is sent
   as null.
 
-### 3.5 Already supported
+### 3.5 Empty object defaults
+
+Status page `features` declares `default: {}` and reads `{}` when nothing is
+set. `emptyDefault` today covers collections only; it extends to an object
+whose children are all optional: the default is the object with every child
+null (`objectdefault.StaticValue`). Any other object default is refused.
+
+### 3.6 Already supported
 
 Write-only top-level fields (status page `password`: never read, Sensitive,
 kept from the plan), ordered lists of objects, sets with enum items (site
@@ -221,18 +228,21 @@ Against `http://localhost:3001`:
 
 ## 6. Dependencies
 
-- **honeybadger** (v3-terraform-readiness): declared defaults on SiteInput and
-  StatusPageInput, each with a read that returns the resolved value (not
-  null) — `incidents_enabled` excluded, and `hide_branding` and
-  `password_protected` only if create accepts the default value without
-  advanced status pages; `features` read: null when nothing is set, or a
-  declared `default: {}` matching a `{}` read; why environment `created_at`
-  is nullable (kept nullable if legacy rows are); nullable `features` children, with the read of an unset key
-  stated; `uniqueItems` on `TeamInput.project_ids` and `SiteInput.locations`;
-  `format: password` on `request_headers` values; empty defaults on
-  `locations`, `project_ids`, status page `sites` and `check_ins`, and on
-  `request_headers` if its read returns `{}`; status page nested shapes as
-  named components (mcp-v3's request).
+- **honeybadger**: done at `a681addd94` (bundle `dee0bbc3`):
+  - declared defaults on SiteInput, StatusPageInput, TeamInput and
+    EnvironmentInput, including `[]` for `locations`, `project_ids`, `sites`
+    and `check_ins`, and `{}` for `request_headers` and `features`;
+  - site reads return non-null `request_method` and `validate_ssl`;
+  - `incidents_enabled` has no static default; null on update resets it to
+    the plan's value;
+  - create accepts `hide_branding` and `password_protected` as false on any
+    plan;
+  - `features` is one component (`StatusPageFeatures`) with `[string, null]`
+    keys; a never-set key is absent from the read, so it reads as null;
+  - `uniqueItems` on `project_ids` and `locations`; `format: password` on
+    `request_headers` values; named components for the status page's site and
+    check-in items;
+  - environment `created_at` stays nullable: legacy rows can be null.
 - **api-go** (mcp-v3): Environments, Sites and Teams are at `54eed1c`.
   StatusPages ships with the bundle above.
 - **Local account**: advanced status pages and uptime-timeout enabled for the
