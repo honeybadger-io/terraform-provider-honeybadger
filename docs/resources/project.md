@@ -24,11 +24,11 @@ resource "honeybadger_project" "app" {
 
 ### Required
 
-- `name` (String)
+- `name` (String) Project name
 
 ### Optional
 
-- `asana_workspace_id` (String)
+- `asana_workspace_id` (String) Asana workspace used by the project's Asana integration.
 - `customer_throttle` (Number) Notices accepted per minute before throttling kicks in.
 - `disable_public_links` (Boolean) Disallow shareable public fault links.
 - `language` (String) Primary language, used to format backtraces.

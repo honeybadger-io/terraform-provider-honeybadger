@@ -26,7 +26,8 @@ func projectResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"asana_workspace_id": schema.StringAttribute{
-				Optional: true,
+				MarkdownDescription: "Asana workspace used by the project's Asana integration.",
+				Optional:            true,
 			},
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "When the project was created",
@@ -53,7 +54,8 @@ func projectResourceSchema() schema.Schema {
 				Optional:            true,
 			},
 			"name": schema.StringAttribute{
-				Required: true,
+				MarkdownDescription: "Project name",
+				Required:            true,
 			},
 			"purge_days": schema.Int64Attribute{
 				MarkdownDescription: "Days to retain notices. Accepted only on accounts with custom retention; otherwise a value other than the current one (on create, the default) is refused with 403 `feature_unavailable`.",

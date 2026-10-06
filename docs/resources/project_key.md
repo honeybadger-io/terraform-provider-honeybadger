@@ -32,6 +32,6 @@ resource "honeybadger_project_key" "deploy" {
 
 ### Read-Only
 
-- `created_at` (String)
+- `created_at` (String) When the key was created
 - `id` (String) Identifier for this key. Use it in paths.
 - `key` (String) The ingestion key a notifier sends. Returned in full — unlike an API credential, this value is meant to be distributed with your application.
