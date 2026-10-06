@@ -1,0 +1,223 @@
+openapi: 3.1.0
+info:
+  title: Widgets
+  version: "1"
+paths:
+  "/projects/{project_id}/widgets":
+    parameters:
+    - "$ref": "#/components/parameters/ProjectId"
+    get:
+      operationId: listWidgets
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      "$ref": "#/components/schemas/Widget"
+    post:
+      operationId: createWidget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/WidgetCreateInput"
+      responses:
+        '201':
+          description: created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    "$ref": "#/components/schemas/Widget"
+                  meta:
+                    type: object
+  "/projects/{project_id}/widgets/{widget_id}":
+    parameters:
+    - "$ref": "#/components/parameters/ProjectId"
+    - name: widget_id
+      in: path
+      required: true
+      schema:
+        type: string
+    get:
+      operationId: getWidget
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    "$ref": "#/components/schemas/Widget"
+    patch:
+      operationId: updateWidget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/WidgetInput"
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    "$ref": "#/components/schemas/Widget"
+    delete:
+      operationId: deleteWidget
+      responses:
+        '204':
+          description: deleted
+components:
+  parameters:
+    ProjectId:
+      name: project_id
+      in: path
+      required: true
+      description: The project's ID.
+      schema:
+        type: string
+  schemas:
+    Shape:
+      type: string
+      enum:
+      - round
+      - square
+      default: round
+      description: Referenced description that a property-level one overrides.
+    Widget:
+      type: object
+      required:
+      - id
+      - project_id
+      - name
+      properties:
+        id:
+          type: string
+          readOnly: true
+          description: Unique identifier
+        project_id:
+          type: string
+          readOnly: true
+          description: The project this widget belongs to
+        name:
+          type: string
+          description: The widget's name
+        shape:
+          description: How the widget looks.
+          allOf:
+          - "$ref": "#/components/schemas/Shape"
+        size:
+          type:
+          - integer
+          - 'null'
+          description: Size in centimetres
+        color:
+          type:
+          - string
+          - 'null'
+          description: The widget's color
+        tags:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Labels
+        period:
+          type:
+          - string
+          - 'null'
+          description: How often it spins
+        serial:
+          type: string
+          description: Factory serial number
+        token:
+          type: string
+          format: password
+          readOnly: true
+          description: Credential for the widget
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: When it was made
+        links:
+          type: object
+          readOnly: true
+          properties:
+            web:
+              type: string
+    WidgetInput:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Widget name. Send null to clear.
+        shape:
+          description: How the widget looks. Send null to reset to `round`.
+          allOf:
+          - "$ref": "#/components/schemas/Shape"
+        size:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+          maximum: 500
+          description: Size in centimetres. Send null to clear.
+        color:
+          description: The widget's color, as a hex code.
+          oneOf:
+          - type: string
+            pattern: "^#[0-9a-f]{6}$"
+          - type: 'null'
+        tags:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Labels on the widget.
+        period:
+          type:
+          - string
+          - 'null'
+          description: How often it spins, such as `5 minutes`.
+        secret:
+          type:
+          - string
+          - 'null'
+          format: password
+          writeOnly: true
+          description: Webhook signing secret.
+    WidgetCreateInput:
+      allOf:
+      - "$ref": "#/components/schemas/WidgetInput"
+      - type: object
+        required:
+        - name
+        properties:
+          serial:
+            type: string
+            maxLength: 32
+            description: Factory serial number, set once.
+          note:
+            type: string
+            description: A note kept only at creation.
+          quiet:
+            type: boolean
+            writeOnly: true
+            description: Create without notifying anyone. Not stored.
