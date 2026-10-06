@@ -1,11 +1,13 @@
 package provider
 
 import (
-	"github.com/google/uuid"
 	"reflect"
+	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/oapi-codegen/nullable"
 )
@@ -92,5 +94,17 @@ func TestUUIDElements(t *testing.T) {
 	}
 	if s := setOf(*p, types.StringType, uuidElem); !s.Equal(strSet("0b6a3c1e-7b4f-4a8e-9f00-1c2d3e4f5a6b")) {
 		t.Errorf("read = %v", s)
+	}
+}
+
+func TestParseUUIDID(t *testing.T) {
+	var diags diag.Diagnostics
+	u, ok := parseUUIDID(types.StringValue("0b6f2b8e-4f7c-4c1a-9a51-6c1f0e1b2a3d"), &diags)
+	if !ok || u.String() != "0b6f2b8e-4f7c-4c1a-9a51-6c1f0e1b2a3d" || diags.HasError() {
+		t.Errorf("valid ID = %v, %v, %v", u, ok, diags)
+	}
+	_, ok = parseUUIDID(types.StringValue("not-a-uuid"), &diags)
+	if ok || !diags.HasError() || !strings.Contains(diags.Errors()[0].Detail(), "isn't a UUID") {
+		t.Errorf("malformed ID = %v, %v; want an error saying it isn't a UUID", ok, diags)
 	}
 }

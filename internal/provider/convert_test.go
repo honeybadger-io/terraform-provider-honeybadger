@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/oapi-codegen/nullable"
 )
@@ -91,5 +92,11 @@ func TestBoolPtr(t *testing.T) {
 	}
 	if !boolPtrValue(nil).IsNull() {
 		t.Error("boolPtrValue(nil)")
+	}
+}
+
+func TestIsZero(t *testing.T) {
+	if !isZero("") || isZero("x1") || !isZero(uuid.UUID{}) || isZero(uuid.MustParse("0b6f2b8e-4f7c-4c1a-9a51-6c1f0e1b2a3d")) {
+		t.Error("isZero must be true only for \"\" and the zero UUID")
 	}
 }

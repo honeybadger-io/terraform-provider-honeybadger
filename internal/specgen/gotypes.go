@@ -36,8 +36,8 @@ func LoadAPI(dir, path string) (*API, error) {
 // GoField is one struct field, found by its JSON name.
 type GoField struct {
 	Name  string // Go field name
-	Shape string // value, pointer, nullable, enum, enum_pointer, time, struct, struct_pointer,
-	// nullable_struct, slice, slice_pointer, nullable_slice or unsupported
+	Shape string // value, pointer, nullable, enum, enum_pointer, time, uuid, struct, struct_pointer,
+	// nullable_struct, slice, slice_pointer, nullable_slice, map, map_pointer or unsupported
 	Elem string // string, int, bool or float64, for value, pointer, nullable and slice shapes
 	Type string // for struct shapes: the API package's exported name for the struct
 }
@@ -106,6 +106,8 @@ func (a *API) shapeOf(t types.Type) (GoField, bool) {
 			pkg = obj.Pkg().Path()
 		}
 		switch {
+		case isUUID(t):
+			return GoField{Shape: "uuid"}, true
 		case pkg == "time" && obj.Name() == "Time":
 			return GoField{Shape: "time"}, true
 		case pkg == "github.com/oapi-codegen/nullable" && obj.Name() == "Nullable":
@@ -171,6 +173,14 @@ func basicElem(b *types.Basic) (string, bool) {
 type GoParam struct {
 	Name string
 	Type string // unqualified for the API package's own types
+	UUID bool   // a github.com/google/uuid UUID, under any alias
+}
+
+// isUUID reports whether t is github.com/google/uuid's UUID, under any alias
+// (api-go's openapi_types.UUID and apiv3.SiteID are both aliases).
+func isUUID(t types.Type) bool {
+	n, ok := types.Unalias(t).(*types.Named)
+	return ok && n.Obj().Pkg() != nil && n.Obj().Pkg().Path() == "github.com/google/uuid" && n.Obj().Name() == "UUID"
 }
 
 // GoMethod is a service method's parameters after ctx, and its first result.
@@ -212,7 +222,7 @@ func (a *API) Method(service, method string) (GoMethod, error) {
 	var m GoMethod
 	for i := 1; i < sig.Params().Len(); i++ {
 		p := sig.Params().At(i)
-		m.Params = append(m.Params, GoParam{Name: p.Name(), Type: types.TypeString(p.Type(), qualify)})
+		m.Params = append(m.Params, GoParam{Name: p.Name(), Type: types.TypeString(p.Type(), qualify), UUID: isUUID(p.Type())})
 	}
 	if sig.Results().Len() > 0 {
 		m.Result = types.TypeString(sig.Results().At(0).Type(), qualify)
@@ -232,7 +242,7 @@ func (a *API) elemOf(t types.Type) (elem, typeName string, ok bool) {
 	if !isNamed {
 		return "", "", false
 	}
-	if n.Obj().Pkg() != nil && n.Obj().Pkg().Path() == "github.com/google/uuid" && n.Obj().Name() == "UUID" {
+	if isUUID(n) {
 		return "uuid", "", true
 	}
 	switch u := n.Underlying().(type) {

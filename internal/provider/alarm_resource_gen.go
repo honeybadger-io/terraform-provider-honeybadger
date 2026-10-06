@@ -275,7 +275,7 @@ func (r *alarmResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 	out, err := r.client.Alarms.Create(ctx, plan.ProjectID.ValueString(), params)
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {
@@ -311,7 +311,7 @@ func (r *alarmResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		resp.State.RemoveResource(ctx)
 		return
 	}
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {
@@ -334,7 +334,7 @@ func (r *alarmResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 	out, err := r.client.Alarms.Update(ctx, state.ProjectID.ValueString(), state.ID.ValueString(), params)
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {

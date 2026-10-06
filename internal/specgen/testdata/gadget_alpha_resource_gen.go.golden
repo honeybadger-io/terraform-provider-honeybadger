@@ -292,7 +292,7 @@ func (r *gadgetAlphaResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 	out, err := r.client.Gadgets.Create(ctx, plan.ProjectID.ValueString(), params)
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {
@@ -328,7 +328,7 @@ func (r *gadgetAlphaResource) Read(ctx context.Context, req resource.ReadRequest
 		resp.State.RemoveResource(ctx)
 		return
 	}
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {
@@ -355,7 +355,7 @@ func (r *gadgetAlphaResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 	out, err := r.client.Gadgets.Update(ctx, state.ProjectID.ValueString(), state.ID.ValueString(), params)
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {

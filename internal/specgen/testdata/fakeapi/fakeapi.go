@@ -143,6 +143,7 @@ type WidgetMapGearUpdateParams struct {
 
 type Client struct {
 	Gadgets         *GadgetsService
+	Sprockets       *SprocketsService
 	Widgets         *WidgetsService
 	WidgetsSwapped  *WidgetsSwappedService
 	WidgetsNoDelete *WidgetsNoDeleteService
@@ -246,3 +247,32 @@ func (s *GadgetsService) Update(ctx context.Context, projectID, gadgetID string,
 	return nil, nil
 }
 func (s *GadgetsService) Delete(ctx context.Context, projectID, gadgetID string) error { return nil }
+
+// Sprocket is the phase-5 fixture: an account-level resource with a UUID id.
+type Sprocket struct {
+	Id       uuid.UUID `json:"id"`
+	Name     string    `json:"name"`
+	ParentId uuid.UUID `json:"parent_id"`
+}
+
+type SprocketCreateParams struct {
+	Name     string    `json:"name"`
+	ParentId uuid.UUID `json:"parent_id"`
+}
+
+type SprocketUpdateParams struct {
+	Name *string `json:"name,omitempty"`
+}
+
+type SprocketsService struct{}
+
+func (s *SprocketsService) Create(ctx context.Context, p SprocketCreateParams) (*Sprocket, error) {
+	return nil, nil
+}
+func (s *SprocketsService) Get(ctx context.Context, sprocketID uuid.UUID) (*Sprocket, error) {
+	return nil, nil
+}
+func (s *SprocketsService) Update(ctx context.Context, sprocketID uuid.UUID, p SprocketUpdateParams) (*Sprocket, error) {
+	return nil, nil
+}
+func (s *SprocketsService) Delete(ctx context.Context, sprocketID uuid.UUID) error { return nil }

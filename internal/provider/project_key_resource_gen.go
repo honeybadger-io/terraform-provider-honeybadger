@@ -125,7 +125,7 @@ func (r *projectKeyResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 	out, err := r.client.ProjectKeys.Create(ctx, plan.ProjectID.ValueString(), params)
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {
@@ -161,7 +161,7 @@ func (r *projectKeyResource) Read(ctx context.Context, req resource.ReadRequest,
 		resp.State.RemoveResource(ctx)
 		return
 	}
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {
@@ -184,7 +184,7 @@ func (r *projectKeyResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 	out, err := r.client.ProjectKeys.Update(ctx, state.ProjectID.ValueString(), state.ID.ValueString(), params)
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {

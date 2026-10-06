@@ -14,6 +14,7 @@ type Mapping struct {
 	Service, Model                   string
 	CreateParams, UpdateParams       string
 	IDField                          string // the model's id field, e.g. Id
+	IDUUID                           bool   // the id is a UUID, parsed from state before each call
 	NameAttr                         string // model field naming the object in errors, or ""
 	FindHint, Validators             string
 	Parents                          []string
@@ -144,6 +145,7 @@ func Map(api *API, r Resource, rc ResourceConfig) (*Mapping, error) {
 		}
 		if a.Name == "id" {
 			m.IDField = gf.Name
+			m.IDUUID = gf.Shape == "uuid"
 		}
 	}
 
@@ -213,6 +215,11 @@ func createLine(a Attribute, gf GoField, v, dst, at, prefix string) (string, err
 		if h, ok := map[string]string{"string": "createString", "int": "createInt", "bool": "createBool"}[gf.Elem]; ok {
 			return fmt.Sprintf("%s.%s = %s(%s)", dst, gf.Name, h, v), nil
 		}
+	case "uuid":
+		if !a.Required {
+			return "", fmt.Errorf("%s is a plain UUID in the create params but isn't Required, so it would be sent as the zero UUID", a.Name)
+		}
+		return fmt.Sprintf("%s.%s = fromUUID(%s)", dst, gf.Name, v), nil
 	case "enum":
 		if !a.Required {
 			return "", fmt.Errorf("%s is a plain enum in the create params but isn't Required, so it would be sent as an empty string", a.Name)
@@ -337,6 +344,8 @@ func readExpr(a Attribute, gf GoField, recv, prefix string) (string, error) {
 		return fmt.Sprintf("types.StringValue(string(%s))", x), nil
 	case "time":
 		return fmt.Sprintf("timeValue(%s)", x), nil
+	case "uuid":
+		return fmt.Sprintf("types.StringValue(%s.String())", x), nil
 	case "struct":
 		return fmt.Sprintf("%sFromAPI(&%s)", prefix, x), nil
 	case "struct_pointer":
@@ -475,7 +484,9 @@ func checkService(api *API, m *Mapping, r Resource) error {
 		}
 		for i, p := range w.params {
 			gp := got.Params[i]
-			if gp.Type != "string" || normalize(gp.Name) != normalize(p) {
+			isID := name != "Create" && i == len(w.params)-1
+			typeOK := gp.Type == "string" || (isID && m.IDUUID && gp.UUID)
+			if !typeOK || normalize(gp.Name) != normalize(p) {
 				return fmt.Errorf("%s.%s.%s parameter %d is %s %s, but path parameter %d is %s", api.Name, m.Service, name, i+1, gp.Name, gp.Type, i+1, p)
 			}
 		}

@@ -59,7 +59,7 @@ func TestMethodSignatures(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Method: %v", err)
 	}
-	want := GoMethod{Params: []GoParam{{"projectID", "string"}, {"widgetID", "string"}, {"p", "WidgetUpdateParams"}}, Result: "*Widget"}
+	want := GoMethod{Params: []GoParam{{Name: "projectID", Type: "string"}, {Name: "widgetID", Type: "string"}, {Name: "p", Type: "WidgetUpdateParams"}}, Result: "*Widget"}
 	if !reflect.DeepEqual(m, want) {
 		t.Errorf("Update = %+v, want %+v", m, want)
 	}
@@ -88,6 +88,14 @@ func TestRealAPIShapes(t *testing.T) {
 	pp, err := api.Fields("ProjectParams")
 	if err != nil || pp["name"].Shape != "pointer" {
 		t.Errorf("ProjectParams.name = %+v, %v; want pointer", pp["name"], err)
+	}
+	site, err := api.Fields("Site")
+	if err != nil || site["id"].Shape != "uuid" {
+		t.Errorf("Site.id = %+v, %v; want uuid", site["id"], err)
+	}
+	get, err := api.Method("Sites", "Get")
+	if err != nil || len(get.Params) != 2 || !get.Params[1].UUID {
+		t.Errorf("Sites.Get = %+v, %v; want a UUID site ID", get, err)
 	}
 }
 
@@ -134,5 +142,23 @@ func TestFieldsClassifyGadgetShapes(t *testing.T) {
 		if !reflect.DeepEqual(pair[0], pair[1]) {
 			t.Errorf("%s = %+v, want %+v", name, pair[0], pair[1])
 		}
+	}
+}
+
+func TestFieldsClassifySprocketShapes(t *testing.T) {
+	api := loadFakeAPI(t)
+	read, _ := api.Fields("Sprocket")
+	create, _ := api.Fields("SprocketCreateParams")
+	for name, pair := range map[string][2]GoField{
+		"read id":       {read["id"], {Name: "Id", Shape: "uuid"}},
+		"create parent": {create["parent_id"], {Name: "ParentId", Shape: "uuid"}},
+	} {
+		if !reflect.DeepEqual(pair[0], pair[1]) {
+			t.Errorf("%s = %+v, want %+v", name, pair[0], pair[1])
+		}
+	}
+	get, err := api.Method("Sprockets", "Get")
+	if err != nil || len(get.Params) != 1 || !get.Params[0].UUID {
+		t.Errorf("Sprockets.Get = %+v, %v; want one UUID parameter", get, err)
 	}
 }

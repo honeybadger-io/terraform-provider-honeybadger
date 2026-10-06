@@ -238,6 +238,11 @@ func renderAttribute(b *bytes.Buffer, a Attribute, imports map[string]bool, pare
 		imports["github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"] = true
 		imports["regexp"] = true
 	}
+	if a.Format == "uuid" && (a.Required || a.Optional) {
+		validators = append(validators, lowercaseUUID)
+		imports["github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"] = true
+		imports["regexp"] = true
+	}
 	if a.Kind == "list" || a.Kind == "set" {
 		cpkg := a.Kind + "validator"
 		switch {
@@ -257,9 +262,7 @@ func renderAttribute(b *bytes.Buffer, a Attribute, imports map[string]bool, pare
 			elem = append(elem, "stringvalidator.OneOf("+strings.Join(quoted, ", ")+")")
 		}
 		if a.ElemFormat == "uuid" {
-			// Lowercase only: the API reads UUIDs back lowercase, so any other
-			// case would never match its read-back.
-			elem = append(elem, `stringvalidator.RegexMatches(regexp.MustCompile("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"), "must be a lowercase UUID")`)
+			elem = append(elem, lowercaseUUID)
 			imports["regexp"] = true
 		}
 		if len(elem) > 0 {
@@ -289,6 +292,10 @@ func renderAttribute(b *bytes.Buffer, a Attribute, imports map[string]bool, pare
 	b.WriteString("},\n")
 	return nil
 }
+
+// lowercaseUUID validates a format: uuid string. Lowercase only: the API reads
+// UUIDs back lowercase, so any other case would never match its read-back.
+const lowercaseUUID = `stringvalidator.RegexMatches(regexp.MustCompile("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"), "must be a lowercase UUID")`
 
 // customTypeMessages describe each custom type's format for validation errors.
 var customTypeMessages = map[string]string{

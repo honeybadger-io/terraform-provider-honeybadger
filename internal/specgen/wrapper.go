@@ -23,7 +23,11 @@ func newWrapperData(r Resource, m *Mapping) wrapperData {
 			d.ProjectIDExpr = "plan.ProjectID.ValueString()"
 		}
 	}
-	d.IDArgs += "state.ID.ValueString()"
+	if m.IDUUID {
+		d.IDArgs += "id"
+	} else {
+		d.IDArgs += "state.ID.ValueString()"
+	}
 	if m.NameAttr != "" {
 		d.NameExpr = "plan." + m.NameAttr + ".ValueString()"
 	}
@@ -168,7 +172,7 @@ func (r *{{.Camel}}Resource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 	out, err := r.client.{{.Service}}.Create(ctx, {{.CreateArgs}}params)
-	if err == nil && (out == nil || out.{{.IDField}} == "") {
+	if err == nil && (out == nil || isZero(out.{{.IDField}})) {
 		err = errNoResult
 	}
 	if err != nil {
@@ -199,12 +203,18 @@ func (r *{{.Camel}}Resource) Read(ctx context.Context, req resource.ReadRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+{{- if .IDUUID}}
+	id, ok := parseUUIDID(state.ID, &resp.Diagnostics)
+	if !ok {
+		return
+	}
+{{- end}}
 	out, err := r.client.{{.Service}}.Get(ctx, {{.IDArgs}})
 	if errors.Is(err, {{.PkgName}}.ErrNotFound) {
 		resp.State.RemoveResource(ctx)
 		return
 	}
-	if err == nil && (out == nil || out.{{.IDField}} == "") {
+	if err == nil && (out == nil || isZero(out.{{.IDField}})) {
 		err = errNoResult
 	}
 	if err != nil {
@@ -233,8 +243,14 @@ func (r *{{.Camel}}Resource) Update(ctx context.Context, req resource.UpdateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+{{- if .IDUUID}}
+	id, ok := parseUUIDID(state.ID, &resp.Diagnostics)
+	if !ok {
+		return
+	}
+{{- end}}
 	out, err := r.client.{{.Service}}.Update(ctx, {{.IDArgs}}, params)
-	if err == nil && (out == nil || out.{{.IDField}} == "") {
+	if err == nil && (out == nil || isZero(out.{{.IDField}})) {
 		err = errNoResult
 	}
 	if err != nil {
@@ -254,6 +270,12 @@ func (r *{{.Camel}}Resource) Delete(ctx context.Context, req resource.DeleteRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+{{- if .IDUUID}}
+	id, ok := parseUUIDID(state.ID, &resp.Diagnostics)
+	if !ok {
+		return
+	}
+{{- end}}
 	err := r.client.{{.Service}}.Delete(ctx, {{.IDArgs}})
 	if err == nil || errors.Is(err, {{.PkgName}}.ErrNotFound) {
 		return

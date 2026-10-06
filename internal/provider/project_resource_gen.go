@@ -198,7 +198,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 	out, err := r.client.Projects.Create(ctx, params)
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {
@@ -234,7 +234,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		resp.State.RemoveResource(ctx)
 		return
 	}
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {
@@ -257,7 +257,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 	out, err := r.client.Projects.Update(ctx, state.ID.ValueString(), params)
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {

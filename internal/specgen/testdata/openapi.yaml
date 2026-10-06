@@ -147,6 +147,68 @@ paths:
       responses:
         '204':
           description: deleted
+  "/sprockets":
+    post:
+      operationId: createSprocket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/SprocketCreateInput"
+      responses:
+        '201':
+          description: created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    "$ref": "#/components/schemas/Sprocket"
+  "/sprockets/{sprocket_id}":
+    parameters:
+    - name: sprocket_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      operationId: getSprocket
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    "$ref": "#/components/schemas/Sprocket"
+    patch:
+      operationId: updateSprocket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/SprocketInput"
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    "$ref": "#/components/schemas/Sprocket"
+    delete:
+      operationId: deleteSprocket
+      responses:
+        '204':
+          description: deleted
 components:
   parameters:
     ProjectId:
@@ -582,3 +644,38 @@ components:
               maxItems: 0
             active:
               default: false
+    Sprocket:
+      type: object
+      description: A sprocket.
+      required:
+      - id
+      - name
+      - parent_id
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+        parent_id:
+          type: string
+          format: uuid
+          description: The sprocket this one hangs from.
+    SprocketInput:
+      type: object
+      properties:
+        name:
+          type: string
+    SprocketCreateInput:
+      allOf:
+      - "$ref": "#/components/schemas/SprocketInput"
+      - type: object
+        required:
+        - name
+        - parent_id
+        properties:
+          parent_id:
+            type: string
+            format: uuid
+            description: The sprocket this one hangs from.

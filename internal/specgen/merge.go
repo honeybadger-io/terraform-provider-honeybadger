@@ -28,6 +28,7 @@ type Attribute struct {
 	Enum               []string
 	ElemEnum           []string // list and set items
 	ElemFormat         string   // uuid
+	Format             string   // "uuid" for a scalar string with format: uuid
 	Default            any
 	MinLength          int64
 	MaxLength          *int64
@@ -285,6 +286,9 @@ func setKind(a *Attribute, f Field) error {
 		a.Kind = k
 		if len(a.Enum) > 0 && k != "string" {
 			return fmt.Errorf("enums on %s aren't supported yet", f.Type)
+		}
+		if k == "string" && f.Format == "uuid" {
+			a.Format = "uuid"
 		}
 		return nil
 	}

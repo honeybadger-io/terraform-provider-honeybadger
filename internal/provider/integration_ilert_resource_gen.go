@@ -414,7 +414,7 @@ func (r *integrationIlertResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 	out, err := r.client.Integrations.Create(ctx, plan.ProjectID.ValueString(), params)
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {
@@ -450,7 +450,7 @@ func (r *integrationIlertResource) Read(ctx context.Context, req resource.ReadRe
 		resp.State.RemoveResource(ctx)
 		return
 	}
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {
@@ -477,7 +477,7 @@ func (r *integrationIlertResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 	out, err := r.client.Integrations.Update(ctx, state.ProjectID.ValueString(), state.ID.ValueString(), params)
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {

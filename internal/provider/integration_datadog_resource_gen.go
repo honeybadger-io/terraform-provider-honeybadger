@@ -431,7 +431,7 @@ func (r *integrationDatadogResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 	out, err := r.client.Integrations.Create(ctx, plan.ProjectID.ValueString(), params)
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {
@@ -467,7 +467,7 @@ func (r *integrationDatadogResource) Read(ctx context.Context, req resource.Read
 		resp.State.RemoveResource(ctx)
 		return
 	}
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {
@@ -494,7 +494,7 @@ func (r *integrationDatadogResource) Update(ctx context.Context, req resource.Up
 		return
 	}
 	out, err := r.client.Integrations.Update(ctx, state.ProjectID.ValueString(), state.ID.ValueString(), params)
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {

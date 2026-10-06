@@ -228,3 +228,45 @@ func TestMapGadgetAlpha(t *testing.T) {
 		t.Errorf("variant = %+v", m.Variant)
 	}
 }
+
+func sprocketConfig(t *testing.T) ResourceConfig {
+	t.Helper()
+	cfg, err := LoadConfig("testdata/resources_sprocket.yaml")
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	rc := cfg.Resources["sprocket"]
+	rc.Provider = cfg.Provider
+	return rc
+}
+
+func mapSprocket(t *testing.T) (*Mapping, Resource) {
+	t.Helper()
+	rc := sprocketConfig(t)
+	r, err := Merge(loadFixture(t), "sprocket", rc)
+	if err != nil {
+		t.Fatalf("Merge: %v", err)
+	}
+	m, err := Map(loadFakeAPI(t), r, rc)
+	if err != nil {
+		t.Fatalf("Map: %v", err)
+	}
+	return m, r
+}
+
+func TestMapSprocket(t *testing.T) {
+	m, _ := mapSprocket(t)
+	if !m.IDUUID {
+		t.Error("IDUUID = false, want true for a UUID id")
+	}
+	for _, want := range []string{`p.Name = m.Name.ValueString()`, `p.ParentId = fromUUID(m.ParentID)`} {
+		if !slices.Contains(m.CreateBody, want) {
+			t.Errorf("create body lacks %s\n%q", want, m.CreateBody)
+		}
+	}
+	for _, want := range []string{`m.ID = types.StringValue(c.Id.String())`, `m.ParentID = types.StringValue(c.ParentId.String())`} {
+		if !slices.Contains(m.ReadBody, want) {
+			t.Errorf("read body lacks %s\n%q", want, m.ReadBody)
+		}
+	}
+}

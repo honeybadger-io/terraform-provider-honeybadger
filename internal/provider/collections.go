@@ -1,8 +1,11 @@
 package provider
 
 import (
+	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/oapi-codegen/nullable"
 )
@@ -114,3 +117,14 @@ func fromUUID(v attr.Value) uuid.UUID {
 }
 
 func uuidElem(u uuid.UUID) attr.Value { return types.StringValue(u.String()) }
+
+// parseUUIDID reads a UUID resource ID from state. A malformed one, such as
+// a mistyped import ID, is an error rather than a request for the zero UUID.
+func parseUUIDID(v types.String, diags *diag.Diagnostics) (uuid.UUID, bool) {
+	u, err := uuid.Parse(v.ValueString())
+	if err != nil {
+		diags.AddError("Invalid ID", fmt.Sprintf("%q isn't a UUID: %v", v.ValueString(), err))
+		return uuid.UUID{}, false
+	}
+	return u, true
+}

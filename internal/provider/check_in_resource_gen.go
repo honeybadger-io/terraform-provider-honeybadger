@@ -194,7 +194,7 @@ func (r *checkInResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 	out, err := r.client.CheckIns.Create(ctx, plan.ProjectID.ValueString(), params)
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {
@@ -230,7 +230,7 @@ func (r *checkInResource) Read(ctx context.Context, req resource.ReadRequest, re
 		resp.State.RemoveResource(ctx)
 		return
 	}
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {
@@ -253,7 +253,7 @@ func (r *checkInResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 	out, err := r.client.CheckIns.Update(ctx, state.ProjectID.ValueString(), state.ID.ValueString(), params)
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {

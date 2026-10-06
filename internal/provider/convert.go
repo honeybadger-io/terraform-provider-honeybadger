@@ -97,3 +97,9 @@ func boolPtrValue(p *bool) types.Bool {
 	}
 	return types.BoolValue(*p)
 }
+
+// isZero reports whether an API result's ID is empty: "" or the zero UUID.
+func isZero[T comparable](v T) bool {
+	var zero T
+	return v == zero
+}

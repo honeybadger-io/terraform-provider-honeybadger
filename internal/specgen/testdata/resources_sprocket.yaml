@@ -1,0 +1,14 @@
+provider: honeybadger
+resources:
+  sprocket:
+    create: createSprocket
+    read: getSprocket
+    update: updateSprocket
+    delete: deleteSprocket
+    import: "<id>"
+    service: Sprockets
+    api:
+      model: Sprocket
+      create_params: SprocketCreateParams
+      update_params: SprocketUpdateParams
+    find_hint: the account's sprockets

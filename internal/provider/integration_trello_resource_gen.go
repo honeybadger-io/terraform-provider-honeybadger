@@ -420,7 +420,7 @@ func (r *integrationTrelloResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 	out, err := r.client.Integrations.Create(ctx, plan.ProjectID.ValueString(), params)
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {
@@ -456,7 +456,7 @@ func (r *integrationTrelloResource) Read(ctx context.Context, req resource.ReadR
 		resp.State.RemoveResource(ctx)
 		return
 	}
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {
@@ -483,7 +483,7 @@ func (r *integrationTrelloResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 	out, err := r.client.Integrations.Update(ctx, state.ProjectID.ValueString(), state.ID.ValueString(), params)
-	if err == nil && (out == nil || out.Id == "") {
+	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {

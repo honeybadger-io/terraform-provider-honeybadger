@@ -187,6 +187,7 @@ func TestCRUDGoldenCompiles(t *testing.T) {
 	}
 	copyFile("testdata/widget_crud_resource_gen.go.golden", "widget_resource_gen.go")
 	copyFile("testdata/gadget_alpha_resource_gen.go.golden", "gadget_alpha_resource_gen.go")
+	copyFile("testdata/sprocket_resource_gen.go.golden", "sprocket_resource_gen.go")
 	for _, f := range []string{"convert.go", "nullable.go", "diagnostics.go", "import.go", "collections.go", "objects.go", "maps.go"} {
 		copyFile(filepath.Join("..", "provider", f), f)
 	}
@@ -305,5 +306,39 @@ func TestGenerateChecksHandwrittenTemplateCategory(t *testing.T) {
 	}
 	if got, _ := os.ReadFile(path); !strings.Contains(string(got), "hand-written") {
 		t.Error("a hand-written template was overwritten")
+	}
+}
+
+func TestRenderSprocketMatchesGolden(t *testing.T) {
+	m, r := mapSprocket(t)
+	got, err := Render(r, m)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	golden := "testdata/sprocket_resource_gen.go.golden"
+	if *update {
+		if err := os.WriteFile(golden, got, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want, err := os.ReadFile(golden)
+	if err != nil {
+		t.Fatalf("reading golden (run with -update): %v", err)
+	}
+	if string(got) != string(want) {
+		t.Errorf("rendered sprocket differs from %s; rerun with -update and review", golden)
+	}
+}
+
+// A configurable UUID gets the lowercase-UUID validator; the computed id
+// doesn't, since nothing configures it.
+func TestRenderScalarUUIDValidator(t *testing.T) {
+	_, r := mapSprocket(t)
+	got, err := Render(r, nil)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	if n := strings.Count(string(got), `"must be a lowercase UUID"`); n != 1 {
+		t.Errorf("lowercase-UUID validators = %d, want 1 (parent_id only)\n%s", n, got)
 	}
 }
