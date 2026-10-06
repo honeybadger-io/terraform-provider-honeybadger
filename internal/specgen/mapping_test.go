@@ -2,6 +2,7 @@ package specgen
 
 import (
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -12,7 +13,9 @@ func crudConfig(t *testing.T) ResourceConfig {
 	if err != nil {
 		t.Fatalf("LoadConfig: %v", err)
 	}
-	return cfg.Resources["widget"]
+	rc := cfg.Resources["widget"]
+	rc.Provider = cfg.Provider
+	return rc
 }
 
 func mapWidget(t *testing.T, edit func(*ResourceConfig)) (*Mapping, error) {
@@ -157,5 +160,71 @@ func TestMapNestedConverters(t *testing.T) {
 	}
 	if mesh.Prefix != "widgetGearMesh" || !reflect.DeepEqual(mesh.ToBody, wantMeshTo) {
 		t.Errorf("mesh = %+v", mesh)
+	}
+}
+
+func mapGadgetAlpha(t *testing.T) (*Mapping, Resource) {
+	t.Helper()
+	rc := gadgetConfig(t)
+	rc.Entry = "gadget" // Generate sets it; a direct Map call has to
+	rs, err := MergeAll(loadFixture(t), "gadget", rc)
+	if err != nil {
+		t.Fatalf("MergeAll: %v", err)
+	}
+	m, err := Map(loadFakeAPI(t), rs[0], rc)
+	if err != nil {
+		t.Fatalf("Map: %v", err)
+	}
+	return m, rs[0]
+}
+
+func TestMapGadgetAlpha(t *testing.T) {
+	m, _ := mapGadgetAlpha(t)
+	for _, want := range []string{
+		`p.Active = createBoolPtr(m.Active)`,
+		`p.Config = gadgetAlphaConfigToMap(m.Config, types.ObjectNull(gadgetAlphaConfigAttrTypes()), path.Root("config"), diags)`,
+		`createNullableSlice(&p.Events, m.Events, fromString)`,
+		`createNullableObjects(&p.Filters, m.Filters, gadgetAlphaFiltersToAPI, path.Root("filters"), diags)`,
+		`createNullableSlice(&p.SpotIds, m.SpotIds, fromUUID)`,
+		`setEnum(&p.Type, types.StringValue("Alpha"))`,
+	} {
+		if !slices.Contains(m.CreateBody, want) {
+			t.Errorf("create body lacks %s\n%q", want, m.CreateBody)
+		}
+	}
+	for _, want := range []string{
+		`p.Config = changedPtr(m.Config, state.Config, gadgetAlphaConfigToMap(m.Config, state.Config, path.Root("config"), diags))`,
+		`updateNullableObjects(&p.Filters, m.Filters, state.Filters, gadgetAlphaFiltersToAPI, path.Root("filters"), diags)`,
+	} {
+		if !slices.Contains(m.UpdateBody, want) {
+			t.Errorf("update body lacks %s\n%q", want, m.UpdateBody)
+		}
+	}
+	for _, want := range []string{
+		`m.Config = gadgetAlphaConfigFromMap(c.Config, m.Config)`,
+		`m.Filters = objectList(c.Filters, gadgetAlphaFiltersFromAPI, gadgetAlphaFiltersAttrTypes())`,
+		`m.Links = gadgetAlphaLinksFromAPI(&c.Links)`,
+		`m.SpotIds = setOf(c.SpotIds, types.StringType, uuidElem)`,
+	} {
+		if !slices.Contains(m.ReadBody, want) {
+			t.Errorf("read body lacks %s\n%q", want, m.ReadBody)
+		}
+	}
+	var cfg *MapObject
+	for i := range m.Maps {
+		if m.Maps[i].Prefix == "gadgetAlphaConfig" {
+			cfg = &m.Maps[i]
+		}
+	}
+	if cfg == nil {
+		t.Fatalf("no map converter for config: %+v", m.Maps)
+	}
+	if !slices.Contains(cfg.ToBody, `putString(out, "token", p.Token, s.Token)`) ||
+		!slices.Contains(cfg.FromBody, `"token": priorAttr(prior, "token", types.StringNull()),`) ||
+		!slices.Contains(cfg.FromBody, `"url": mapString(m, "url"),`) {
+		t.Errorf("config converter = %+v", cfg)
+	}
+	if m.Variant == nil || m.Variant.Const != "Alpha" {
+		t.Errorf("variant = %+v", m.Variant)
 	}
 }

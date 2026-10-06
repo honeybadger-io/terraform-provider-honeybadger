@@ -137,11 +137,12 @@ func TestRenderCRUDMatchesGolden(t *testing.T) {
 }
 
 func TestRenderRegistry(t *testing.T) {
-	got, err := RenderRegistry([]string{"project", "check_in"})
+	got, err := RenderRegistry([]string{"project", "check_in"}, map[string]map[string]string{
+		"gadget": {"Alpha": "honeybadger_gadget_alpha"}})
 	if err != nil {
 		t.Fatalf("RenderRegistry: %v", err)
 	}
-	for _, want := range []string{"func generatedResources() []func() resource.Resource", "newProjectResource,", "newCheckInResource,"} {
+	for _, want := range []string{"func generatedResources() []func() resource.Resource", "newProjectResource,", "newCheckInResource,", "var gadgetVariants = map[string]string{", `"Alpha": "honeybadger_gadget_alpha"`} {
 		if !strings.Contains(string(got), want) {
 			t.Errorf("registry lacks %q:\n%s", want, got)
 		}
@@ -166,8 +167,14 @@ func TestCRUDGoldenCompiles(t *testing.T) {
 		}
 	}
 	copyFile("testdata/widget_crud_resource_gen.go.golden", "widget_resource_gen.go")
-	for _, f := range []string{"convert.go", "nullable.go", "diagnostics.go", "import.go", "collections.go", "objects.go"} {
+	copyFile("testdata/gadget_alpha_resource_gen.go.golden", "gadget_alpha_resource_gen.go")
+	for _, f := range []string{"convert.go", "nullable.go", "diagnostics.go", "import.go", "collections.go", "objects.go", "maps.go"} {
 		copyFile(filepath.Join("..", "provider", f), f)
+	}
+	// The registry normally holds the variant names.
+	variants := "package provider\n\nvar gadgetVariants = map[string]string{\"Alpha\": \"honeybadger_gadget_alpha\"}\n"
+	if err := os.WriteFile(filepath.Join(dir, "variants.go"), []byte(variants), 0o644); err != nil {
+		t.Fatal(err)
 	}
 	out, err := exec.Command("go", "vet", "./testdata/crudcheck").CombinedOutput()
 	if err != nil {
@@ -199,5 +206,26 @@ func TestRenderNestedAndCollections(t *testing.T) {
 		if !regexp.MustCompile(want).Match(got) {
 			t.Errorf("rendered code doesn't match %s", want)
 		}
+	}
+}
+
+func TestRenderGadgetAlphaMatchesGolden(t *testing.T) {
+	m, r := mapGadgetAlpha(t)
+	got, err := Render(r, m)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	golden := "testdata/gadget_alpha_resource_gen.go.golden"
+	if *update {
+		if err := os.WriteFile(golden, got, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want, err := os.ReadFile(golden)
+	if err != nil {
+		t.Fatalf("reading golden (run with -update): %v", err)
+	}
+	if string(got) != string(want) {
+		t.Errorf("rendered gadget differs from %s; rerun with -update and review", golden)
 	}
 }

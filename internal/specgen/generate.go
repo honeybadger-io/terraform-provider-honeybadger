@@ -29,46 +29,56 @@ func Generate(specPath, configPath, outDir, apiPath string) error {
 
 	written := map[string]bool{}
 	var wrappers []string
+	variants := map[string]map[string]string{}
 	var api *API
 	for _, name := range names {
 		rc := cfg.Resources[name]
-		res, err := Merge(doc, name, rc)
+		rc.Entry, rc.Provider = name, cfg.Provider
+		resources, err := MergeAll(doc, name, rc)
 		if err != nil {
 			return err
 		}
-		for _, w := range res.Warnings {
-			fmt.Fprintln(os.Stderr, "specgen: warning:", w)
-		}
-		var m *Mapping
-		if rc.API.Model != "" {
-			if api == nil {
-				if apiPath == "" {
-					return fmt.Errorf("resource %s: needs the client package's import path (-api)", name)
+		for _, res := range resources {
+			for _, w := range res.Warnings {
+				fmt.Fprintln(os.Stderr, "specgen: warning:", w)
+			}
+			var m *Mapping
+			if rc.API.Model != "" {
+				if api == nil {
+					if apiPath == "" {
+						return fmt.Errorf("resource %s: needs the client package's import path (-api)", name)
+					}
+					if api, err = LoadAPI(outDir, apiPath); err != nil {
+						return err
+					}
 				}
-				if api, err = LoadAPI(outDir, apiPath); err != nil {
+				if m, err = Map(api, res, rc); err != nil {
 					return err
 				}
+				if m.Wrapper {
+					wrappers = append(wrappers, res.Name)
+				}
 			}
-			if m, err = Map(api, res, rc); err != nil {
+			if res.Variant != nil {
+				if variants[name] == nil {
+					variants[name] = map[string]string{}
+				}
+				variants[name][res.Variant.Const] = cfg.Provider + "_" + res.Name
+			}
+			src, err := Render(res, m)
+			if err != nil {
 				return err
 			}
-			if m.Wrapper {
-				wrappers = append(wrappers, name)
+			file := filepath.Join(outDir, res.Name+"_resource_gen.go")
+			if err := os.WriteFile(file, src, 0o644); err != nil {
+				return err
 			}
+			written[file] = true
 		}
-		src, err := Render(res, m)
-		if err != nil {
-			return err
-		}
-		file := filepath.Join(outDir, name+"_resource_gen.go")
-		if err := os.WriteFile(file, src, 0o644); err != nil {
-			return err
-		}
-		written[file] = true
 	}
 
 	// Always written, even empty, so the provider's call to it compiles.
-	registry, err := RenderRegistry(wrappers)
+	registry, err := RenderRegistry(wrappers, variants)
 	if err != nil {
 		return err
 	}

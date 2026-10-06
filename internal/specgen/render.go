@@ -38,7 +38,7 @@ func Render(r Resource, m *Mapping) ([]byte, error) {
 
 	var attrs bytes.Buffer
 	for _, a := range r.Attributes {
-		if err := renderAttribute(&attrs, a, imports); err != nil {
+		if err := renderAttribute(&attrs, a, imports, camel); err != nil {
 			return nil, fmt.Errorf("resource %s: %w", r.Name, err)
 		}
 	}
@@ -55,7 +55,7 @@ func Render(r Resource, m *Mapping) ([]byte, error) {
 	if m != nil {
 		imports[m.PkgPath] = true
 		imports["github.com/hashicorp/terraform-plugin-framework/diag"] = true
-		if len(m.Nested) > 0 {
+		if len(m.Nested) > 0 || len(m.Maps) > 0 {
 			imports["github.com/hashicorp/terraform-plugin-framework/path"] = true
 			imports["github.com/hashicorp/terraform-plugin-framework/attr"] = true
 		}
@@ -129,23 +129,36 @@ func Render(r Resource, m *Mapping) ([]byte, error) {
 
 // renderAttribute writes one schema attribute; an object writes its own
 // attributes inside it.
-func renderAttribute(b *bytes.Buffer, a Attribute, imports map[string]bool) error {
+func renderAttribute(b *bytes.Buffer, a Attribute, imports map[string]bool, parent string) error {
 	k, ok := kinds[a.Kind]
 	if !ok {
 		return fmt.Errorf("%s has unknown kind %q", a.Name, a.Kind)
 	}
-	fmt.Fprintf(b, "%q: schema.%s{\n", a.Name, k.schema)
-	if a.Kind == "list" || a.Kind == "set" {
+	p := nestedPrefix(parent, a.Name)
+	objectList := a.Kind == "list" && a.ElemKind == "object"
+	switch {
+	case objectList:
+		fmt.Fprintf(b, "%q: schema.ListNestedAttribute{\nNestedObject: schema.NestedAttributeObject{\nAttributes: map[string]schema.Attribute{\n", a.Name)
+		for _, c := range a.Attributes {
+			if err := renderAttribute(b, c, imports, p); err != nil {
+				return fmt.Errorf("%s: %w", a.Name, err)
+			}
+		}
+		b.WriteString("},\n},\n")
+	case a.Kind == "list" || a.Kind == "set":
+		fmt.Fprintf(b, "%q: schema.%s{\n", a.Name, k.schema)
 		fmt.Fprintf(b, "ElementType: %s,\n", kinds[a.ElemKind].elemType)
-	}
-	if a.Kind == "object" {
+	case a.Kind == "object":
+		fmt.Fprintf(b, "%q: schema.%s{\n", a.Name, k.schema)
 		b.WriteString("Attributes: map[string]schema.Attribute{\n")
 		for _, c := range a.Attributes {
-			if err := renderAttribute(b, c, imports); err != nil {
+			if err := renderAttribute(b, c, imports, p); err != nil {
 				return fmt.Errorf("%s: %w", a.Name, err)
 			}
 		}
 		b.WriteString("},\n")
+	default:
+		fmt.Fprintf(b, "%q: schema.%s{\n", a.Name, k.schema)
 	}
 	if a.Description != "" {
 		fmt.Fprintf(b, "MarkdownDescription: %q,\n", a.Description)
@@ -162,7 +175,16 @@ func renderAttribute(b *bytes.Buffer, a Attribute, imports map[string]bool) erro
 		fmt.Fprintf(b, "CustomType: %s,\n", customTypeCode[a.CustomType][0])
 		imports["github.com/honeybadger-io/terraform-provider-honeybadger/internal/provider/customtypes"] = true
 	}
-	if a.Default != nil {
+	if a.Default != nil && (a.Kind == "list" || a.Kind == "set") {
+		// Only an empty collection default is allowed (merge.go).
+		elem := kinds[a.ElemKind].elemType
+		if objectList {
+			elem = "types.ObjectType{AttrTypes: " + p + "AttrTypes()}"
+		}
+		fmt.Fprintf(b, "Default: %sdefault.StaticValue(types.%sValueMust(%s, []attr.Value{})),\n", k.pkg, typeName(a.Kind), elem)
+		imports["github.com/hashicorp/terraform-plugin-framework/resource/schema/"+k.pkg+"default"] = true
+		imports["github.com/hashicorp/terraform-plugin-framework/attr"] = true
+	} else if a.Default != nil {
 		lit, err := literal(a.Kind, a.Default)
 		if err != nil {
 			return fmt.Errorf("%s default: %w", a.Name, err)
@@ -226,7 +248,23 @@ func renderAttribute(b *bytes.Buffer, a Attribute, imports map[string]bool) erro
 		case a.MaxItems != nil:
 			validators = append(validators, fmt.Sprintf("%s.SizeAtMost(%d)", cpkg, *a.MaxItems))
 		}
-		if a.MinItems > 0 || a.MaxItems != nil {
+		var elem []string
+		if len(a.ElemEnum) > 0 {
+			quoted := make([]string, len(a.ElemEnum))
+			for i, e := range a.ElemEnum {
+				quoted[i] = strconv.Quote(e)
+			}
+			elem = append(elem, "stringvalidator.OneOf("+strings.Join(quoted, ", ")+")")
+		}
+		if a.ElemFormat == "uuid" {
+			elem = append(elem, `stringvalidator.RegexMatches(regexp.MustCompile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"), "must be a UUID")`)
+			imports["regexp"] = true
+		}
+		if len(elem) > 0 {
+			validators = append(validators, fmt.Sprintf("%s.ValueStringsAre(%s)", cpkg, strings.Join(elem, ", ")))
+			imports["github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"] = true
+		}
+		if a.MinItems > 0 || a.MaxItems != nil || len(elem) > 0 {
 			imports["github.com/hashicorp/terraform-plugin-framework-validators/"+cpkg] = true
 		}
 	}
@@ -323,7 +361,7 @@ func lowerCamel(snake string) string {
 
 // RenderRegistry writes resources_gen.go: every generated wrapper, for the
 // provider's Resources.
-func RenderRegistry(names []string) ([]byte, error) {
+func RenderRegistry(names []string, variants map[string]map[string]string) ([]byte, error) {
 	var b bytes.Buffer
 	b.WriteString("// Code generated by specgen. DO NOT EDIT.\n\npackage provider\n\nimport \"github.com/hashicorp/terraform-plugin-framework/resource\"\n\n")
 	b.WriteString("// generatedResources lists the resources specgen generates wrappers for.\nfunc generatedResources() []func() resource.Resource {\n\treturn []func() resource.Resource{\n")
@@ -331,6 +369,23 @@ func RenderRegistry(names []string) ([]byte, error) {
 		fmt.Fprintf(&b, "\t\tnew%sResource,\n", upperCamel(n))
 	}
 	b.WriteString("\t}\n}\n")
+	entries := make([]string, 0, len(variants))
+	for e := range variants {
+		entries = append(entries, e)
+	}
+	sort.Strings(entries)
+	for _, e := range entries {
+		fmt.Fprintf(&b, "\n// %sVariants maps each %s type to its resource, for the type check in Read.\nvar %sVariants = map[string]string{\n", lowerCamel(e), e, lowerCamel(e))
+		consts := make([]string, 0, len(variants[e]))
+		for c := range variants[e] {
+			consts = append(consts, c)
+		}
+		sort.Strings(consts)
+		for _, c := range consts {
+			fmt.Fprintf(&b, "\t%q: %q,\n", c, variants[e][c])
+		}
+		b.WriteString("}\n")
+	}
 	return format.Source(b.Bytes())
 }
 
@@ -341,7 +396,7 @@ func nestedPrefix(parent, name string) string { return parent + upperCamel(name)
 
 func hasObject(attrs []Attribute) bool {
 	for _, a := range attrs {
-		if a.Kind == "object" {
+		if a.Kind == "object" || (a.Kind == "list" && a.ElemKind == "object") {
 			return true
 		}
 	}
@@ -352,7 +407,7 @@ func hasObject(attrs []Attribute) bool {
 // attribute types, depth first.
 func renderNestedModels(b *bytes.Buffer, prefix string, attrs []Attribute) {
 	for _, a := range attrs {
-		if a.Kind != "object" {
+		if a.Kind != "object" && (a.Kind != "list" || a.ElemKind != "object") {
 			continue
 		}
 		p := nestedPrefix(prefix, a.Name)
@@ -373,6 +428,9 @@ func renderNestedModels(b *bytes.Buffer, prefix string, attrs []Attribute) {
 func attrTypeExpr(a Attribute, prefix string) string {
 	switch a.Kind {
 	case "list":
+		if a.ElemKind == "object" {
+			return "types.ListType{ElemType: types.ObjectType{AttrTypes: " + nestedPrefix(prefix, a.Name) + "AttrTypes()}}"
+		}
 		return "types.ListType{ElemType: " + kinds[a.ElemKind].elemType + "}"
 	case "set":
 		return "types.SetType{ElemType: " + kinds[a.ElemKind].elemType + "}"

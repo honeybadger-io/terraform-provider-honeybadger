@@ -1,3 +1,4 @@
+provider: honeybadger
 resources:
   gadget:
     create: createGadget

@@ -12,6 +12,7 @@ import (
 // Config is resources.yaml: per resource, the operations it uses and the
 // overrides for facts the spec doesn't state (spec section 5.2).
 type Config struct {
+	Provider  string                    `yaml:"provider"` // the provider's type-name prefix, e.g. honeybadger
 	Resources map[string]ResourceConfig `yaml:"resources"`
 }
 
@@ -34,6 +35,8 @@ type ResourceConfig struct {
 	ConfigValidators   string            `yaml:"config_validators"` // hand-written func returning []resource.ConfigValidator
 	CRUD               string            `yaml:"crud"`              // "" or "generated" (wrapper generated), or "manual"
 	Variants           string            `yaml:"variants"`          // discriminator: one resource per create branch
+	Entry              string            `yaml:"-"`                 // the entry name, set by Generate
+	Provider           string            `yaml:"-"`                 // the provider prefix, from Config
 }
 
 // APIConfig names the apiv3 types a resource's operations use.

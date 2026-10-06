@@ -76,10 +76,14 @@ func (a *API) shapeOf(t types.Type) (GoField, bool) {
 			return GoField{Shape: "value", Elem: e}, true
 		}
 	case *types.Slice:
-		if b, ok := types.Unalias(t.Elem()).(*types.Basic); ok {
-			if e, ok := basicElem(b); ok {
-				return GoField{Shape: "slice", Elem: e}, true
-			}
+		if e, tn, ok := a.elemOf(t.Elem()); ok {
+			return GoField{Shape: "slice", Elem: e, Type: tn}, true
+		}
+	case *types.Map:
+		k, kok := types.Unalias(t.Key()).(*types.Basic)
+		v, vok := types.Unalias(t.Elem()).Underlying().(*types.Interface)
+		if kok && k.Kind() == types.String && vok && v.Empty() {
+			return GoField{Shape: "map"}, true
 		}
 	case *types.Pointer:
 		inner, ok := a.shapeOf(t.Elem())
@@ -91,7 +95,9 @@ func (a *API) shapeOf(t types.Type) (GoField, bool) {
 		case ok && inner.Shape == "struct":
 			return GoField{Shape: "struct_pointer", Type: inner.Type}, true
 		case ok && inner.Shape == "slice":
-			return GoField{Shape: "slice_pointer", Elem: inner.Elem}, true
+			return GoField{Shape: "slice_pointer", Elem: inner.Elem, Type: inner.Type}, true
+		case ok && inner.Shape == "map":
+			return GoField{Shape: "map_pointer"}, true
 		}
 	case *types.Named:
 		obj := t.Obj()
@@ -113,7 +119,7 @@ func (a *API) shapeOf(t types.Type) (GoField, bool) {
 			case ok && inner.Shape == "struct":
 				return GoField{Shape: "nullable_struct", Type: inner.Type}, true
 			case ok && inner.Shape == "slice":
-				return GoField{Shape: "nullable_slice", Elem: inner.Elem}, true
+				return GoField{Shape: "nullable_slice", Elem: inner.Elem, Type: inner.Type}, true
 			}
 			return GoField{}, false
 		}
@@ -212,4 +218,32 @@ func (a *API) Method(service, method string) (GoMethod, error) {
 		m.Result = types.TypeString(sig.Results().At(0).Type(), qualify)
 	}
 	return m, nil
+}
+
+// elemOf classifies a slice element: a basic type, an enum (named ~string),
+// a UUID (github.com/google/uuid), or an exported struct.
+func (a *API) elemOf(t types.Type) (elem, typeName string, ok bool) {
+	t = types.Unalias(t)
+	if b, isBasic := t.(*types.Basic); isBasic {
+		e, ok := basicElem(b)
+		return e, "", ok
+	}
+	n, isNamed := t.(*types.Named)
+	if !isNamed {
+		return "", "", false
+	}
+	if n.Obj().Pkg() != nil && n.Obj().Pkg().Path() == "github.com/google/uuid" && n.Obj().Name() == "UUID" {
+		return "uuid", "", true
+	}
+	switch u := n.Underlying().(type) {
+	case *types.Basic:
+		if u.Kind() == types.String {
+			return "enum", "", true
+		}
+	case *types.Struct:
+		if name, ok := a.exportedName(n); ok {
+			return "struct", name, true
+		}
+	}
+	return "", "", false
 }

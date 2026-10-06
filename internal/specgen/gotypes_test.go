@@ -116,3 +116,23 @@ func TestFieldsClassifyWriteShapes(t *testing.T) {
 		}
 	}
 }
+
+func TestFieldsClassifyGadgetShapes(t *testing.T) {
+	api := loadFakeAPI(t)
+	read, _ := api.Fields("Gadget")
+	create, _ := api.Fields("GadgetCreateParams")
+	for name, pair := range map[string][2]GoField{
+		"read config":    {read["config"], {Name: "Config", Shape: "map"}},
+		"create config":  {create["config"], {Name: "Config", Shape: "map_pointer"}},
+		"create active":  {create["active"], {Name: "Active", Shape: "pointer", Elem: "bool"}},
+		"create events":  {create["events"], {Name: "Events", Shape: "nullable_slice", Elem: "enum"}},
+		"create spots":   {create["spot_ids"], {Name: "SpotIds", Shape: "nullable_slice", Elem: "uuid"}},
+		"create filters": {create["filters"], {Name: "Filters", Shape: "nullable_slice", Elem: "struct", Type: "GadgetFilter"}},
+		"read filters":   {read["filters"], {Name: "Filters", Shape: "slice", Elem: "struct", Type: "GadgetFilter"}},
+		"read spots":     {read["spot_ids"], {Name: "SpotIds", Shape: "slice", Elem: "uuid"}},
+	} {
+		if !reflect.DeepEqual(pair[0], pair[1]) {
+			t.Errorf("%s = %+v, want %+v", name, pair[0], pair[1])
+		}
+	}
+}

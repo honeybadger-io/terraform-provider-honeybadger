@@ -1,6 +1,7 @@
 # Per-resource operations and overrides for specgen (spec sections 3.3, 5.2;
 # phase 2b spec section 4). Schemas, models, mappings and CRUD wrappers are
 # generated from these and openapi/bundled.yaml.
+provider: honeybadger
 resources:
   project:
     create: createProject

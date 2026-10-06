@@ -53,6 +53,7 @@ func (m *{{.Camel}}ResourceModel) fromAPI(c *{{.PkgName}}.{{.Model}}) {
 {{- end}}
 }
 {{range .Nested}}
+{{- if .GoType}}
 // {{.Prefix}}ToAPI converts {{.Path}} for a request. It's nil when the
 // object is null or unknown, or holds a value that isn't known, which it
 // reports: the API replaces the object whole.
@@ -67,10 +68,41 @@ func {{.Prefix}}ToAPI(o types.Object, at path.Path, diags *diag.Diagnostics) *{{
 {{- end}}
 	return &out
 }
+{{- end}}
 
 // {{.Prefix}}FromAPI reads {{.Path}}: null when the API returns none.
 func {{.Prefix}}FromAPI(c *{{$.PkgName}}.{{.ReadType}}) types.Object {
 	if c == nil {
+		return types.ObjectNull({{.Prefix}}AttrTypes())
+	}
+	return types.ObjectValueMust({{.Prefix}}AttrTypes(), map[string]attr.Value{
+{{- range .FromBody}}
+		{{.}}
+{{- end}}
+	})
+}
+{{end}}
+{{range .Maps}}
+// {{.Prefix}}ToMap writes the object for a request by the one write rule:
+// every set key, null for a key removed since state, nothing for a key never
+// set. It's nil when the plan is null or unknown, or holds an unknown value.
+func {{.Prefix}}ToMap(plan, state types.Object, at path.Path, diags *diag.Diagnostics) *map[string]any {
+	var p, s {{.Prefix}}Model
+	if !objectAs(plan, &p, at, diags) {
+		return nil
+	}
+	objectAsLoose(state, &s)
+	out := map[string]any{}
+{{- range .ToBody}}
+	{{.}}
+{{- end}}
+	return &out
+}
+
+// {{.Prefix}}FromMap reads the object; write-only keys come from prior,
+// since the API never returns them.
+func {{.Prefix}}FromMap(m map[string]any, prior types.Object) types.Object {
+	if m == nil {
 		return types.ObjectNull({{.Prefix}}AttrTypes())
 	}
 	return types.ObjectValueMust({{.Prefix}}AttrTypes(), map[string]attr.Value{
@@ -142,7 +174,7 @@ func (r *{{.Camel}}Resource) Create(ctx context.Context, req resource.CreateRequ
 	if err != nil {
 		if isUnknownOutcome(err) {
 			addUnknownCreateOutcome(&resp.Diagnostics, createOutcome{
-				TypeName:     "honeybadger_{{.Name}}",
+				TypeName:     "{{.Provider}}_{{.Name}}",
 				ProjectID:    {{.ProjectIDExpr}},
 				Name:         {{.NameExpr}},
 				ImportFormat: {{.Camel}}ImportFormat,
@@ -179,6 +211,12 @@ func (r *{{.Camel}}Resource) Read(ctx context.Context, req resource.ReadRequest,
 		addAPIError(ctx, &resp.Diagnostics, {{.Camel}}ResourceSchema(), "Reading {{.Human}}", err)
 		return
 	}
+{{- if .Variant}}
+	if string(out.{{.VariantRead}}) != {{printf "%q" .Variant.Const}} {
+		addVariantMismatch(&resp.Diagnostics, state.ID.ValueString(), string(out.{{.VariantRead}}), {{.Entry}}Variants)
+		return
+	}
+{{- end}}
 	state.fromAPI(out)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -221,7 +259,7 @@ func (r *{{.Camel}}Resource) Delete(ctx context.Context, req resource.DeleteRequ
 		return
 	}
 	if isUnknownOutcome(err) {
-		addUnknownDeleteOutcome(&resp.Diagnostics, "honeybadger_{{.Name}}", state.ID.ValueString(), err)
+		addUnknownDeleteOutcome(&resp.Diagnostics, "{{.Provider}}_{{.Name}}", state.ID.ValueString(), err)
 		return
 	}
 	addAPIError(ctx, &resp.Diagnostics, {{.Camel}}ResourceSchema(), "Deleting {{.Human}}", err)

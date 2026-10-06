@@ -21,6 +21,20 @@ type Mapping struct {
 	Wrapper                          bool           // generate the CRUD wrapper
 	Period                           bool           // the model uses customtypes
 	Nested                           []NestedObject // converters for object attributes, parents first
+	Maps                             []MapObject    // converters for map-backed object attributes
+	Variant                          *VariantInfo   // the discriminator a variant resource sends and checks
+	VariantRead                      string         // the read model's discriminator field
+	Entry                            string         // the config entry, naming the variant names map
+	Provider                         string         // the provider's type-name prefix, e.g. honeybadger
+}
+
+// MapObject is a map-backed object attribute's converters (phase 4b spec,
+// 3.2): ToMap applies the one write rule; FromMap reads the map, carrying
+// write-only keys from the prior value.
+type MapObject struct {
+	Prefix   string
+	ToBody   []string // put… lines
+	FromBody []string // map entries
 }
 
 // NestedObject is one object attribute's converters (phase 4a spec, 3.1).
@@ -42,7 +56,11 @@ func Map(api *API, r Resource, rc ResourceConfig) (*Mapping, error) {
 		PkgName: api.Name, PkgPath: api.Path, Service: rc.Service, Model: rc.API.Model,
 		CreateParams: rc.API.CreateParams, UpdateParams: rc.API.UpdateParams,
 		FindHint: rc.FindHint, Validators: rc.ConfigValidators, Parents: r.Parents,
-		Wrapper: rc.Service != "" && rc.CRUD != "manual",
+		Wrapper:  rc.Service != "" && rc.CRUD != "manual",
+		Provider: rc.Provider,
+	}
+	if rc.Entry != "" {
+		m.Entry = lowerCamel(rc.Entry)
 	}
 	if m.Wrapper && r.Import == "" {
 		return fail("a generated wrapper needs an import format")
@@ -110,7 +128,12 @@ func Map(api *API, r Resource, rc ResourceConfig) (*Mapping, error) {
 			return fail("%v", err)
 		}
 		m.ReadBody = append(m.ReadBody, fmt.Sprintf("m.%s = %s", field, expr))
-		if a.Kind == "object" {
+		switch {
+		case a.Kind == "object" && (gf.Shape == "map" || gf.Shape == "map_pointer"):
+			if err := addMap(m, a, prefix); err != nil {
+				return fail("%v", err)
+			}
+		case a.Kind == "object", a.Kind == "list" && a.ElemKind == "object":
 			toType := create[a.Name].Type
 			if u, ok := update[a.Name]; ok && u.Type != "" && u.Type != toType {
 				return fail("%s: create sends %s but update sends %s; specgen needs one struct for both", a.Name, toType, u.Type)
@@ -122,6 +145,20 @@ func Map(api *API, r Resource, rc ResourceConfig) (*Mapping, error) {
 		if a.Name == "id" {
 			m.IDField = gf.Name
 		}
+	}
+
+	if r.Variant != nil {
+		gf, ok := create[r.Variant.Field]
+		if !ok {
+			return fail("%s has no field in %s.%s", r.Variant.Field, api.Name, rc.API.CreateParams)
+		}
+		m.CreateBody = append(m.CreateBody, fmt.Sprintf("setEnum(&p.%s, types.StringValue(%q))", gf.Name, r.Variant.Const))
+		rf, ok := read[r.Variant.Field]
+		if !ok {
+			return fail("%s has no field in %s.%s", r.Variant.Field, api.Name, rc.API.Model)
+		}
+		m.VariantRead = rf.Name
+		m.Variant = r.Variant
 	}
 
 	for _, n := range []string{"name", "label"} {
@@ -142,8 +179,11 @@ func Map(api *API, r Resource, rc ResourceConfig) (*Mapping, error) {
 // elemConv names the helpers that convert a collection's elements. Only
 // strings are needed today; other elements fail generation until they are.
 func elemConv(elem string) (from, to string, ok bool) {
-	if elem == "string" {
+	switch elem {
+	case "string", "enum":
 		return "fromString", "stringElem", true
+	case "uuid":
+		return "fromUUID", "uuidElem", true
 	}
 	return "", "", false
 }
@@ -151,7 +191,7 @@ func elemConv(elem string) (from, to string, ok bool) {
 func createLine(a Attribute, gf GoField, v, dst, at, prefix string) (string, error) {
 	conv := fmt.Sprintf("%sToAPI(%s, %s, diags)", prefix, v, at)
 	from, _, elemOK := elemConv(gf.Elem)
-	if strings.Contains(gf.Shape, "slice") && !elemOK {
+	if strings.Contains(gf.Shape, "slice") && gf.Elem != "struct" && !elemOK {
 		return "", fmt.Errorf("%s: slices of %s aren't mapped yet; extend specgen", a.Name, gf.Elem)
 	}
 	switch gf.Shape {
@@ -161,9 +201,14 @@ func createLine(a Attribute, gf GoField, v, dst, at, prefix string) (string, err
 		}
 		return fmt.Sprintf("%s.%s = %s", dst, gf.Name, valueOf(gf.Elem, v)), nil
 	case "pointer":
-		if gf.Elem == "string" {
+		switch gf.Elem {
+		case "string":
 			return fmt.Sprintf("%s.%s = createStringPtr(%s)", dst, gf.Name, v), nil
+		case "bool":
+			return fmt.Sprintf("%s.%s = createBoolPtr(%s)", dst, gf.Name, v), nil
 		}
+	case "map_pointer":
+		return fmt.Sprintf("%s.%s = %sToMap(%s, types.ObjectNull(%sAttrTypes()), %s, diags)", dst, gf.Name, prefix, v, prefix, at), nil
 	case "nullable":
 		if h, ok := map[string]string{"string": "createString", "int": "createInt", "bool": "createBool"}[gf.Elem]; ok {
 			return fmt.Sprintf("%s.%s = %s(%s)", dst, gf.Name, h, v), nil
@@ -187,8 +232,14 @@ func createLine(a Attribute, gf GoField, v, dst, at, prefix string) (string, err
 	case "slice":
 		return "", fmt.Errorf("%s is a plain slice in the create params; only a pointer or nullable slice is mapped", a.Name)
 	case "slice_pointer":
+		if gf.Elem == "struct" {
+			return "", fmt.Errorf("%s: a pointer to a slice of structs isn't mapped; only a nullable one is", a.Name)
+		}
 		return fmt.Sprintf("setSlicePtr(&%s.%s, %s, %s)", dst, gf.Name, v, from), nil
 	case "nullable_slice":
+		if gf.Elem == "struct" {
+			return fmt.Sprintf("createNullableObjects(&%s.%s, %s, %sToAPI, %s, diags)", dst, gf.Name, v, prefix, at), nil
+		}
 		return fmt.Sprintf("createNullableSlice(&%s.%s, %s, %s)", dst, gf.Name, v, from), nil
 	}
 	return "", fmt.Errorf("%s: specgen doesn't map a %s create field", a.Name, describeShape(gf))
@@ -197,7 +248,7 @@ func createLine(a Attribute, gf GoField, v, dst, at, prefix string) (string, err
 func updateLine(a Attribute, gf GoField, plan, state, at, prefix string) (string, error) {
 	canBeNull := a.Optional && !a.Computed
 	from, _, elemOK := elemConv(gf.Elem)
-	if strings.Contains(gf.Shape, "slice") && !elemOK {
+	if strings.Contains(gf.Shape, "slice") && gf.Elem != "struct" && !elemOK {
 		return "", fmt.Errorf("%s: slices of %s aren't mapped yet; extend specgen", a.Name, gf.Elem)
 	}
 	switch gf.Shape {
@@ -208,7 +259,15 @@ func updateLine(a Attribute, gf GoField, plan, state, at, prefix string) (string
 	case "nullable_struct":
 		return fmt.Sprintf("p.%s = updateNullableObject(%s, %s, %sToAPI(%s, %s, diags))", gf.Name, plan, state, prefix, plan, at), nil
 	case "nullable_slice":
+		if gf.Elem == "struct" {
+			return fmt.Sprintf("updateNullableObjects(&p.%s, %s, %s, %sToAPI, %s, diags)", gf.Name, plan, state, prefix, at), nil
+		}
 		return fmt.Sprintf("updateNullableSlice(&p.%s, %s, %s, %s)", gf.Name, plan, state, from), nil
+	case "map_pointer":
+		if canBeNull {
+			return "", fmt.Errorf("%s can be removed from config, but the update params' map pointer can't send null to clear it", a.Name)
+		}
+		return fmt.Sprintf("p.%s = changedPtr(%s, %s, %sToMap(%s, %s, %s, diags))", gf.Name, plan, state, prefix, plan, state, at), nil
 	case "pointer", "enum_pointer", "struct_pointer", "slice_pointer":
 		if canBeNull {
 			return "", fmt.Errorf("%s can be removed from config, but the update params' pointer field can't send null to clear it", a.Name)
@@ -221,8 +280,11 @@ func updateLine(a Attribute, gf GoField, plan, state, at, prefix string) (string
 		case "slice_pointer":
 			return fmt.Sprintf("updateSlicePtr(&p.%s, %s, %s, %s)", gf.Name, plan, state, from), nil
 		}
-		if gf.Elem == "string" {
+		switch gf.Elem {
+		case "string":
 			return fmt.Sprintf("p.%s = updateStringPtr(%s, %s)", gf.Name, plan, state), nil
+		case "bool":
+			return fmt.Sprintf("p.%s = updateBoolPtr(%s, %s)", gf.Name, plan, state), nil
 		}
 	case "value", "enum", "struct", "slice":
 		return "", fmt.Errorf("%s is a plain value in the update params, so an update can't leave it unchanged", a.Name)
@@ -247,7 +309,7 @@ func readExpr(a Attribute, gf GoField, recv, prefix string) (string, error) {
 		coll = "listOf"
 	}
 	_, to, elemOK := elemConv(gf.Elem)
-	if strings.Contains(gf.Shape, "slice") && !elemOK {
+	if strings.Contains(gf.Shape, "slice") && gf.Elem != "struct" && !elemOK {
 		return "", fmt.Errorf("%s: slices of %s aren't mapped yet; extend specgen", a.Name, gf.Elem)
 	}
 	elemType := ""
@@ -261,8 +323,11 @@ func readExpr(a Attribute, gf GoField, recv, prefix string) (string, error) {
 			"bool": "types.BoolValue(" + x + ")", "float64": "types.Float64Value(" + x + ")",
 		}[gf.Elem], nil
 	case "pointer":
-		if gf.Elem == "string" {
+		switch gf.Elem {
+		case "string":
 			return fmt.Sprintf("stringPtrValue(%s)", x), nil
+		case "bool":
+			return fmt.Sprintf("boolPtrValue(%s)", x), nil
 		}
 	case "nullable":
 		if h, ok := map[string]string{"string": "stringValue", "int": "int64Value", "bool": "boolValue"}[gf.Elem]; ok {
@@ -278,7 +343,12 @@ func readExpr(a Attribute, gf GoField, recv, prefix string) (string, error) {
 		return fmt.Sprintf("%sFromAPI(%s)", prefix, x), nil
 	case "nullable_struct":
 		return fmt.Sprintf("%sFromAPI(nullablePtr(%s))", prefix, x), nil
+	case "map":
+		return fmt.Sprintf("%sFromMap(%s, m.%s)", prefix, x, upperCamel(a.Name)), nil
 	case "slice":
+		if gf.Elem == "struct" {
+			return fmt.Sprintf("objectList(%s, %sFromAPI, %sAttrTypes())", x, prefix, prefix), nil
+		}
 		return fmt.Sprintf("%s(%s, %s, %s)", coll, x, elemType, to), nil
 	case "slice_pointer":
 		return fmt.Sprintf("%s(derefSlice(%s), %s, %s)", coll, x, elemType, to), nil
@@ -309,12 +379,16 @@ func describeShape(gf GoField) string {
 // child is required (Merge refuses the rest), and the object is sent whole,
 // so each child is written the way create writes it.
 func addNested(api *API, m *Mapping, a Attribute, prefix, pathName, toType, fromType string) error {
-	if toType == "" || fromType == "" {
+	readOnly := a.Computed && !a.Optional
+	if (toType == "" && !readOnly) || fromType == "" {
 		return fmt.Errorf("%s: the client has no exported struct for it", pathName)
 	}
-	to, err := api.Fields(toType)
-	if err != nil {
-		return err
+	to := map[string]GoField{}
+	if !readOnly {
+		var err error
+		if to, err = api.Fields(toType); err != nil {
+			return err
+		}
 	}
 	from, err := api.Fields(fromType)
 	if err != nil {
@@ -329,15 +403,21 @@ func addNested(api *API, m *Mapping, a Attribute, prefix, pathName, toType, from
 	for _, c := range a.Attributes {
 		field := upperCamel(c.Name)
 		cp := nestedPrefix(prefix, c.Name)
-		tf, ok := to[c.Name]
-		if !ok {
-			return fmt.Errorf("%s.%s has no field in %s.%s", pathName, c.Name, api.Name, toType)
+		if c.NotRead {
+			return fmt.Errorf("%s.%s: a write-only key in a struct-backed object can't be carried from the prior value", pathName, c.Name)
 		}
-		line, err := createLine(c, tf, "m."+field, "out", fmt.Sprintf("at.AtName(%q)", c.Name), cp)
-		if err != nil {
-			return fmt.Errorf("%s: %w", pathName, err)
+		var tf GoField
+		if !readOnly {
+			var ok bool
+			if tf, ok = to[c.Name]; !ok {
+				return fmt.Errorf("%s.%s has no field in %s.%s", pathName, c.Name, api.Name, toType)
+			}
+			line, err := createLine(c, tf, "m."+field, "out", fmt.Sprintf("at.AtName(%q)", c.Name), cp)
+			if err != nil {
+				return fmt.Errorf("%s: %w", pathName, err)
+			}
+			n.ToBody = append(n.ToBody, line)
 		}
-		n.ToBody = append(n.ToBody, line)
 		rf, ok := from[c.Name]
 		if !ok {
 			return fmt.Errorf("%s.%s has no field in %s.%s", pathName, c.Name, api.Name, fromType)
@@ -412,3 +492,43 @@ func checkService(api *API, m *Mapping, r Resource) error {
 // normalize compares path parameter names with Go names: check_in_id and
 // checkInID both become checkinid.
 func normalize(s string) string { return strings.ToLower(strings.ReplaceAll(s, "_", "")) }
+
+func addMap(m *Mapping, a Attribute, prefix string) error {
+	mo := MapObject{Prefix: prefix}
+	for _, c := range a.Attributes {
+		field := upperCamel(c.Name)
+		put, read := "", ""
+		switch c.Kind {
+		case "string":
+			put, read = "putString", fmt.Sprintf("mapString(m, %q)", c.Name)
+		case "bool":
+			put, read = "putBool", fmt.Sprintf("mapBool(m, %q)", c.Name)
+		case "list", "set":
+			if c.ElemKind != "string" {
+				return fmt.Errorf("%s.%s: only lists of strings are mapped inside a map-backed object", a.Name, c.Name)
+			}
+			put, read = "putStrings", fmt.Sprintf("mapStrings(m, %q, %t)", c.Name, c.Kind == "set")
+		default:
+			return fmt.Errorf("%s.%s: a %s inside a map-backed object isn't mapped yet", a.Name, c.Name, c.Kind)
+		}
+		mo.ToBody = append(mo.ToBody, fmt.Sprintf("%s(out, %q, p.%s, s.%s)", put, c.Name, field, field))
+		if c.NotRead {
+			read = fmt.Sprintf("priorAttr(prior, %q, %s)", c.Name, nullOf(c))
+		}
+		mo.FromBody = append(mo.FromBody, fmt.Sprintf("%q: %s,", c.Name, read))
+	}
+	m.Maps = append(m.Maps, mo)
+	return nil
+}
+
+// nullOf is an attribute's typed null.
+func nullOf(a Attribute) string {
+	switch a.Kind {
+	case "list":
+		return "types.ListNull(" + kinds[a.ElemKind].elemType + ")"
+	case "set":
+		return "types.SetNull(" + kinds[a.ElemKind].elemType + ")"
+	}
+	return map[string]string{"string": "types.StringNull()", "bool": "types.BoolNull()",
+		"int64": "types.Int64Null()", "float64": "types.Float64Null()"}[a.Kind]
+}

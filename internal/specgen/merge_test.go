@@ -302,7 +302,9 @@ func gadgetConfig(t *testing.T) ResourceConfig {
 	if err != nil {
 		t.Fatalf("LoadConfig: %v", err)
 	}
-	return cfg.Resources["gadget"]
+	rc := cfg.Resources["gadget"]
+	rc.Provider = cfg.Provider
+	return rc
 }
 
 func TestMergeAllVariants(t *testing.T) {

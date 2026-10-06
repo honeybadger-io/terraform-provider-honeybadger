@@ -5,6 +5,7 @@ package fakeapi
 import (
 	"context"
 	"errors"
+	"github.com/google/uuid"
 	"time"
 
 	"github.com/oapi-codegen/nullable"
@@ -141,6 +142,7 @@ type WidgetMapGearUpdateParams struct {
 }
 
 type Client struct {
+	Gadgets         *GadgetsService
 	Widgets         *WidgetsService
 	WidgetsSwapped  *WidgetsSwappedService
 	WidgetsNoDelete *WidgetsNoDeleteService
@@ -187,3 +189,60 @@ func (s *WidgetsNoDeleteService) Get(ctx context.Context, projectID, widgetID st
 func (s *WidgetsNoDeleteService) Update(ctx context.Context, projectID, widgetID string, p WidgetUpdateParams) (*Widget, error) {
 	return nil, nil
 }
+
+type GadgetType string
+
+type GadgetEvent string
+
+type GadgetFilterEvent string
+
+type GadgetFilter struct {
+	Event GadgetFilterEvent `json:"event"`
+	Query string            `json:"query"`
+}
+
+type GadgetLinks struct {
+	Web string `json:"web"`
+}
+
+type Gadget struct {
+	Id        string                 `json:"id"`
+	ProjectId string                 `json:"project_id"`
+	Type      string                 `json:"type"`
+	Active    bool                   `json:"active"`
+	Events    []string               `json:"events"`
+	SpotIds   []uuid.UUID            `json:"spot_ids"`
+	Filters   []GadgetFilter         `json:"filters"`
+	Config    map[string]interface{} `json:"config"`
+	Links     GadgetLinks            `json:"links"`
+}
+
+type GadgetCreateParams struct {
+	Type    GadgetType                        `json:"type"`
+	Active  *bool                             `json:"active,omitempty"`
+	Events  nullable.Nullable[[]GadgetEvent]  `json:"events,omitempty"`
+	SpotIds nullable.Nullable[[]uuid.UUID]    `json:"spot_ids,omitempty"`
+	Filters nullable.Nullable[[]GadgetFilter] `json:"filters,omitempty"`
+	Config  *map[string]interface{}           `json:"config,omitempty"`
+}
+
+type GadgetUpdateParams struct {
+	Active  *bool                             `json:"active,omitempty"`
+	Events  nullable.Nullable[[]GadgetEvent]  `json:"events,omitempty"`
+	SpotIds nullable.Nullable[[]uuid.UUID]    `json:"spot_ids,omitempty"`
+	Filters nullable.Nullable[[]GadgetFilter] `json:"filters,omitempty"`
+	Config  *map[string]interface{}           `json:"config,omitempty"`
+}
+
+type GadgetsService struct{}
+
+func (s *GadgetsService) Create(ctx context.Context, projectID string, p GadgetCreateParams) (*Gadget, error) {
+	return nil, nil
+}
+func (s *GadgetsService) Get(ctx context.Context, projectID, gadgetID string) (*Gadget, error) {
+	return nil, nil
+}
+func (s *GadgetsService) Update(ctx context.Context, projectID, gadgetID string, p GadgetUpdateParams) (*Gadget, error) {
+	return nil, nil
+}
+func (s *GadgetsService) Delete(ctx context.Context, projectID, gadgetID string) error { return nil }
