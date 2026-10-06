@@ -89,4 +89,4 @@ resources:
       error_reason: live data
       connected: authentication status, Honeybadger's state rather than config
     server_filled: [events]
-    use_state_for_unknown: [created_at]
+    use_state_for_unknown: [created_at, links]

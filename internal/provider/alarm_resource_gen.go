@@ -66,7 +66,7 @@ func alarmResourceSchema() schema.Schema {
 			},
 			"stream_ids": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "Streams the query runs against. A set: order is ignored, duplicates are dropped, and it can't be empty. Left out, every current stream in the project, which a read then lists. An ID that isn't one of the project's streams fails the request with 422.",
+				MarkdownDescription: "Streams the query runs against. A set: order is ignored, duplicates are dropped, and it can't be empty. Left out, every current stream in the project, which a read then lists. An ID that isn't one of the project's streams fails the request with 422. Removing it from config keeps the current value.",
 				Optional:            true,
 				Computed:            true,
 				Validators:          []validator.Set{setvalidator.SizeAtLeast(1)},

@@ -257,7 +257,9 @@ func renderAttribute(b *bytes.Buffer, a Attribute, imports map[string]bool, pare
 			elem = append(elem, "stringvalidator.OneOf("+strings.Join(quoted, ", ")+")")
 		}
 		if a.ElemFormat == "uuid" {
-			elem = append(elem, `stringvalidator.RegexMatches(regexp.MustCompile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"), "must be a UUID")`)
+			// Lowercase only: the API reads UUIDs back lowercase, so any other
+			// case would never match its read-back.
+			elem = append(elem, `stringvalidator.RegexMatches(regexp.MustCompile("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"), "must be a lowercase UUID")`)
 			imports["regexp"] = true
 		}
 		if len(elem) > 0 {

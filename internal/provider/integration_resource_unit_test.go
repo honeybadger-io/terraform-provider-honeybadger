@@ -6,8 +6,10 @@ import (
 	"testing"
 
 	tfresource "github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
 func webHookHCL(url, config string) string {
@@ -226,7 +228,7 @@ resource "honeybadger_integration_web_hook" "t" {
   config     = { url = "https://a.example/hook" }
 }
 `,
-			ExpectError: regexp.MustCompile(`must be a UUID`),
+			ExpectError: regexp.MustCompile(`must be a lowercase UUID`),
 		}},
 	})
 }
@@ -255,6 +257,42 @@ resource "honeybadger_integration_web_hook" "t" {
 			{
 				Config:           config,
 				ConfigPlanChecks: tfresource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
+			},
+		},
+	})
+}
+
+// UUIDs read back lowercase, so an uppercase one in config would never match.
+func TestIntegrationUppercaseSiteID(t *testing.T) {
+	f := newFakeHoneybadger(t)
+	tfresource.UnitTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testFactories,
+		Steps: []tfresource.TestStep{{
+			Config: providerConfig(f.srv.URL) + `
+resource "honeybadger_integration_web_hook" "t" {
+  project_id = "p1"
+  site_ids   = ["0B6A3C1E-7B4F-4A8E-9F00-1C2D3E4F5A6B"]
+  config     = { url = "https://a.example/hook" }
+}
+`,
+			ExpectError: regexp.MustCompile(`lowercase UUID`),
+		}},
+	})
+}
+
+// links is stable, so an update doesn't plan it as unknown.
+func TestIntegrationLinksStableOnUpdate(t *testing.T) {
+	f := newFakeHoneybadger(t)
+	tfresource.UnitTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testFactories,
+		Steps: []tfresource.TestStep{
+			{Config: webHookHCL(f.srv.URL, "    url = \"https://a.example/hook\"\n")},
+			{
+				Config: webHookHCL(f.srv.URL, "    url = \"https://b.example/hook\"\n"),
+				ConfigPlanChecks: tfresource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectKnownValue("honeybadger_integration_web_hook.t", tfjsonpath.New("links").AtMapKey("web"),
+						knownvalue.StringRegexp(regexp.MustCompile(`/integrations/`))),
+				}},
 			},
 		},
 	})

@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
@@ -33,9 +34,10 @@ func integrationShortcutV2ResourceSchema() schema.Schema {
 		MarkdownDescription: "A notification integration",
 		Attributes: map[string]schema.Attribute{
 			"active": schema.BoolAttribute{
-				Optional: true,
-				Computed: true,
-				Default:  booldefault.StaticBool(true),
+				MarkdownDescription: "Whether to use the integration. An OAuth integration that isn't `connected` sends nothing until it is.",
+				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(true),
 			},
 			"alarm_alert_ids": schema.SetAttribute{
 				ElementType:         types.StringType,
@@ -121,7 +123,7 @@ func integrationShortcutV2ResourceSchema() schema.Schema {
 			},
 			"events": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "Left out or null: `occurred`, less any the plan doesn't include.",
+				MarkdownDescription: "Left out or null: `occurred`, less any the plan doesn't include. Removing it from config keeps the current value.",
 				Optional:            true,
 				Computed:            true,
 				Validators:          []validator.Set{setvalidator.ValueStringsAre(stringvalidator.OneOf("occurred", "resolved", "unresolved", "rate_exceeded"))},
@@ -175,6 +177,7 @@ func integrationShortcutV2ResourceSchema() schema.Schema {
 				},
 				MarkdownDescription: "Links into the Honeybadger web UI",
 				Computed:            true,
+				PlanModifiers:       []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
 			},
 			"notification_limit": schema.Int64Attribute{
 				MarkdownDescription: "Maximum notifications in a 10-minute window before flood control.",
@@ -197,7 +200,7 @@ func integrationShortcutV2ResourceSchema() schema.Schema {
 				Optional:            true,
 				Computed:            true,
 				Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
-				Validators:          []validator.Set{setvalidator.ValueStringsAre(stringvalidator.RegexMatches(regexp.MustCompile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"), "must be a UUID"))},
+				Validators:          []validator.Set{setvalidator.ValueStringsAre(stringvalidator.RegexMatches(regexp.MustCompile("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"), "must be a lowercase UUID"))},
 			},
 			"threshold": schema.Int64Attribute{
 				MarkdownDescription: "Number of occurrences before rate_exceeded fires.",

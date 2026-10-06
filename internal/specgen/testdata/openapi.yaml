@@ -448,6 +448,7 @@ components:
           type: string
         active:
           type: boolean
+          description: Whether the gadget runs.
         events:
           type: array
           uniqueItems: true

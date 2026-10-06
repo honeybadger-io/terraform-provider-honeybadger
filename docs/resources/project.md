@@ -32,7 +32,7 @@ resource "honeybadger_project" "app" {
 - `customer_throttle` (Number) Notices accepted per minute before throttling kicks in.
 - `disable_public_links` (Boolean) Disallow shareable public fault links.
 - `language` (String) Primary language, used to format backtraces.
-- `purge_days` (Number) Days to retain notices. Accepted only on accounts with custom retention; otherwise a value other than the current one (on create, the default) is refused with 403 `feature_unavailable`.
+- `purge_days` (Number) Days to retain notices. Accepted only on accounts with custom retention; otherwise a value other than the current one (on create, the default) is refused with 403 `feature_unavailable`. Removing it from config keeps the current value.
 - `resolve_errors_on_deploy` (Boolean) Resolve every open fault when a deploy is recorded.
 - `source_url` (String) Template for linking a backtrace line to your source host. `[file]` and `[line]` are substituted.
 - `user_search_field` (String) Context key identifying the affected user, for when it is not in the default `context.user_email` or `context.user_id`.

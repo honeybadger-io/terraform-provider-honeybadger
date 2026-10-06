@@ -60,7 +60,7 @@ func projectResourceSchema() schema.Schema {
 				Required:            true,
 			},
 			"purge_days": schema.Int64Attribute{
-				MarkdownDescription: "Days to retain notices. Accepted only on accounts with custom retention; otherwise a value other than the current one (on create, the default) is refused with 403 `feature_unavailable`.",
+				MarkdownDescription: "Days to retain notices. Accepted only on accounts with custom retention; otherwise a value other than the current one (on create, the default) is refused with 403 `feature_unavailable`. Removing it from config keeps the current value.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Int64{int64planmodifier.UseStateForUnknown()},

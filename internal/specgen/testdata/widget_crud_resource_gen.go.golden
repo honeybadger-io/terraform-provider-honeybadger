@@ -77,7 +77,7 @@ func widgetResourceSchema() schema.Schema {
 			},
 			"parts": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "Part numbers fitted. Left out on create, every stocked part.",
+				MarkdownDescription: "Part numbers fitted. Left out on create, every stocked part. Removing it from config keeps the current value.",
 				Optional:            true,
 				Computed:            true,
 				Validators:          []validator.Set{setvalidator.SizeBetween(1, 10)},
@@ -112,7 +112,7 @@ func widgetResourceSchema() schema.Schema {
 				Validators:          []validator.String{stringvalidator.OneOf("round", "square")},
 			},
 			"size": schema.Int64Attribute{
-				MarkdownDescription: "Size in centimetres.",
+				MarkdownDescription: "Size in centimetres. Removing it from config keeps the current value.",
 				Optional:            true,
 				Computed:            true,
 				Validators:          []validator.Int64{int64validator.Between(1, 500)},

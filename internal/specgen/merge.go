@@ -193,6 +193,9 @@ func mergeWith(doc *openapi3.T, name string, rc ResourceConfig, createObj *Objec
 			a.UseStateForUnknown = f == "id"
 		} else {
 			a.Description = stripCallerWording(src.Description)
+			if a.Description == "" && inR {
+				a.Description = stripCallerWording(rf.Description)
+			}
 			def := cf.Default
 			if def == nil {
 				def = uf.Default
@@ -204,6 +207,9 @@ func mergeWith(doc *openapi3.T, name string, rc ResourceConfig, createObj *Objec
 				a.Optional, a.Computed, a.Default = true, true, def
 			case slices.Contains(rc.ServerFilled, f):
 				a.Optional, a.Computed, a.UseStateForUnknown = true, true, true
+				// UseStateForUnknown keeps the stored value when the attribute
+				// is removed, so the docs say so.
+				a.Description = strings.TrimSpace(a.Description + " Removing it from config keeps the current value.")
 			case inU && !uf.Nullable && uf.Type != "array":
 				// A scalar that can't be sent as null: removing it from config
 				// can't clear it. Arrays clear with [] instead.
@@ -362,7 +368,7 @@ func nestedAttributes(obj Object, computed bool) ([]Attribute, error) {
 		case !obj.Required[n] && !f.Nullable && f.Default == nil:
 			return nil, fmt.Errorf("%s: an optional attribute inside an object must be nullable, or removing it can't clear it", n)
 		}
-		a := Attribute{Name: n, Description: stripCallerWording(f.Description), Sensitive: f.Secret,
+		a := Attribute{Name: n, Description: stripCallerWording(f.Description), Sensitive: f.Secret || f.WriteOnly,
 			Enum: f.Enum, Pattern: f.Pattern, MinLength: f.MinLength, MaxLength: f.MaxLength,
 			Minimum: f.Minimum, Maximum: f.Maximum, MinItems: f.MinItems, MaxItems: f.MaxItems}
 		switch {
@@ -505,6 +511,11 @@ func narrow(base, branch Object) (Object, error) {
 		f, ok := base.Fields[k]
 		if !ok {
 			return Object{}, fmt.Errorf("%s isn't in the shared input", k)
+		}
+		if b.Pattern != "" || b.MinLength > 0 || b.MaxLength != nil || len(b.Enum) > 0 || b.Format != "" ||
+			b.Minimum != nil || b.Maximum != nil || b.ExclusiveMinimum != nil || b.ExclusiveMaximum != nil ||
+			b.ReadOnly || b.WriteOnly {
+			return Object{}, fmt.Errorf("%s: the branch sets a constraint specgen doesn't apply to branches yet; extend narrow", k)
 		}
 		if b.Type != "" && b.Type != f.Type {
 			return Object{}, fmt.Errorf("%s: the branch changes its type from %s to %s", k, f.Type, b.Type)

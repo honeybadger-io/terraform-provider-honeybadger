@@ -43,7 +43,7 @@ func TestMergeFollowsTheMergeRule(t *testing.T) {
 		{Name: "name", Kind: "string", Required: true, Description: "Widget name."},
 		{Name: "parts", Kind: "set", ElemKind: "string", Optional: true, Computed: true, UseStateForUnknown: true,
 			MinItems: 1, MaxItems: ptr(int64(10)),
-			Description: "Part numbers fitted. Left out on create, every stocked part."},
+			Description: "Part numbers fitted. Left out on create, every stocked part. Removing it from config keeps the current value."},
 		{Name: "period", Kind: "string", Optional: true, CustomType: "period",
 			Description: "How often it spins, such as `5 minutes`."},
 		{Name: "project_id", Kind: "string", Required: true, RequiresReplace: true,
@@ -55,7 +55,7 @@ func TestMergeFollowsTheMergeRule(t *testing.T) {
 		{Name: "shape", Kind: "string", Optional: true, Computed: true, Default: "round",
 			Enum: []string{"round", "square"}, Description: "How the widget looks."},
 		{Name: "size", Kind: "int64", Optional: true, Computed: true, UseStateForUnknown: true,
-			Minimum: ptr(1.0), Maximum: ptr(500.0), Description: "Size in centimetres."},
+			Minimum: ptr(1.0), Maximum: ptr(500.0), Description: "Size in centimetres. Removing it from config keeps the current value."},
 		{Name: "tags", Kind: "set", ElemKind: "string", Optional: true, Description: "Labels on the widget."},
 		{Name: "token", Kind: "string", Computed: true, Sensitive: true,
 			Description: "Credential for the widget"},
@@ -200,7 +200,7 @@ func TestMergeNestedAndCollections(t *testing.T) {
 		}}
 	wantParts := Attribute{Name: "parts", Kind: "set", ElemKind: "string", Optional: true, Computed: true,
 		UseStateForUnknown: true, MinItems: 1, MaxItems: ptr(int64(10)),
-		Description: "Part numbers fitted. Left out on create, every stocked part."}
+		Description: "Part numbers fitted. Left out on create, every stocked part. Removing it from config keeps the current value."}
 	if !reflect.DeepEqual(got["gear"], wantGear) {
 		t.Errorf("gear:\n got  %+v\n want %+v", got["gear"], wantGear)
 	}
@@ -390,5 +390,59 @@ func TestMergeAllRejectsWidening(t *testing.T) {
 	defer func() { gamma.Properties["events"] = orig }()
 	if _, err := MergeAll(doc, "gadget", gadgetConfig(t)); err == nil || !strings.Contains(err.Error(), "events") {
 		t.Errorf("err = %v, want one naming events", err)
+	}
+}
+
+// An input field without a description takes the read model's.
+func TestMergeFallsBackToReadDescription(t *testing.T) {
+	rs, err := MergeAll(loadFixture(t), "gadget", gadgetConfig(t))
+	if err != nil {
+		t.Fatalf("MergeAll: %v", err)
+	}
+	for _, a := range rs[0].Attributes {
+		if a.Name == "active" && a.Description != "Whether the gadget runs." {
+			t.Errorf("active description = %q", a.Description)
+		}
+	}
+}
+
+// A server-filled attribute says what removing it does, since that keeps
+// the stored value rather than resetting it.
+func TestServerFilledDescribesRemoval(t *testing.T) {
+	res, err := Merge(loadFixture(t), "widget", fixtureConfig(t))
+	if err != nil {
+		t.Fatalf("Merge: %v", err)
+	}
+	for _, a := range res.Attributes {
+		if a.Name == "size" && !strings.HasSuffix(a.Description, "Removing it from config keeps the current value.") {
+			t.Errorf("size description = %q", a.Description)
+		}
+	}
+}
+
+// A branch fact narrow doesn't apply is an error, not silently dropped.
+func TestNarrowRejectsUnhandledBranchFacts(t *testing.T) {
+	ten := int64(10)
+	base := Object{Required: map[string]bool{}, Fields: map[string]Field{"label": {Name: "label", Type: "string"}}}
+	for name, b := range map[string]Field{
+		"pattern":   {Name: "label", Pattern: "^x$"},
+		"maxLength": {Name: "label", MaxLength: &ten},
+		"enum":      {Name: "label", Enum: []string{"a"}},
+		"format":    {Name: "label", Format: "uuid"},
+	} {
+		branch := Object{Required: map[string]bool{}, Fields: map[string]Field{"label": b}}
+		if _, err := narrow(base, branch); err == nil || !strings.Contains(err.Error(), "label") {
+			t.Errorf("%s: err = %v, want one naming label", name, err)
+		}
+	}
+}
+
+// A write-only key is sensitive even without format: password.
+func TestWriteOnlyIsSensitive(t *testing.T) {
+	obj := Object{Required: map[string]bool{}, Fields: map[string]Field{
+		"token": {Name: "token", Type: "string", Nullable: true, WriteOnly: true}}}
+	got, err := nestedAttributes(obj, false)
+	if err != nil || !got[0].Sensitive {
+		t.Errorf("got %+v, %v; want token Sensitive", got, err)
 	}
 }

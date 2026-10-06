@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
@@ -33,9 +34,10 @@ func integrationEmailResourceSchema() schema.Schema {
 		MarkdownDescription: "A notification integration",
 		Attributes: map[string]schema.Attribute{
 			"active": schema.BoolAttribute{
-				Optional: true,
-				Computed: true,
-				Default:  booldefault.StaticBool(true),
+				MarkdownDescription: "Whether to use the integration. An OAuth integration that isn't `connected` sends nothing until it is.",
+				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(true),
 			},
 			"alarm_alert_ids": schema.SetAttribute{
 				ElementType:         types.StringType,
@@ -90,7 +92,7 @@ func integrationEmailResourceSchema() schema.Schema {
 			},
 			"events": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "Left out or null: `occurred`, `assigned`, `up`, `down`, `cert_will_expire`, `check_in_missing`, and `check_in_reporting`, less any the plan doesn't include.",
+				MarkdownDescription: "Left out or null: `occurred`, `assigned`, `up`, `down`, `cert_will_expire`, `check_in_missing`, and `check_in_reporting`, less any the plan doesn't include. Removing it from config keeps the current value.",
 				Optional:            true,
 				Computed:            true,
 				Validators:          []validator.Set{setvalidator.ValueStringsAre(stringvalidator.OneOf("occurred", "rate_exceeded", "assigned", "resolved", "unresolved", "commented", "deployed", "up", "down", "cert_will_expire", "flooded", "check_in_missing", "check_in_reporting", "alarm_alert", "alarm_ok", "volume_spike"))},
@@ -144,6 +146,7 @@ func integrationEmailResourceSchema() schema.Schema {
 				},
 				MarkdownDescription: "Links into the Honeybadger web UI",
 				Computed:            true,
+				PlanModifiers:       []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
 			},
 			"notification_limit": schema.Int64Attribute{
 				MarkdownDescription: "Maximum notifications in a 10-minute window before flood control.",
@@ -166,7 +169,7 @@ func integrationEmailResourceSchema() schema.Schema {
 				Optional:            true,
 				Computed:            true,
 				Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
-				Validators:          []validator.Set{setvalidator.ValueStringsAre(stringvalidator.RegexMatches(regexp.MustCompile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"), "must be a UUID"))},
+				Validators:          []validator.Set{setvalidator.ValueStringsAre(stringvalidator.RegexMatches(regexp.MustCompile("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"), "must be a lowercase UUID"))},
 			},
 			"threshold": schema.Int64Attribute{
 				MarkdownDescription: "Number of occurrences before rate_exceeded fires.",
