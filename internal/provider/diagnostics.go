@@ -17,6 +17,10 @@ import (
 	"github.com/honeybadger-io/api-go/apiv3"
 )
 
+// errNoResult is a create the API answered with a 2xx but no usable result,
+// such as an empty id. The object may exist, so it's an unknown outcome.
+var errNoResult = errors.New("the API answered without a usable result")
+
 // attributeTypes is the part of a resource or data source schema that error
 // mapping needs: whether a path exists in it.
 type attributeTypes interface {
