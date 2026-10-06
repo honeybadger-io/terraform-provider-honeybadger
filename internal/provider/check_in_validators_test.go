@@ -58,6 +58,7 @@ func TestCheckInScheduleRules(t *testing.T) {
 		{"simple with UTC timezone", map[string]tftypes.Value{"report_period": str("1 day"), "cron_timezone": str("UTC")}, true},
 		{"zero report_period", map[string]tftypes.Value{"report_period": str("00:00:00")}, false},
 		{"unknown schedule_type skips", map[string]tftypes.Value{"schedule_type": unknownStr}, true},
+		{"zero report_period with unknown schedule_type", map[string]tftypes.Value{"schedule_type": unknownStr, "report_period": str("00:00:00")}, false},
 		{"unknown report_period skips", map[string]tftypes.Value{"report_period": unknownStr}, true},
 	}
 	for _, tt := range tests {

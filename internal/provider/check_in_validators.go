@@ -34,7 +34,18 @@ func (checkInSchedule) ValidateResource(ctx context.Context, req resource.Valida
 	} {
 		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(name), dst)...)
 	}
-	if resp.Diagnostics.HasError() || scheduleType.IsUnknown() {
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	// A zero period is wrong whatever the schedule, so it's checked before an
+	// unknown schedule_type skips the rest.
+	if !reportPeriod.IsNull() && !reportPeriod.IsUnknown() {
+		if secs, err := customtypes.ParsePeriod(reportPeriod.ValueString()); err == nil && secs == 0 {
+			resp.Diagnostics.AddAttributeError(path.Root("report_period"), "Zero report period",
+				"report_period can't be zero.")
+		}
+	}
+	if scheduleType.IsUnknown() {
 		return
 	}
 	// Config is validated before schema defaults apply, so an omitted
@@ -65,11 +76,5 @@ func (checkInSchedule) ValidateResource(ctx context.Context, req resource.Valida
 	if !cron && !cronTimezone.IsNull() && !cronTimezone.IsUnknown() && cronTimezone.ValueString() != "UTC" {
 		resp.Diagnostics.AddAttributeError(path.Root("cron_timezone"), "Unexpected cron timezone",
 			"cron_timezone applies only to cron check-ins; the API resets it to UTC for simple ones.")
-	}
-	if !reportPeriod.IsNull() && !reportPeriod.IsUnknown() {
-		if secs, err := customtypes.ParsePeriod(reportPeriod.ValueString()); err == nil && secs == 0 {
-			resp.Diagnostics.AddAttributeError(path.Root("report_period"), "Zero report period",
-				"report_period can't be zero.")
-		}
 	}
 }
