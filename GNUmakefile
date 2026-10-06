@@ -19,9 +19,10 @@ check-spec:
 	./scripts/check-spec.sh
 
 # Phase 7's release checklist runs this: a release needs the provider and the
-# api-go it requires built from the same bundle.
+# api-go its go.mod requires (not the local checkout go.work points at) built
+# from the same bundle.
 check-spec-release:
-	./scripts/check-spec.sh --release
+	GOWORK=off ./scripts/check-spec.sh --release
 
 # specgen before tfplugindocs: the docs are built from the generated schemas.
 generate: check-spec

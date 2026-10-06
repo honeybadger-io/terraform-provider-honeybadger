@@ -31,10 +31,11 @@ got=$(sha256 "$root/openapi/bundled.yaml")
 
 if [ "$got" != "$want" ]; then
 	echo "check-spec: openapi/bundled.yaml ($got) doesn't match api-go's ($want, $apigo)." >&2
-	echo "Copy the same honeybadger bundle into both: make update-spec here, and api-go's own update." >&2
 	if $release; then
+		echo "A release needs go.mod to require an api-go built from this bundle: bump it to that tagged version." >&2
 		exit 1
 	fi
+	echo "Copy the same honeybadger bundle into both: make update-spec here, and api-go's own update." >&2
 	echo "check-spec: warning only; a release fails on this" >&2
 	exit 0
 fi
