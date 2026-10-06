@@ -94,3 +94,21 @@ func intEnumValue[T ~int](n nullable.Nullable[T]) types.Int64 {
 	}
 	return types.Int64Null()
 }
+
+// Nullable enums (apiv3 Nullable[named string]); T is inferred from the
+// destination, since the enum types are internal to api-go.
+
+func createEnum[T ~string](dst *nullable.Nullable[T], v types.String) {
+	*dst = createValue(v.IsNull() || v.IsUnknown(), T(v.ValueString()))
+}
+
+func updateEnum[T ~string](dst *nullable.Nullable[T], plan, state types.String) {
+	*dst = updateValue(plan.IsUnknown(), plan.IsNull(), plan.Equal(state), T(plan.ValueString()))
+}
+
+func enumValue[T ~string](n nullable.Nullable[T]) types.String {
+	if v, err := n.Get(); err == nil {
+		return types.StringValue(string(v))
+	}
+	return types.StringNull()
+}

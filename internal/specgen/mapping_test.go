@@ -259,17 +259,17 @@ func TestMapSprocket(t *testing.T) {
 	if !m.IDUUID {
 		t.Error("IDUUID = false, want true for a UUID id")
 	}
-	for _, want := range []string{`p.Name = m.Name.ValueString()`, `p.ParentId = fromUUID(m.ParentID)`, `createStringMap(&p.Headers, m.Headers)`, `createIntEnum(&p.Speed, m.Speed)`} {
+	for _, want := range []string{`p.Name = m.Name.ValueString()`, `p.ParentId = fromUUID(m.ParentID)`, `createStringMap(&p.Headers, m.Headers)`, `createIntEnum(&p.Speed, m.Speed)`, `createEnum(&p.Mode, m.Mode)`} {
 		if !slices.Contains(m.CreateBody, want) {
 			t.Errorf("create body lacks %s\n%q", want, m.CreateBody)
 		}
 	}
-	for _, want := range []string{`m.ID = types.StringValue(c.Id.String())`, `m.ParentID = types.StringValue(c.ParentId.String())`, `m.Headers = stringMapValue(c.Headers)`, `m.Speed = types.Int64Value(int64(c.Speed))`} {
+	for _, want := range []string{`m.ID = types.StringValue(c.Id.String())`, `m.ParentID = types.StringValue(c.ParentId.String())`, `m.Headers = stringMapValue(c.Headers)`, `m.Speed = types.Int64Value(int64(c.Speed))`, `m.Mode = types.StringValue(string(c.Mode))`, `m.CheckedAt = nullableTimeValue(c.CheckedAt)`} {
 		if !slices.Contains(m.ReadBody, want) {
 			t.Errorf("read body lacks %s\n%q", want, m.ReadBody)
 		}
 	}
-	for _, want := range []string{`updateStringMap(&p.Headers, m.Headers, state.Headers)`, `updateIntEnum(&p.Speed, m.Speed, state.Speed)`} {
+	for _, want := range []string{`updateStringMap(&p.Headers, m.Headers, state.Headers)`, `updateIntEnum(&p.Speed, m.Speed, state.Speed)`, `updateEnum(&p.Mode, m.Mode, state.Mode)`} {
 		if !slices.Contains(m.UpdateBody, want) {
 			t.Errorf("update body lacks %s\n%q", want, m.UpdateBody)
 		}

@@ -109,3 +109,13 @@ func TestSetIntEnum(t *testing.T) {
 		t.Errorf("s = %d, want 5 (a null leaves it unchanged)", s)
 	}
 }
+
+func TestNullableTimeValue(t *testing.T) {
+	at := time.Date(2026, 10, 7, 12, 0, 0, 0, time.FixedZone("x", 3600))
+	if got := nullableTimeValue(nullable.NewNullableWithValue(at)); got.ValueString() != "2026-10-07T11:00:00Z" {
+		t.Errorf("value = %v", got)
+	}
+	if got := nullableTimeValue(nullable.NewNullNullable[time.Time]()); !got.IsNull() {
+		t.Errorf("null = %v", got)
+	}
+}

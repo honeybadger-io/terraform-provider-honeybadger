@@ -135,3 +135,22 @@ func TestIntEnumHelpers(t *testing.T) {
 		t.Errorf("read null = %v", got)
 	}
 }
+
+type testMode string
+
+func TestEnumHelpers(t *testing.T) {
+	var c, unset, same, removed nullable.Nullable[testMode]
+	createEnum(&c, types.StringValue("fast"))
+	createEnum(&unset, types.StringNull())
+	updateEnum(&same, types.StringValue("slow"), types.StringValue("slow"))
+	updateEnum(&removed, types.StringNull(), types.StringValue("fast"))
+	if v, err := c.Get(); err != nil || v != "fast" {
+		t.Errorf("create = %v, %v", v, err)
+	}
+	if unset.IsSpecified() || same.IsSpecified() || !removed.IsNull() {
+		t.Errorf("null specified=%v, unchanged specified=%v, removed null=%v", unset.IsSpecified(), same.IsSpecified(), removed.IsNull())
+	}
+	if got := enumValue(nullable.NewNullableWithValue(testMode("slow"))); got.ValueString() != "slow" {
+		t.Errorf("read = %v", got)
+	}
+}

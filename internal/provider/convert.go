@@ -110,3 +110,10 @@ func setIntEnum[T ~int](dst *T, v types.Int64) {
 	}
 	*dst = T(v.ValueInt64())
 }
+
+func nullableTimeValue(n nullable.Nullable[time.Time]) types.String {
+	if t, err := n.Get(); err == nil {
+		return timeValue(t)
+	}
+	return types.StringNull()
+}

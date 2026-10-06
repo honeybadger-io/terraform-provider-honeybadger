@@ -652,6 +652,7 @@ components:
       - name
       - parent_id
       - speed
+      - mode
       properties:
         id:
           type: string
@@ -673,6 +674,15 @@ components:
           description: Headers sent with each turn.
         speed:
           "$ref": "#/components/schemas/SprocketSpeed"
+        mode:
+          "$ref": "#/components/schemas/SprocketMode"
+        checked_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          readOnly: true
+          description: When it was last checked; null for one never checked.
     SprocketInput:
       type: object
       properties:
@@ -692,6 +702,12 @@ components:
           default: 5
           anyOf:
           - "$ref": "#/components/schemas/SprocketSpeed"
+          - type: 'null'
+        mode:
+          description: How it turns. Send null to reset to slow.
+          default: slow
+          anyOf:
+          - "$ref": "#/components/schemas/SprocketMode"
           - type: 'null'
     SprocketCreateInput:
       allOf:
@@ -713,3 +729,8 @@ components:
       - 5
       - 15
       description: Turns a minute.
+    SprocketMode:
+      type: string
+      enum:
+      - slow
+      - fast

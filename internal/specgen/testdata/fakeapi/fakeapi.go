@@ -250,13 +250,17 @@ func (s *GadgetsService) Delete(ctx context.Context, projectID, gadgetID string)
 
 type SprocketSpeed int
 
+type SprocketMode string
+
 // Sprocket is the phase-5 fixture: an account-level resource with a UUID id.
 type Sprocket struct {
-	Id       uuid.UUID                            `json:"id"`
-	Name     string                               `json:"name"`
-	ParentId uuid.UUID                            `json:"parent_id"`
-	Headers  nullable.Nullable[map[string]string] `json:"headers"`
-	Speed    SprocketSpeed                        `json:"speed"`
+	Id        uuid.UUID                            `json:"id"`
+	Name      string                               `json:"name"`
+	ParentId  uuid.UUID                            `json:"parent_id"`
+	Headers   nullable.Nullable[map[string]string] `json:"headers"`
+	Speed     SprocketSpeed                        `json:"speed"`
+	Mode      SprocketMode                         `json:"mode"`
+	CheckedAt nullable.Nullable[time.Time]         `json:"checked_at"`
 }
 
 type SprocketCreateParams struct {
@@ -264,12 +268,14 @@ type SprocketCreateParams struct {
 	ParentId uuid.UUID                            `json:"parent_id"`
 	Headers  nullable.Nullable[map[string]string] `json:"headers,omitempty"`
 	Speed    nullable.Nullable[SprocketSpeed]     `json:"speed,omitempty"`
+	Mode     nullable.Nullable[SprocketMode]      `json:"mode,omitempty"`
 }
 
 type SprocketUpdateParams struct {
 	Name    *string                              `json:"name,omitempty"`
 	Headers nullable.Nullable[map[string]string] `json:"headers,omitempty"`
 	Speed   nullable.Nullable[SprocketSpeed]     `json:"speed,omitempty"`
+	Mode    nullable.Nullable[SprocketMode]      `json:"mode,omitempty"`
 }
 
 type SprocketsService struct{}

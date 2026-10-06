@@ -103,6 +103,13 @@ func TestRealAPIShapes(t *testing.T) {
 	if err != nil || sc["frequency"].Shape != "nullable_int_enum" {
 		t.Errorf("SiteCreateParams.frequency = %+v, %v; want nullable_int_enum", sc["frequency"], err)
 	}
+	if sc["match_type"].Shape != "nullable_enum" || sc["request_method"].Shape != "nullable_enum" {
+		t.Errorf("SiteCreateParams match_type = %+v, request_method = %+v; want nullable_enum", sc["match_type"], sc["request_method"])
+	}
+	env, err := api.Fields("Environment")
+	if err != nil || env["created_at"].Shape != "nullable_time" {
+		t.Errorf("Environment.created_at = %+v, %v; want nullable_time", env["created_at"], err)
+	}
 	get, err := api.Method("Sites", "Get")
 	if err != nil || len(get.Params) != 2 || !get.Params[1].UUID {
 		t.Errorf("Sites.Get = %+v, %v; want a UUID site ID", get, err)
@@ -166,6 +173,8 @@ func TestFieldsClassifySprocketShapes(t *testing.T) {
 		"create headers": {create["headers"], {Name: "Headers", Shape: "nullable_string_map"}},
 		"read speed":     {read["speed"], {Name: "Speed", Shape: "int_enum", Elem: "int"}},
 		"create speed":   {create["speed"], {Name: "Speed", Shape: "nullable_int_enum", Elem: "int"}},
+		"create mode":    {create["mode"], {Name: "Mode", Shape: "nullable_enum"}},
+		"read checked":   {read["checked_at"], {Name: "CheckedAt", Shape: "nullable_time"}},
 	} {
 		if !reflect.DeepEqual(pair[0], pair[1]) {
 			t.Errorf("%s = %+v, want %+v", name, pair[0], pair[1])

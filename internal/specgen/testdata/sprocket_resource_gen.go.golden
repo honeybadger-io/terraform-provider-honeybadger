@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -27,6 +28,10 @@ func sprocketResourceSchema() schema.Schema {
 	return schema.Schema{
 		MarkdownDescription: "A sprocket.",
 		Attributes: map[string]schema.Attribute{
+			"checked_at": schema.StringAttribute{
+				MarkdownDescription: "When it was last checked; null for one never checked.",
+				Computed:            true,
+			},
 			"headers": schema.MapAttribute{
 				ElementType:         types.StringType,
 				MarkdownDescription: "Headers sent with each turn. Replaces the stored headers.",
@@ -38,6 +43,13 @@ func sprocketResourceSchema() schema.Schema {
 			"id": schema.StringAttribute{
 				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			},
+			"mode": schema.StringAttribute{
+				MarkdownDescription: "How it turns.",
+				Optional:            true,
+				Computed:            true,
+				Default:             stringdefault.StaticString("slow"),
+				Validators:          []validator.String{stringvalidator.OneOf("slow", "fast")},
 			},
 			"name": schema.StringAttribute{
 				Required: true,
@@ -60,11 +72,13 @@ func sprocketResourceSchema() schema.Schema {
 }
 
 type sprocketResourceModel struct {
-	Headers  types.Map    `tfsdk:"headers"`
-	ID       types.String `tfsdk:"id"`
-	Name     types.String `tfsdk:"name"`
-	ParentID types.String `tfsdk:"parent_id"`
-	Speed    types.Int64  `tfsdk:"speed"`
+	CheckedAt types.String `tfsdk:"checked_at"`
+	Headers   types.Map    `tfsdk:"headers"`
+	ID        types.String `tfsdk:"id"`
+	Mode      types.String `tfsdk:"mode"`
+	Name      types.String `tfsdk:"name"`
+	ParentID  types.String `tfsdk:"parent_id"`
+	Speed     types.Int64  `tfsdk:"speed"`
 }
 
 // sprocketImportFormat is the ID terraform import takes.
@@ -73,6 +87,7 @@ const sprocketImportFormat = "<id>"
 func (m sprocketResourceModel) createParams(diags *diag.Diagnostics) fakeapi.SprocketCreateParams {
 	var p fakeapi.SprocketCreateParams
 	createStringMap(&p.Headers, m.Headers)
+	createEnum(&p.Mode, m.Mode)
 	p.Name = m.Name.ValueString()
 	p.ParentId = fromUUID(m.ParentID)
 	createIntEnum(&p.Speed, m.Speed)
@@ -82,14 +97,17 @@ func (m sprocketResourceModel) createParams(diags *diag.Diagnostics) fakeapi.Spr
 func (m sprocketResourceModel) updateParams(state sprocketResourceModel, diags *diag.Diagnostics) fakeapi.SprocketUpdateParams {
 	var p fakeapi.SprocketUpdateParams
 	updateStringMap(&p.Headers, m.Headers, state.Headers)
+	updateEnum(&p.Mode, m.Mode, state.Mode)
 	p.Name = updateStringPtr(m.Name, state.Name)
 	updateIntEnum(&p.Speed, m.Speed, state.Speed)
 	return p
 }
 
 func (m *sprocketResourceModel) fromAPI(c *fakeapi.Sprocket) {
+	m.CheckedAt = nullableTimeValue(c.CheckedAt)
 	m.Headers = stringMapValue(c.Headers)
 	m.ID = types.StringValue(c.Id.String())
+	m.Mode = types.StringValue(string(c.Mode))
 	m.Name = types.StringValue(c.Name)
 	m.ParentID = types.StringValue(c.ParentId.String())
 	m.Speed = types.Int64Value(int64(c.Speed))
