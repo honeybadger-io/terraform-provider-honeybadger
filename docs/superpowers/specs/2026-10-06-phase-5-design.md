@@ -199,7 +199,7 @@ refused.
 
 The fake API learns the four resources. Cases:
 
-- site headers: set, change, clear (sent as null); values Sensitive in the plan;
+- site headers: set, change, clear (the plan's default `{}`, sent as `{}`); values Sensitive in the plan;
 - site locations: order changes plan nothing; leaving it out plans `[]`;
 - team `project_ids`: set semantics, clearing;
 - status page `password`: sent, never read, kept from state; a change outside
