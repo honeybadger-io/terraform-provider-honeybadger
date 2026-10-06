@@ -26,6 +26,25 @@ edit a `_gen.go` file.
     make update-spec  # copy honeybadger's bundle into openapi/ (after a spec change)
     make generate   # regenerate docs/ with tfplugindocs; commit the result
     make testacc    # acceptance tests against a Honeybadger stack
+    make dev        # build for your own Terraform (below)
+
+## Trying it with your own Terraform
+
+`make dev` builds the provider into `.dev/` and writes `.dev/terraformrc`, a
+Terraform CLI config whose `dev_overrides` point `honeybadger-io/honeybadger`
+at that build. Point Terraform at it from your Terraform project, for example
+with direnv:
+
+    # .envrc in your Terraform project
+    export TF_CLI_CONFIG_FILE=~/Projects/honeybadger/mcp/terraform-provider-honeybadger/.dev/terraformrc
+    export HONEYBADGER_API_URL=http://localhost:3001
+    export HONEYBADGER_API_TOKEN=...   # an API Token for the local stack
+
+Then run `terraform plan` and `apply` as usual; `terraform init` isn't
+needed, and Terraform warns that development overrides are in effect. Rerun
+`make dev` after pulling changes (from anywhere: `make -C <this repo> dev`).
+Leave the directory, or unset `TF_CLI_CONFIG_FILE`, to use providers from the
+registry again. `examples/resources/` has a config for every resource.
 
 ## Acceptance tests
 

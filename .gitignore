@@ -1,5 +1,6 @@
 /terraform-provider-honeybadger
 /dist/
+/.dev/
 *.test
 .terraform/
 *.tfstate
