@@ -334,8 +334,10 @@ Consequences of a `Default`, all intended:
     from config): send JSON `null`, which clears it. v3 accepts null only for
     fields marked nullable and rejects it with 422 elsewhere, so a non-nullable
     scalar Optional field is mapped as Optional + Computed instead (section
-    5.2). A non-nullable array stays Optional: removing it sends `[]`, which
-    clears it;
+    5.2). A non-nullable array stays Optional, and removing it plans null;
+    whether the update then sends `[]` (clear) or leaves it out is the
+    resource's decision, because some fields treat them differently (alarm
+    `stream_ids`: omitted means every stream, `[]` means none);
   - unknown: leave it out.
 
   `apiv3`'s `nullable.Nullable` fields carry all three states.
