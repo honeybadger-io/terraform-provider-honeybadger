@@ -30,17 +30,21 @@ type Attribute struct {
 	MaxLength          *int64
 	Minimum            *float64
 	Maximum            *float64
-	NotRead            bool // write-only, never read back
+	MinItems           int64 // lists and sets
+	MaxItems           *int64
+	Attributes         []Attribute // an object's attributes, sorted by name
+	NotRead            bool        // write-only, never read back
 }
 
 // Resource is a resource's attributes, sorted by name, and its import format.
 type Resource struct {
-	Name       string
-	Import     string
-	Attributes []Attribute
-	Warnings   []string // overrides the spec has made redundant
-	Parents    []string // the create operation's path parameters, in order
-	IDParam    string   // the read operation's last path parameter
+	Name        string
+	Description string // the read model's description
+	Import      string
+	Attributes  []Attribute
+	Warnings    []string // overrides the spec has made redundant
+	Parents     []string // the create operation's path parameters, in order
+	IDParam     string   // the read operation's last path parameter
 }
 
 // customTypes are the custom types resources.yaml may name.
@@ -201,15 +205,16 @@ func Merge(doc *openapi3.T, name string, rc ResourceConfig) (Resource, error) {
 			a.Pattern = src.Pattern
 			a.MinLength, a.MaxLength = src.MinLength, src.MaxLength
 			a.Minimum, a.Maximum = src.Minimum, src.Maximum
-			if src.MinItems > 0 || src.MaxItems != nil {
-				return fail("%s: minItems and maxItems aren't supported yet; extend specgen", f)
-			}
+			a.MinItems, a.MaxItems = src.MinItems, src.MaxItems
 		}
 
 		// A collection the read schema calls unordered is a set, even when an
 		// input doesn't say so.
 		if inR && rf.UniqueItems {
 			src.UniqueItems = true
+		}
+		if !writable && src.Type == "object" {
+			return fail("%s: read-only objects aren't supported yet; omit it", f)
 		}
 		if err := setKind(&a, src); err != nil {
 			return fail("%s: %v", f, err)
@@ -251,11 +256,14 @@ func Merge(doc *openapi3.T, name string, rc ResourceConfig) (Resource, error) {
 	if n := len(read.PathParams); n > 0 {
 		idParam = read.PathParams[n-1].Name
 	}
-	return Resource{Name: name, Import: rc.Import, Attributes: attrs, Warnings: warnings,
-		Parents: parentNames, IDParam: idParam}, nil
+	return Resource{Name: name, Description: stripCallerWording(R.Description), Import: rc.Import, Attributes: attrs,
+		Warnings: warnings, Parents: parentNames, IDParam: idParam}, nil
 }
 
 func setKind(a *Attribute, f Field) error {
+	if f.ExclusiveMinimum != nil || f.ExclusiveMaximum != nil {
+		return fmt.Errorf("exclusive bounds aren't supported yet; extend specgen")
+	}
 	scalar := map[string]string{"string": "string", "integer": "int64", "number": "float64", "boolean": "bool"}
 	if k, ok := scalar[f.Type]; ok {
 		a.Kind = k
@@ -281,7 +289,49 @@ func setKind(a *Attribute, f Field) error {
 		}
 		return nil
 	}
+	if f.Type == "object" {
+		if f.Properties == nil {
+			return fmt.Errorf("objects without properties aren't supported; omit it or extend specgen")
+		}
+		children, err := nestedAttributes(*f.Properties)
+		if err != nil {
+			return err
+		}
+		a.Kind, a.Attributes = "object", children
+		return nil
+	}
 	return fmt.Errorf("%s fields aren't supported yet; omit it or extend specgen", f.Type)
+}
+
+// nestedAttributes decides an object's attributes. Each must be required:
+// the API replaces the object whole, so optional and defaulted keys need
+// rules of their own, which wait until the bundle has one (phase 4a spec,
+// section 3.1).
+func nestedAttributes(obj Object) ([]Attribute, error) {
+	names := keys(obj.Fields)
+	sort.Strings(names)
+	var out []Attribute
+	for _, n := range names {
+		f := obj.Fields[n]
+		switch {
+		case f.ReadOnly:
+			return nil, fmt.Errorf("%s: read-only attributes inside objects aren't supported yet; extend specgen", n)
+		case f.WriteOnly:
+			return nil, fmt.Errorf("%s: write-only attributes inside objects aren't supported yet; extend specgen", n)
+		case f.Default != nil:
+			return nil, fmt.Errorf("%s: defaults inside objects aren't supported yet; extend specgen", n)
+		case !obj.Required[n]:
+			return nil, fmt.Errorf("%s: optional attributes inside objects aren't supported yet; extend specgen", n)
+		}
+		a := Attribute{Name: n, Required: true, Description: stripCallerWording(f.Description), Sensitive: f.Secret,
+			Enum: f.Enum, Pattern: f.Pattern, MinLength: f.MinLength, MaxLength: f.MaxLength,
+			Minimum: f.Minimum, Maximum: f.Maximum, MinItems: f.MinItems, MaxItems: f.MaxItems}
+		if err := setKind(&a, f); err != nil {
+			return nil, fmt.Errorf("%s: %w", n, err)
+		}
+		out = append(out, a)
+	}
+	return out, nil
 }
 
 // stripCallerWording drops "Send null to …" instructions: in Terraform,

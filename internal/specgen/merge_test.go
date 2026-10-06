@@ -88,6 +88,7 @@ func TestMergeErrors(t *testing.T) {
 		{"import names a missing attribute", func(rc *ResourceConfig) { rc.Import = "<project_id>/<nope>" }, "nope"},
 		{"update operation without a request body", func(rc *ResourceConfig) { rc.Update = "getWidget" }, "getWidget"},
 		{"nested object not omitted", func(rc *ResourceConfig) { delete(rc.Omit, "links") }, "links"},
+		{"server_filled names a nested attribute", func(rc *ResourceConfig) { rc.ServerFilled = append(rc.ServerFilled, "teeth") }, "teeth"},
 		{"override names a missing field", func(rc *ResourceConfig) { rc.Sensitive = append(rc.Sensitive, "nope") }, "nope"},
 		{"unknown custom type", func(rc *ResourceConfig) { rc.CustomTypes = map[string]string{"period": "nope"} }, "nope"},
 		{"unknown operation", func(rc *ResourceConfig) { rc.Read = "getGizmo" }, "getGizmo"},
@@ -148,5 +149,89 @@ func TestMergeRejectsUnknownCRUDMode(t *testing.T) {
 	_, err := Merge(loadFixture(t), "widget", rc)
 	if err == nil || !strings.Contains(err.Error(), "automatic") {
 		t.Errorf("err = %v, want one naming the crud value", err)
+	}
+}
+
+// mergeNested merges the widget with gear and parts, which the fixture
+// config omits until objects render.
+func mergeNested(t *testing.T) Resource {
+	t.Helper()
+	rc := fixtureConfig(t)
+	omit := map[string]string{}
+	for k, v := range rc.Omit {
+		if k != "gear" && k != "parts" {
+			omit[k] = v
+		}
+	}
+	rc.Omit = omit
+	rc.ServerFilled = append(rc.ServerFilled, "parts")
+	res, err := Merge(loadFixture(t), "widget", rc)
+	if err != nil {
+		t.Fatalf("Merge: %v", err)
+	}
+	return res
+}
+
+func TestMergeNestedAndCollections(t *testing.T) {
+	res := mergeNested(t)
+	got := map[string]Attribute{}
+	for _, a := range res.Attributes {
+		got[a.Name] = a
+	}
+	wantGear := Attribute{Name: "gear", Kind: "object", Required: true,
+		Description: "The widget's drive gear. Replaced whole on update.",
+		Attributes: []Attribute{
+			{Name: "kind", Kind: "string", Required: true, Enum: []string{"spur", "helical"}, Description: "Tooth profile."},
+			{Name: "mesh", Kind: "object", Required: true, Attributes: []Attribute{
+				{Name: "pitch", Kind: "float64", Required: true, Description: "Tooth spacing in millimetres."},
+				{Name: "teeth", Kind: "int64", Required: true, Minimum: ptr(1.0), Description: "Number of teeth."},
+			}},
+		}}
+	wantParts := Attribute{Name: "parts", Kind: "set", ElemKind: "string", Optional: true, Computed: true,
+		UseStateForUnknown: true, MinItems: 1, MaxItems: ptr(int64(10)),
+		Description: "Part numbers fitted. Left out on create, every stocked part."}
+	if !reflect.DeepEqual(got["gear"], wantGear) {
+		t.Errorf("gear:\n got  %+v\n want %+v", got["gear"], wantGear)
+	}
+	if !reflect.DeepEqual(got["parts"], wantParts) {
+		t.Errorf("parts:\n got  %+v\n want %+v", got["parts"], wantParts)
+	}
+	if res.Description != "A widget in a project." {
+		t.Errorf("Description = %q", res.Description)
+	}
+}
+
+// Inside an object, only required attributes are supported today. The rest
+// need their own rules, because the object is replaced whole, and wait until
+// the bundle needs them (phase 4a spec, section 3.1).
+func TestNestedAttributesRejectUnsupported(t *testing.T) {
+	zero := 0.0
+	tests := []struct {
+		name     string
+		field    Field
+		required bool
+	}{
+		{"optional", Field{Name: "note", Type: "string"}, false},
+		{"defaulted", Field{Name: "mode", Type: "string", Default: "static"}, true},
+		{"read-only", Field{Name: "made_at", Type: "string", ReadOnly: true}, true},
+		{"write-only", Field{Name: "key", Type: "string", WriteOnly: true}, true},
+		{"exclusive bound", Field{Name: "ratio", Type: "number", ExclusiveMinimum: &zero}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			obj := Object{Required: map[string]bool{tt.field.Name: tt.required}, Fields: map[string]Field{tt.field.Name: tt.field}}
+			if _, err := nestedAttributes(obj); err == nil || !strings.Contains(err.Error(), tt.field.Name) {
+				t.Errorf("err = %v, want one naming %s", err, tt.field.Name)
+			}
+		})
+	}
+}
+
+// Arrays of objects wait for phase 4b (integration filters).
+func TestSetKindRejectsArrayOfObjects(t *testing.T) {
+	a := Attribute{Name: "filters"}
+	f := Field{Name: "filters", Type: "array", Items: &Field{Type: "object", Properties: &Object{}}}
+	if err := setKind(&a, f); err == nil || !strings.Contains(err.Error(), "arrays of object") {
+		t.Errorf("err = %v, want arrays of object aren't supported", err)
 	}
 }
