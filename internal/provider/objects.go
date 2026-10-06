@@ -100,3 +100,66 @@ func nullablePtr[T any](n nullable.Nullable[T]) *T {
 	}
 	return nil
 }
+
+// objectAsLoose reads a prior object into its model, ignoring problems: a
+// prior value only decides which keys were set before.
+func objectAsLoose(o types.Object, dst any) {
+	if o.IsNull() || o.IsUnknown() {
+		return
+	}
+	_ = o.As(context.Background(), dst, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+}
+
+// priorAttr is a write-only key's value from the prior object, which the API
+// never returns (phase 4b spec, 3.2).
+func priorAttr(prior types.Object, key string, null attr.Value) attr.Value {
+	if prior.IsNull() || prior.IsUnknown() {
+		return null
+	}
+	if v, ok := prior.Attributes()[key]; ok {
+		return v
+	}
+	return null
+}
+
+// createNullableObjects and updateNullableObjects write a list of objects,
+// sent whole: a removed list ([] by default) is sent as it's planned.
+func createNullableObjects[T any](dst *nullable.Nullable[[]T], l types.List, conv func(types.Object, path.Path, *diag.Diagnostics) *T, at path.Path, diags *diag.Diagnostics) {
+	if l.IsNull() || l.IsUnknown() {
+		return
+	}
+	*dst = nullable.NewNullableWithValue(objectsOf(l, conv, at, diags))
+}
+
+func updateNullableObjects[T any](dst *nullable.Nullable[[]T], plan, state types.List, conv func(types.Object, path.Path, *diag.Diagnostics) *T, at path.Path, diags *diag.Diagnostics) {
+	switch {
+	case plan.IsUnknown() || plan.Equal(state):
+	case plan.IsNull():
+		*dst = nullable.NewNullNullable[[]T]()
+	default:
+		*dst = nullable.NewNullableWithValue(objectsOf(plan, conv, at, diags))
+	}
+}
+
+func objectsOf[T any](l types.List, conv func(types.Object, path.Path, *diag.Diagnostics) *T, at path.Path, diags *diag.Diagnostics) []T {
+	out := make([]T, 0, len(l.Elements()))
+	for i, e := range l.Elements() {
+		if v := conv(e.(types.Object), at.AtListIndex(i), diags); v != nil {
+			out = append(out, *v)
+		}
+	}
+	return out
+}
+
+// objectList reads a slice of structs; nil reads as null.
+func objectList[T any](s []T, conv func(*T) types.Object, attrTypes map[string]attr.Type) types.List {
+	elem := types.ObjectType{AttrTypes: attrTypes}
+	if s == nil {
+		return types.ListNull(elem)
+	}
+	vals := make([]attr.Value, len(s))
+	for i := range s {
+		vals[i] = conv(&s[i])
+	}
+	return types.ListValueMust(elem, vals)
+}

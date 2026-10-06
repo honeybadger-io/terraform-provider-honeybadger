@@ -72,3 +72,28 @@ func periodValue(n nullable.Nullable[string]) customtypes.PeriodValue {
 func timeValue(t time.Time) types.String {
 	return types.StringValue(t.UTC().Format(time.RFC3339))
 }
+
+func createBoolPtr(v types.Bool) *bool {
+	if v.IsNull() || v.IsUnknown() {
+		return nil
+	}
+	b := v.ValueBool()
+	return &b
+}
+
+// updateBoolPtr sends only a change; specgen uses it only for attributes
+// that can't be null.
+func updateBoolPtr(plan, state types.Bool) *bool {
+	if plan.IsNull() || plan.IsUnknown() || plan.Equal(state) {
+		return nil
+	}
+	b := plan.ValueBool()
+	return &b
+}
+
+func boolPtrValue(p *bool) types.Bool {
+	if p == nil {
+		return types.BoolNull()
+	}
+	return types.BoolValue(*p)
+}

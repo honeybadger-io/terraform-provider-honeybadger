@@ -179,3 +179,14 @@ func addUnknownDeleteOutcome(diags *diag.Diagnostics, typeName, id string, err e
 			"Run terraform destroy again; an object that's already gone counts as deleted.",
 		typeName, id, err))
 }
+
+// addVariantMismatch reports an object of another type read through a
+// variant resource (phase 4b spec, 3.1). names maps each creatable type to
+// its resource.
+func addVariantMismatch(diags *diag.Diagnostics, id, got string, names map[string]string) {
+	if name, ok := names[got]; ok {
+		diags.AddError("Wrong resource type", fmt.Sprintf("%s has type %s; use %s.", id, got, name))
+		return
+	}
+	diags.AddError("Wrong resource type", fmt.Sprintf("%s has type %s, which this provider can't manage.", id, got))
+}

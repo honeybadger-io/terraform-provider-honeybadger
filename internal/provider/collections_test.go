@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"github.com/google/uuid"
 	"reflect"
 	"testing"
 
@@ -80,5 +81,16 @@ func TestCollectionReads(t *testing.T) {
 	}
 	if l := listOf(derefSlice(&[]string{"a"}), types.StringType, stringElem); len(l.Elements()) != 1 {
 		t.Errorf("list: got %v", l)
+	}
+}
+
+func TestUUIDElements(t *testing.T) {
+	var p *[]uuid.UUID
+	setSlicePtr(&p, strSet("0b6a3c1e-7b4f-4a8e-9f00-1c2d3e4f5a6b"), fromUUID)
+	if p == nil || (*p)[0].String() != "0b6a3c1e-7b4f-4a8e-9f00-1c2d3e4f5a6b" {
+		t.Errorf("p = %v", p)
+	}
+	if s := setOf(*p, types.StringType, uuidElem); !s.Equal(strSet("0b6a3c1e-7b4f-4a8e-9f00-1c2d3e4f5a6b")) {
+		t.Errorf("read = %v", s)
 	}
 }

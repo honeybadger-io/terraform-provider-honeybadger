@@ -81,3 +81,15 @@ func TestErrNoResultIsAnUnknownOutcome(t *testing.T) {
 		t.Error("a create answered without a usable result must be an unknown outcome")
 	}
 }
+
+func TestBoolPtr(t *testing.T) {
+	if createBoolPtr(types.BoolNull()) != nil || *createBoolPtr(types.BoolValue(false)) {
+		t.Error("createBoolPtr")
+	}
+	if updateBoolPtr(types.BoolValue(true), types.BoolValue(true)) != nil || !*updateBoolPtr(types.BoolValue(true), types.BoolValue(false)) {
+		t.Error("updateBoolPtr")
+	}
+	if !boolPtrValue(nil).IsNull() {
+		t.Error("boolPtrValue(nil)")
+	}
+}

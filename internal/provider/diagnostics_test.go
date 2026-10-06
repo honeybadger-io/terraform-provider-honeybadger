@@ -389,3 +389,17 @@ func TestUnknownDeleteOutcomeSaysToRunAgain(t *testing.T) {
 		}
 	}
 }
+
+func TestAddVariantMismatch(t *testing.T) {
+	names := map[string]string{"Slack": "honeybadger_integration_slack"}
+	var d diag.Diagnostics
+	addVariantMismatch(&d, "i1", "Slack", names)
+	if !strings.Contains(d[0].Detail(), "honeybadger_integration_slack") {
+		t.Errorf("detail = %q", d[0].Detail())
+	}
+	var l diag.Diagnostics
+	addVariantMismatch(&l, "i2", "HipChat", names)
+	if !strings.Contains(l[0].Detail(), "can't manage") {
+		t.Errorf("legacy detail = %q", l[0].Detail())
+	}
+}

@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/oapi-codegen/nullable"
@@ -104,3 +105,12 @@ func nullableSlice[T any](n nullable.Nullable[[]T]) []T {
 	}
 	return v
 }
+
+// fromUUID and uuidElem convert format: uuid elements; api-go's
+// openapi_types.UUID is an alias of uuid.UUID.
+func fromUUID(v attr.Value) uuid.UUID {
+	u, _ := uuid.Parse(v.(types.String).ValueString())
+	return u
+}
+
+func uuidElem(u uuid.UUID) attr.Value { return types.StringValue(u.String()) }
