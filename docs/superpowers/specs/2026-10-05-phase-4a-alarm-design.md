@@ -11,8 +11,9 @@ spec covers phase 4a only: `honeybadger_alarm`. Phase 4b
 Ship `honeybadger_alarm`, generated the same way as the phase 2b resources:
 schema, model, mapping and CRUD wrapper come from the bundle and api-go's
 `apiv3` types, with one `resources.yaml` entry and no hand-written resource
-code. The generator learns nested objects and collections, which phase 4b
-also needs. The resource passes a full acceptance lifecycle against Kevin's
+code. The generator learns what the alarm needs today: nested objects whose
+attributes are all required, collections of plain values, and resource
+descriptions. The resource passes a full acceptance lifecycle against Kevin's
 local stack, Opticon included.
 
 ## 2. Decisions
@@ -33,16 +34,16 @@ local stack, Opticon included.
 
 A property whose schema is an object (inline, or a `$ref` to one, or a
 nullable `anyOf` of one) becomes a `SingleNestedAttribute`. Its attributes
-come from the object's own properties by the same rules as top-level ones
-for Required, defaults, enums, patterns, bounds and descriptions. Nesting
-recurses (`trigger_config.config`).
+come from the object's own properties, with their enums, patterns, bounds and
+descriptions. Nesting recurses (`trigger_config.config`).
 
-One rule differs: an optional child without a declared default is plain
-Optional. It's never Computed, `UseStateForUnknown` or server-filled, and
-`server_filled` can't name it. Because the object is replaced whole, a child
-kept from state would be resent after the user removed it: switching
-`trigger_config.type` back from `alert_field_threshold` would resend
-`field`. A removed child is simply absent from the object sent.
+Every attribute inside an object must be required, as every key of
+`AlarmTriggerConfig` and `AlarmTriggerCondition` is today. An optional or
+defaulted key, a read-only or write-only one, or an exclusive bound inside an
+object is a generation error ("isn't supported yet; extend specgen"). Those
+need their own rules, because the object is replaced whole, and they're
+added against the real contract when the bundle first needs them.
+`server_filled` can't name a nested attribute.
 
 Generated per nested object:
 
@@ -65,8 +66,8 @@ whole:
 `toAPI` requires the object and every value inside it to be known. A
 `types.Object` can be known while a child is unknown, and reading an unknown
 number gives 0, so an unchecked conversion could send a threshold of 0.
-With the rule above, no child is Computed, so at apply time every child is
-known. If one isn't, `toAPI` returns an error diagnostic naming the
+Every child is required, so at apply time every child is known. If one
+isn't, `toAPI` returns an error diagnostic naming the
 attribute instead of sending a zero value.
 
 A nested object's api-go field may be a value struct, a pointer, or
@@ -78,9 +79,9 @@ resource and field.
 
 Arrays of strings, integers, numbers and booleans become list attributes, or
 set attributes when `uniqueItems` is true on any of the three schemas (as
-`setKind` decides today). Item enums and patterns become element validators.
-`minItems` and `maxItems` become size validators (`SizeAtLeast`,
-`SizeAtMost`); today they're a generation error (`merge.go:204`).
+`setKind` decides today). `minItems` and `maxItems` become size validators
+(`SizeAtLeast`, `SizeAtMost`); today they're a generation error
+(`merge.go:204`).
 
 Go shapes, extending the 2b shape table:
 
@@ -88,34 +89,16 @@ Go shapes, extending the 2b shape table:
 | --- | --- | --- |
 | `[]T` | create, Required only | list or set of `T` |
 | `*[]T` | create: pointer when known; update: pointer when changed | list or set, null when nil |
+| `nullable.Nullable[[]T]` | create: set when known; update: set when changed, null when removed | list or set, null when unset or null |
 
 As for scalar pointers in 2b, a `*[]T` update field can't send null, so it's
 a generation error for an attribute the user can remove, unless the
 attribute is server-filled (removal keeps the stored value).
-| `nullable.Nullable[[]T]` | create: set when known; update: set when changed, null when removed | list or set, null when unset or null |
-| `[]E`, `*[]E`, `Nullable[[]E]` with `E ~string` (enum items) | as above, converted element by element | as above |
 
-Arrays of objects stay a generation error until phase 4b needs them
-(integration `filters`).
+Item enums and patterns, and arrays of objects, stay generation errors until
+phase 4b needs them (integration `events` and `filters`).
 
-### 3.3 Defaults and bounds
-
-Defaults inside nested objects use the same rules as top-level attributes:
-a declared `default` makes the attribute Optional and Computed with a
-static default. The generator also reads `exclusiveMinimum` and
-`exclusiveMaximum` (OpenAPI 3.1 numeric form) into validators. The framework
-has no exclusive-bound validators, so a small generic one goes in
-`internal/provider` with the other shared helpers.
-
-This is what keeps the planned Opticon changes generation-only. When
-honeybadger documents `alert_field_threshold`, anomaly mode and hysteresis,
-each new `trigger_config` key arrives with its default and bounds
-(`on_no_data: keep_state`, `detection_mode: static`, `alert_after` and
-`resolve_after` default 1 with minimum 1, `sigma` with `exclusiveMinimum: 0`),
-as honeybadger has agreed. Regenerating picks them up. The fixture in
-section 5.1 proves that before honeybadger ships them.
-
-### 3.4 Resource descriptions
+### 3.3 Resource descriptions
 
 The read model's schema `description` becomes the resource's
 `MarkdownDescription`, so it reaches the registry docs. That closes a
@@ -195,12 +178,9 @@ rerun. The policy stays as it is.
 
 ### 4.2 Trigger rules
 
-The spec states some rules only in prose: today `value` must be a whole
-number of at least 0 for `alert_result_count`; after Opticon's observer-26
-branches ship, `field` is required for `alert_field_threshold`, and
-anomaly mode needs `direction` and `sigma` but not `operator` or `value`.
-Those rules are still changing, so the provider doesn't mirror them. The
-API's 422 catches them at apply, and field errors map to the attribute
+The spec states some rules only in prose: `value` must be a whole number of
+at least 0 for `alert_result_count`. The provider doesn't mirror rules that
+depend on the trigger type. The API's 422 catches them at apply, and field errors map to the attribute
 (`trigger_config.config.value`, for example) through `fieldPath`. Only
 what each key declares on its own is checked at plan time.
 
@@ -208,9 +188,8 @@ what each key declares on its own is checked at plan time.
 
 Documented in the resource docs, not worked around (umbrella 10):
 
-- **An invalid trigger on update answers 200 and keeps the old one**, until
-  Opticon's `observer-26-field-threshold` branch lands. The read-back then
-  differs from the plan, and Terraform reports "Provider produced
+- **An invalid trigger on update answers 200 and keeps the old one.** The
+  read-back then differs from the plan, and Terraform reports "Provider produced
   inconsistent result after apply", which surfaces the problem.
 - **A create that times out can leave an Opticon observer behind** with no
   alarm. The unknown-outcome error's `find_hint` sends the user to the
@@ -221,9 +200,6 @@ Documented in the resource docs, not worked around (umbrella 10):
   stays nullable on read (Kevin): Opticon always has a trigger, but v3 reads
   Honeybadger's stored copy of the observer, and an old copy can lack it.
   The resource docs say so under import.
-- **New defaulted trigger keys after an upgrade** (Opticon's hysteresis
-  keys, for example) plan one harmless update on existing alarms the first
-  time, as the default fills in.
 - **Opticon unavailable answers 503.** On create that's an unknown outcome
   (umbrella 6.4); on read, update and delete it's an error.
 
@@ -234,32 +210,22 @@ Documented in the resource docs, not worked around (umbrella 10):
 The widget fixture gains a nested object and collections covering every
 case in section 3:
 
-- a Required nested object containing a nested object (two levels), with an
-  enum, an integer and a number, an Optional key with a declared default,
-  and a key with `exclusiveMinimum`;
+- a Required nested object containing a nested object (two levels), whose
+  attributes are all required: an enum, an integer and a number;
 - a set of strings with `minItems`, mapped from `*[]string` on one input and
   `nullable.Nullable[[]string]` on the other;
-- a list of enum strings;
 - a resource-level description.
 
 Golden output is compiled, as in 2a and 2b, and the fixture includes the
 read shapes explicitly (`Nullable[Struct]`, `Nullable[[]string]`). Error
-cases, each naming the resource and field: an array of objects, a nested
-object whose api-go field has an unsupported shape, a value-shaped nested
-field on create whose attribute isn't Required, a `*[]T` update field on a
-removable attribute that isn't server-filled, and `server_filled` naming a
-nested child.
-
-Compiling doesn't prove runtime behaviour, so the rendered fixture also runs
-in a `resource.UnitTest` against a fake: a nested default fills in at plan
-time, item validators and the size validator reject bad values, a list and a
-set round-trip without a diff, and removing an optional nested child leaves
-it out of the next body.
+cases, each naming the resource and field: an array of objects, an item
+enum, an optional or defaulted key inside an object, an exclusive bound, a
+nested object whose api-go field has an unsupported shape, a `*[]T` update
+field on a removable attribute that isn't server-filled, and `server_filled`
+naming a nested attribute.
 
 ### 5.2 Unit tests
 
-- The exclusive-bound validator: at, below and above the bound; null and
-  unknown skip it.
 - One `resource.UnitTest` for the alarm against the `httptest` fake,
   checking exact request bodies:
   - create sends the whole `trigger_config` and leaves `stream_ids` out;
@@ -325,4 +291,6 @@ running locally.
 - Alarm history (`ListHistory`): live data, a future data source.
 - The `honeybadger_streams` data source (deferred, umbrella D5).
 - Plan-time trigger rules that depend on `type` (section 4.2).
-- `warning` thresholds (severity levels): not implemented in Opticon yet.
+- Trigger settings Opticon hasn't shipped, and the generator support they'd
+  need (optional and defaulted keys inside objects, exclusive bounds): added
+  when they're in the bundle.
