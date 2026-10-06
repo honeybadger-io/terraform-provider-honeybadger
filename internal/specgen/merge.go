@@ -289,6 +289,9 @@ func mergeWith(doc *openapi3.T, name string, rc ResourceConfig, createObj *Objec
 }
 
 func setKind(a *Attribute, f Field) error {
+	if f.Conditional || (f.Items != nil && f.Items.Conditional) {
+		return fmt.Errorf("its schema has conditional (if/then) parts specgen can't type; make it a json_subset custom type, or extend specgen")
+	}
 	if f.ExclusiveMinimum != nil || f.ExclusiveMaximum != nil {
 		return fmt.Errorf("exclusive bounds aren't supported yet; extend specgen")
 	}

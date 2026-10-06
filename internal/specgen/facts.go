@@ -44,6 +44,7 @@ type Field struct {
 	Properties       *Object // an object's own properties
 	Values           *Field  // an object's additionalProperties schema
 	Const            any     // OpenAPI 3.1 const
+	Conditional      bool    // has if/then allOf parts specgen doesn't model
 }
 
 // Object is a schema's properties, with allOf flattened.
@@ -98,10 +99,22 @@ func FieldFacts(name string, ref *openapi3.SchemaRef) (Field, error) {
 	}
 	s := ref.Value
 
+	// if/then parts are conditional constraints (per-type shapes): recorded,
+	// so setKind can refuse to type them, and otherwise left to the API.
+	var structural openapi3.SchemaRefs
+	conditional := false
+	for _, p := range s.AllOf {
+		if p.Value != nil && (p.Value.If != nil || p.Value.Then != nil) {
+			conditional = true
+			continue
+		}
+		structural = append(structural, p)
+	}
+
 	var f Field
 	switch {
-	case len(s.AllOf) == 1:
-		base, err := FieldFacts(name, s.AllOf[0])
+	case len(structural) == 1:
+		base, err := FieldFacts(name, structural[0])
 		if err != nil {
 			return Field{}, err
 		}
@@ -121,9 +134,10 @@ func FieldFacts(name string, ref *openapi3.SchemaRef) (Field, error) {
 		}
 		f = base
 		f.Nullable = true
-	case len(s.AllOf) > 1:
-		return Field{}, fmt.Errorf("unsupported allOf with %d parts on a property", len(s.AllOf))
+	case len(structural) > 1:
+		return Field{}, fmt.Errorf("unsupported allOf with %d parts on a property", len(structural))
 	}
+	f.Conditional = f.Conditional || conditional
 
 	f.Name = name
 	if s.Type != nil {

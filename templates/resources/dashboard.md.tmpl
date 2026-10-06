@@ -1,0 +1,29 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+{{ if .HasExample -}}
+## Example Usage
+
+{{ tffile .ExampleFile }}
+{{- end }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Notes
+
+- **Widget ids are required.** Every widget needs an `id`, kept as written and unique within the dashboard (another dashboard can use the same id). Use letters, digits, `-` and `_`: the id appears in web UI links.
+- **Set `grid` to control layout.** Left out, a widget is placed at `{x: 0, y: 0, w: 12, h: 3}`; a partial grid takes its missing keys from that. A widget moved in the web UI is put back by the next apply that writes the dashboard.
+- **`streams`** left out or `[]` means every stream in the project.
+- **What Honeybadger adds isn't drift.** Keys you don't set (a filled-in grid, every stream) are ignored. A value you set that changes in Honeybadger shows in the plan as the whole `widgets` string changing.
+- **"Provider produced inconsistent result after apply"** means Honeybadger didn't keep a value you set, such as a stream the project doesn't have yet (just after the project is created). The dashboard is in state: fix the value, or leave it out, and apply again. A stream slug other than `default` or `internal` is refused before anything is saved.
+- **Reformatting** `widgets` (key order, a heredoc instead of `jsonencode`) plans an update that changes nothing.
+- **Import:** put the dashboard's widgets in your config before applying. With `widgets` left out, the default `[]` removes every widget. The first plan after import is an update that settles state to your JSON.
+- **The default dashboard** can be imported. Honeybadger creates a new one the next time someone opens Insights if it's destroyed.

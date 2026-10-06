@@ -146,3 +146,18 @@ resources:
       domain_verified_at: live data
     server_filled: [incidents_enabled]
     use_state_for_unknown: [account_id, created_at, url, links]
+
+  dashboard:
+    create: createDashboard
+    read: getDashboard
+    update: updateDashboard
+    delete: deleteDashboard
+    import: "<project_id>/<id>"
+    service: Dashboards
+    api: {model: Dashboard, create_params: DashboardCreateParams, update_params: DashboardUpdateParams}
+    find_hint: "the project's dashboards in Honeybadger"
+    custom_types: {widgets: json_subset}
+    json_required_keys: {widgets: [id]}
+    omit:
+      updated_at: live data
+    use_state_for_unknown: [created_at, links, is_default, shared]

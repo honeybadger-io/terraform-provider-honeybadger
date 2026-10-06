@@ -2,6 +2,7 @@ package specgen
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -250,5 +251,26 @@ func TestFieldFactsStringMap(t *testing.T) {
 	}
 	if d, ok := h.Default.(map[string]any); !ok || len(d) != 0 {
 		t.Errorf("headers default = %#v, want {}", h.Default)
+	}
+}
+
+// Conditional (if/then) allOf parts are recorded, not refused: a json_subset
+// field holds them as JSON, and setKind refuses to type them (phase 6).
+func TestFieldFactsConditionalAllOf(t *testing.T) {
+	s := &openapi3.Schema{Type: &openapi3.Types{"object"}, AllOf: openapi3.SchemaRefs{
+		{Value: &openapi3.Schema{If: &openapi3.SchemaRef{Value: &openapi3.Schema{}}, Then: &openapi3.SchemaRef{Value: &openapi3.Schema{}}}},
+		{Value: &openapi3.Schema{If: &openapi3.SchemaRef{Value: &openapi3.Schema{}}, Then: &openapi3.SchemaRef{Value: &openapi3.Schema{}}}},
+	}, Properties: openapi3.Schemas{"type": {Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}}}}
+	f, err := FieldFacts("widget", &openapi3.SchemaRef{Value: s})
+	if err != nil || !f.Conditional || f.Type != "object" {
+		t.Fatalf("FieldFacts = %+v, %v; want a conditional object", f, err)
+	}
+	a := Attribute{Name: "widget"}
+	if err := setKind(&a, f); err == nil || !strings.Contains(err.Error(), "json_subset") {
+		t.Errorf("setKind err = %v, want a refusal pointing at json_subset", err)
+	}
+	arr := Field{Type: "array", Items: &f}
+	if err := setKind(&Attribute{Name: "widgets"}, arr); err == nil || !strings.Contains(err.Error(), "json_subset") {
+		t.Errorf("setKind(array of conditional) err = %v", err)
 	}
 }

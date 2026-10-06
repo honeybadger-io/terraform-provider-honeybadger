@@ -45,11 +45,13 @@ type fakeHoneybadger struct {
 	requests []fakeRequest
 	scripted map[string][]fakeResponse // "METHOD path" (or "METHOD *") -> queued responses
 	next     int
+	// projectStreams are the streams a project has; nil means both.
+	projectStreams []string
 }
 
 var (
-	collectionPath = regexp.MustCompile(`^/v3/(?:projects/([^/]+)/(check_ins|keys|alarms|integrations|environments|sites)|(projects|teams|status_pages))$`)
-	objectPath     = regexp.MustCompile(`^/v3/(?:projects/[^/]+/(?:check_ins|keys|alarms|integrations|environments|sites)|projects|teams|status_pages)/[^/]+$`)
+	collectionPath = regexp.MustCompile(`^/v3/(?:projects/([^/]+)/(check_ins|keys|alarms|integrations|environments|sites|dashboards)|(projects|teams|status_pages))$`)
+	objectPath     = regexp.MustCompile(`^/v3/(?:projects/[^/]+/(?:check_ins|keys|alarms|integrations|environments|sites|dashboards)|projects|teams|status_pages)/[^/]+$`)
 )
 
 func newFakeHoneybadger(t *testing.T) *fakeHoneybadger {
@@ -154,6 +156,10 @@ func (f *fakeHoneybadger) serve(w http.ResponseWriter, r *http.Request) {
 		case http.MethodGet:
 			writeJSON(w, http.StatusOK, map[string]any{"data": readable(obj)})
 		case http.MethodPatch:
+			if msg := badStream(body); msg != "" {
+				writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": map[string]any{"code": "invalid", "message": msg}})
+				return
+			}
 			for k, v := range body {
 				if k == "config" {
 					// v3 merges config: a key left out keeps its value; null deletes it.
@@ -169,6 +175,9 @@ func (f *fakeHoneybadger) serve(w http.ResponseWriter, r *http.Request) {
 				}
 				obj[k] = v
 			}
+			if ws, ok := obj["widgets"].([]any); ok {
+				obj["widgets"] = f.storedWidgets(ws)
+			}
 			writeJSON(w, http.StatusOK, map[string]any{"data": readable(obj)})
 		case http.MethodDelete:
 			delete(f.objects, r.URL.Path)
@@ -180,6 +189,10 @@ func (f *fakeHoneybadger) serve(w http.ResponseWriter, r *http.Request) {
 }
 
 func (f *fakeHoneybadger) create(w http.ResponseWriter, collection, projectID, kind string, body map[string]any) {
+	if msg := badStream(body); msg != "" {
+		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": map[string]any{"code": "invalid", "message": msg}})
+		return
+	}
 	f.next++
 	id := fmt.Sprintf("x%d", f.next)
 	if kind == "sites" {
@@ -230,6 +243,12 @@ func (f *fakeHoneybadger) create(w http.ResponseWriter, collection, projectID, k
 		obj["validate_ssl"], obj["active"] = true, true
 		obj["locations"], obj["request_headers"] = []any{}, map[string]any{}
 		obj["request_body"], obj["outage_threshold"], obj["timeout"] = nil, nil, nil
+	case "dashboards":
+		obj["project_id"] = projectID
+		obj["is_default"], obj["shared"], obj["default_ts"] = false, false, nil
+		obj["updated_at"] = "2026-10-05T00:00:00Z"
+		obj["links"] = map[string]any{"web": "https://app.honeybadger.io/projects/" + projectID + "/insights/dashboards/" + id}
+		obj["widgets"] = []any{}
 	case "teams":
 		obj["account_id"], obj["member_count"] = "a1", 0
 		obj["project_ids"] = []any{}
@@ -251,6 +270,9 @@ func (f *fakeHoneybadger) create(w http.ResponseWriter, collection, projectID, k
 			continue
 		}
 		obj[k] = v
+	}
+	if ws, ok := obj["widgets"].([]any); ok {
+		obj["widgets"] = f.storedWidgets(ws)
 	}
 	f.objects[collection+"/"+id] = obj
 	writeJSON(w, http.StatusCreated, map[string]any{"data": readable(obj)})
@@ -293,4 +315,117 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+// storedWidgets is what Honeybadger stores and reads back for dashboard
+// widgets (honeybadger a15c6fbb39): an id for one left without, the grid
+// merged into its default, every stream for an insights_vis widget whose
+// streams are left out or empty, and null, "", [] and {} dropped.
+func (f *fakeHoneybadger) storedWidgets(in []any) []any {
+	have := map[string]bool{"default": true, "internal": true}
+	if f.projectStreams != nil {
+		have = map[string]bool{}
+		for _, s := range f.projectStreams {
+			have[s] = true
+		}
+	}
+	out := make([]any, 0, len(in))
+	for i, e := range in {
+		w, _ := e.(map[string]any)
+		w = maps.Clone(w)
+		if w == nil {
+			w = map[string]any{}
+		}
+		if s, _ := w["id"].(string); s == "" {
+			w["id"] = fmt.Sprintf("00000000-0000-4000-8000-%012d", i+1)
+		}
+		grid := map[string]any{"x": float64(0), "y": float64(0), "w": float64(12), "h": float64(3)}
+		if g, ok := w["grid"].(map[string]any); ok {
+			maps.Copy(grid, g)
+		}
+		w["grid"] = grid
+		if w["type"] == "insights_vis" {
+			cfg, _ := w["config"].(map[string]any)
+			cfg = maps.Clone(cfg)
+			if cfg == nil {
+				cfg = map[string]any{}
+			}
+			if s, _ := cfg["streams"].([]any); len(s) == 0 {
+				var all []any
+				for _, st := range []string{"default", "internal"} {
+					if have[st] {
+						all = append(all, st)
+					}
+				}
+				cfg["streams"] = all
+			} else {
+				// A valid slug the project has no stream for yet is dropped.
+				var kept []any
+				for _, st := range s {
+					if name, _ := st.(string); have[name] {
+						kept = append(kept, st)
+					}
+				}
+				cfg["streams"] = kept
+			}
+			w["config"] = cfg
+		}
+		out = append(out, compact(w))
+	}
+	return out
+}
+
+// badStream is the 422 Honeybadger answers for a stream slug outside
+// [default, internal]; "" when every slug is valid.
+func badStream(body map[string]any) string {
+	ws, _ := body["widgets"].([]any)
+	for i, e := range ws {
+		w, _ := e.(map[string]any)
+		cfg, _ := w["config"].(map[string]any)
+		ss, _ := cfg["streams"].([]any)
+		for _, st := range ss {
+			if st != "default" && st != "internal" {
+				return fmt.Sprintf("widgets[%d].config.streams: %v isn't one of default, internal", i, st)
+			}
+		}
+	}
+	return ""
+}
+
+// compact drops null, "", [] and {} at every level, as Honeybadger's
+// deep_compact does.
+func compact(v any) any {
+	switch x := v.(type) {
+	case map[string]any:
+		out := map[string]any{}
+		for k, e := range x {
+			if c := compact(e); !emptyJSON(c) {
+				out[k] = c
+			}
+		}
+		return out
+	case []any:
+		out := []any{}
+		for _, e := range x {
+			if c := compact(e); !emptyJSON(c) {
+				out = append(out, c)
+			}
+		}
+		return out
+	}
+	return v
+}
+
+func emptyJSON(v any) bool {
+	switch x := v.(type) {
+	case nil:
+		return true
+	case string:
+		return x == ""
+	case []any:
+		return len(x) == 0
+	case map[string]any:
+		return len(x) == 0
+	}
+	return false
 }
