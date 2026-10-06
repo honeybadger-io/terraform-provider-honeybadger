@@ -32,33 +32,64 @@ acceptance suite is the gate, with no production smoke test.
 
 ## 3. Generator extensions
 
-### 3.1 String maps
+api-go's types for these services use Go shapes the generator hasn't met
+(the Fable and Codex spec reviews found them). Each is a generic shape rule
+with no domain logic: classification in `gotypes`, conversions in `mapping`
+and the provider helpers, rendering in `render`.
 
-An object whose only schema is `additionalProperties: {type: string}` becomes
-`schema.MapAttribute{ElementType: types.StringType}`. When the value schema
-is `format: password`, the attribute is Sensitive. Writes follow the
-collection rules from phase 4b: the whole map is sent on create and on any
-update that changes it; a map set in state and null in the plan is sent as
-null; a declared `default: {}` becomes an empty map default, so a config that
-leaves it out plans the value the read returns.
+### 3.1 UUID scalars and UUID IDs
 
-The Go side is `map[string]string` (or its `Nullable` wrapper). `gotypes`
-classifies it as a map shape the same way it classifies slices; a map whose
-values aren't strings is refused until a schema needs one.
+`Site.Id` is `openapi_types.UUID` (`apiv3.SiteID`), and a status page's
+`sites[].site_id` is `format: uuid`. Today the generator handles UUIDs only
+as collection elements.
+
+- A `uuid` scalar shape: read as `types.StringValue(x.String())`, written by
+  parsing the planned string. Scalar `format: uuid` attributes get the same
+  lowercase-UUID validator as UUID elements.
+- IDs: `checkService` accepts a UUID-typed path parameter; the wrapper parses
+  `state.ID` (and an imported ID) before calling the service, compares the
+  returned ID with the zero UUID rather than `""`, and turns a malformed ID
+  into an error diagnostic.
 
 ### 3.2 Integer enums
 
-An integer field with `enum` gets `int64validator.OneOf(...)`, the counterpart
-of the string `OneOf` already emitted. Site `frequency` (1, 2, 5, 15) is the
-first.
+`SiteFrequency` is a named `int` with `enum: [1, 2, 5, 15]`.
 
-### 3.3 Already supported
+- An `int_enum` shape, and its nullable form, beside the string `enum`.
+- Generic conversions over `~int`, as the string ones are over `~string`.
+- `int64validator.OneOf(...)`, the counterpart of the string `OneOf`.
+
+### 3.3 Nullable enums and nullable times
+
+`Nullable[SiteMatchType]` and `Nullable[SiteRequestMethod]` (inputs), and
+`Nullable[time.Time]` (environment `created_at`, read) have no shape today.
+The `Nullable` case gains `enum` and `time` alongside value, struct and
+slice, with matching create, update and read conversions.
+
+### 3.4 String maps
+
+`request_headers` is `additionalProperties: {type: string}` on the wire and
+`Nullable[map[string]string]` in Go.
+
+- `facts` reads `additionalProperties` (today it's dropped), including the
+  value schema's `format: password`; `setKind` accepts an object with no
+  properties when it has string `additionalProperties`, and refuses other
+  value types until a schema needs one.
+- A `map` kind renders `schema.MapAttribute{ElementType: types.StringType}`,
+  Sensitive when the values are `format: password`. A declared `default: {}`
+  becomes an empty map default.
+- A string-map Go shape (plain and `Nullable`), distinct from the existing
+  `map[string]any` shape that backs nested objects.
+- Writes follow the phase 4b collection rules: the whole map on create and on
+  any update that changes it; a map set in state and null in the plan is sent
+  as null.
+
+### 3.5 Already supported
 
 Write-only top-level fields (status page `password`: never read, Sensitive,
-kept from the plan), ordered lists of objects (status page `sites` and
-`check_ins`), sets with enum items (site `locations`), nullable `anyOf`
-fields, URL patterns, server-filled fields, and account-level resources with
-no parent ID (as `honeybadger_project`).
+kept from the plan), ordered lists of objects, sets with enum items (site
+`locations`), URL patterns, `server_filled`, `replace`, and account-level
+resources with no parent ID (as `honeybadger_project`).
 
 ## 4. The resources
 
@@ -68,12 +99,14 @@ user should know.
 
 ### 4.1 `honeybadger_environment`
 
-Project-scoped: `project_id`, `name` (required), `notifications` (default
-true), `created_at` (read-only).
+Project-scoped: `project_id`, `name` (required; changing it replaces the
+environment, since the API refuses a rename), `notifications` (default
+true), `created_at` (read-only, nullable).
 
 ```yaml
 environment:
   service: Environments
+  replace: [name]
   use_state_for_unknown: [created_at]
 ```
 
@@ -102,15 +135,15 @@ site:
 
 ### 4.3 `honeybadger_team`
 
-Account-level: `name` (required), `project_ids` (set), `links.web` and
-`created_at` (read-only). `member_count` changes as people join and is
+Account-level: `name` (required), `project_ids` (set), `account_id`,
+`links.web` and `created_at` (read-only). `member_count` changes as people join and is
 omitted.
 
 ```yaml
 team:
   service: Teams
   omit: [member_count]
-  use_state_for_unknown: [created_at, links]
+  use_state_for_unknown: [account_id, created_at, links]
 ```
 
 ### 4.4 `honeybadger_status_page`
@@ -121,8 +154,10 @@ Account-level: `name` (required), `domain`, `hide_branding`,
 `password_protected`, `username`, `password` (write-only, Sensitive),
 `features` (object), `sites` (ordered list of `site_id`, `display_name`,
 `description`), `check_ins` (ordered list of `check_in_id`, `display_name`,
-`description`), and `url`, `links.web` and `created_at` (read-only).
-`domain_verified_at` changes on its own and is omitted.
+`description`), and `account_id`, `url`, `links.web` and `created_at`
+(read-only). `domain_verified_at` changes on its own and is omitted.
+`incidents_enabled` defaults on create to whether the plan has status page
+incidents, so it is server-filled rather than given a static default.
 
 `sites` and `check_ins` reference `honeybadger_site` and
 `honeybadger_check_in` IDs, so Terraform orders creation. `features` and
@@ -133,15 +168,18 @@ API's 403 surfaces.
 status_page:
   service: StatusPages
   omit: [domain_verified_at]
-  use_state_for_unknown: [created_at, url, links]
+  server_filled: [incidents_enabled]
+  use_state_for_unknown: [account_id, created_at, url, links]
 ```
 
 ## 5. Testing
 
 ### 5.1 Generator
 
-Golden and compiled cases for a string map (plain, Sensitive, with `default:
-{}`), a map with non-string values (refused), and an integer enum.
+Golden and compiled cases for each new shape: UUID scalar and UUID ID, integer
+enum (plain and nullable), nullable string enum, nullable time, and string map
+(plain, Sensitive, with `default: {}`); a map with non-string values is
+refused.
 
 ### 5.2 Unit tests (fake API, real generated resources)
 
@@ -154,7 +192,15 @@ The fake API learns the four resources. Cases:
   Terraform isn't seen;
 - status page `sites` order: reordering plans an update;
 - status page `domain` set and cleared (acceptance never sets it);
-- environment import.
+- environment import; changing `name` plans a replacement;
+- site imported by UUID; a malformed ID is an error, not a panic;
+- `frequency = 3` is refused at plan time;
+- defaulted fields left out of config: create, then an empty plan; removing a
+  configured value plans the default;
+- status page `features` left out, set, and cleared;
+- status page `sites` with `display_name` null reads back null;
+- `match_type = "success"` with `match` set: the API's 422 surfaces (no
+  provider validator).
 
 ### 5.3 Acceptance (`TF_ACC`, local stack)
 
@@ -175,7 +221,12 @@ Against `http://localhost:3001`:
 ## 6. Dependencies
 
 - **honeybadger** (v3-terraform-readiness): declared defaults on SiteInput and
-  StatusPageInput; nullable `features` children, with the read of an unset key
+  StatusPageInput, each with a read that returns the resolved value (not
+  null) — `incidents_enabled` excluded, and `hide_branding` and
+  `password_protected` only if create accepts the default value without
+  advanced status pages; `features` read: null when nothing is set, or a
+  declared `default: {}` matching a `{}` read; why environment `created_at`
+  is nullable (kept nullable if legacy rows are); nullable `features` children, with the read of an unset key
   stated; `uniqueItems` on `TeamInput.project_ids` and `SiteInput.locations`;
   `format: password` on `request_headers` values; empty defaults on
   `locations`, `project_ids`, status page `sites` and `check_ins`, and on
