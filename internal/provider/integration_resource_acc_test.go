@@ -226,3 +226,33 @@ func TestAccIntegrationTypes(t *testing.T) {
 		})
 	}
 }
+
+// An integration limited to a site, the gap phase 4b left (no site resource
+// then).
+func TestAccIntegrationSiteIDs(t *testing.T) {
+	name := accName()
+	config := accProvider() + fmt.Sprintf(`
+resource "honeybadger_project" "a" {
+  name = %q
+}
+
+resource "honeybadger_site" "s" {
+  project_id = honeybadger_project.a.id
+  url        = "https://www.example.com/"
+}
+
+resource "honeybadger_integration_web_hook" "t" {
+  project_id = honeybadger_project.a.id
+  site_ids   = [honeybadger_site.s.id]
+  config     = { url = "https://93.184.216.34/hook" }
+}
+`, name)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{Config: config, Check: resource.TestCheckTypeSetElemAttrPair(webHookAddr, "site_ids.*", "honeybadger_site.s", "id")},
+			{ResourceName: webHookAddr, ImportState: true, ImportStateIdFunc: importID(webHookAddr), ImportStateVerify: true},
+		},
+	})
+}
