@@ -228,14 +228,28 @@ schema, and a committed resource disappearing without a `retired` entry.
 
 - `TestAccIntegrationWebHook`: the full lifecycle, every common setting
   except `site_ids` (no site resource until phase 5), `config` changes,
-  removing the secret, import, and deleted outside Terraform. The URL must
-  resolve (`https://example.com/hook`).
+  removing the secret, import, and deleted outside Terraform. WebHook
+  resolves its URL's host on every save, so the test uses a public IP
+  literal, which skips the lookup: `https://93.184.216.34/hook`.
 - `TestAccIntegrationEmail`: create, update, import.
 - `TestAccIntegrationSlack`: an OAuth type created active and unconnected;
   the plan is empty afterwards and `links.web` is set.
-- A create-read-update-delete check over every type that creates without an
-  external call, as honeybadger lists them, with their minimal configs. It
-  catches a type whose read doesn't match its schema.
+- `TestAccIntegrationTypes`: a create-read-update-delete check over every
+  type that creates without an external call, so a type whose read doesn't
+  match its schema fails here rather than in a user's apply. From
+  honeybadger's reading of the channel code, that's 33 of the 34; only
+  IncidentIo calls out (incident.io) on every create. Each type uses the
+  minimal config honeybadger listed, kept in the test's data:
+  - WebHook uses an IP-literal URL; Zulip uses `zulip_domain`, not
+    `server_url` (which triggers DNS); Backlog sets `enable_webhook: false`
+    (otherwise a save registers a Backlog webhook);
+  - GitHub runs with `active: false`, so it doesn't try to attach the App,
+    and leaves out `issue_fields`;
+  - GitHub, GitLab and Bitbucket allow one per project and Intercom two, so
+    each type gets its own resource in one project.
+
+  The update step changes one optional `config` key or `active`, to cover
+  the write rule on every type.
 
 ## 6. Dependencies
 
@@ -244,8 +258,8 @@ schema, and a committed resource disappearing without a `retired` entry.
   Intercom's `maxItems: 0`.
 - **api-go:** regenerated from the same bundle (mcp-v3), so `make
   check-spec` matches.
-- **honeybadger, pending:** which types create without an external call, and
-  their minimal configs (section 5.3).
+- **honeybadger, answered:** which types create without an external call,
+  and their minimal configs (section 5.3).
 
 ## 7. Out of scope
 
