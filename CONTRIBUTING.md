@@ -38,6 +38,16 @@ Honeybadger stack, never your everyday account:
 
 Alarm tests also need Opticon running locally.
 
+Before a full run, raise the token account's rate limit in the local stack. A
+run makes 150–250 requests; the default is 360 an hour:
+
+    bin/rails runner 'Account.find(ID).update!(api_hits_per_hour: 5000)'
+
+`testAccPreCheck` stops a run early when fewer than 300 requests remain.
+Objects are named with a `tf-acc-` prefix; clean up after failed runs with:
+
+    go test ./internal/provider/ -sweep=local
+
 Still to be documented (spec open decision D2): the commands that start the
 local stack, and the honeybadger rake task that creates the `terraform-acc`
 account and its token.
