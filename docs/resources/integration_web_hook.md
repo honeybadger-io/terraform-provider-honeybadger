@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_web_hook Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Create a Webhook integration.
+  DIY integrations via webhook.
 ---
 
 # honeybadger_integration_web_hook (Resource)
 
-Create a Webhook integration.
+DIY integrations via webhook.
 
 ## Example Usage
 
@@ -33,7 +33,7 @@ resource "honeybadger_integration_web_hook" "alerts" {
 
 ### Optional
 
-- `active` (Boolean) Whether to use the integration. An OAuth integration that isn't `connected` sends nothing until it is.
+- `active` (Boolean) Whether to use the integration. An OAuth integration that's active sends nothing until someone connects it in the web UI at `links.web`.
 - `alarm_alert_ids` (Set of String) IDs of alarms whose alert events this integration receives. Send null or [] to clear. A set; order is ignored and duplicates are dropped.
 - `alarm_ok_ids` (Set of String) IDs of alarms whose recovery events this integration receives. Send null or [] to clear. A set; order is ignored and duplicates are dropped.
 - `all_check_ins` (Boolean) Follow every check-in in the project, including ones added later. When true, check_in_ids must be empty or left out, and reads return []. Sending a non-empty check_in_ids turns it off. With it off and check_in_ids empty, the integration gets no check-in events.
@@ -59,13 +59,13 @@ resource "honeybadger_integration_web_hook" "alerts" {
 
 Required:
 
-- `url` (String, Sensitive)
+- `url` (String, Sensitive) The URL Honeybadger sends each notification to, as a JSON POST.
 
 Optional:
 
 - `bearer_token` (String, Sensitive) Optional. When set, requests are sent with `Authorization: Bearer <token>`, for endpoints that require it. Never returned. Leave it out of an update to keep it.
 - `label` (String) Optional label to show in the integrations list.
-- `payload_version` (String)
+- `payload_version` (String) The JSON payload format. v2 by default.
 
 
 <a id="nestedatt--filters"></a>

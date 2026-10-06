@@ -31,10 +31,10 @@ import (
 
 func integrationJiraResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "Create a Jira integration.",
+		MarkdownDescription: "Track issues in Jira. Older, Basic Auth strategy -- works with JIRA Server & JIRA Cloud.",
 		Attributes: map[string]schema.Attribute{
 			"active": schema.BoolAttribute{
-				MarkdownDescription: "Whether to use the integration. An OAuth integration that isn't `connected` sends nothing until it is.",
+				MarkdownDescription: "Whether to use the integration. An OAuth integration that's active sends nothing until someone connects it in the web UI at `links.web`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(true),

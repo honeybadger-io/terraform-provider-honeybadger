@@ -31,10 +31,10 @@ import (
 
 func integrationWebHookResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "Create a Webhook integration.",
+		MarkdownDescription: "DIY integrations via webhook.",
 		Attributes: map[string]schema.Attribute{
 			"active": schema.BoolAttribute{
-				MarkdownDescription: "Whether to use the integration. An OAuth integration that isn't `connected` sends nothing until it is.",
+				MarkdownDescription: "Whether to use the integration. An OAuth integration that's active sends nothing until someone connects it in the web UI at `links.web`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(true),
@@ -85,14 +85,16 @@ func integrationWebHookResourceSchema() schema.Schema {
 						Validators:          []validator.String{stringvalidator.LengthAtMost(100)},
 					},
 					"payload_version": schema.StringAttribute{
-						Optional:   true,
-						Computed:   true,
-						Default:    stringdefault.StaticString("v2"),
-						Validators: []validator.String{stringvalidator.OneOf("v2", "v3")},
+						MarkdownDescription: "The JSON payload format. v2 by default.",
+						Optional:            true,
+						Computed:            true,
+						Default:             stringdefault.StaticString("v2"),
+						Validators:          []validator.String{stringvalidator.OneOf("v2", "v3")},
 					},
 					"url": schema.StringAttribute{
-						Required:  true,
-						Sensitive: true,
+						MarkdownDescription: "The URL Honeybadger sends each notification to, as a JSON POST.",
+						Required:            true,
+						Sensitive:           true,
 					},
 				},
 				MarkdownDescription: "The type's settings, listed per type in [Integration types](https://docs.honeybadger.io/api/v3/integrations/types/).",

@@ -31,10 +31,10 @@ import (
 
 func integrationClickUpResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "Create a ClickUp integration. It sends nothing until someone connects it in the web UI at `links.web`.",
+		MarkdownDescription: "Create ClickUp tasks from errors. It sends nothing until someone connects it in the web UI at `links.web`.",
 		Attributes: map[string]schema.Attribute{
 			"active": schema.BoolAttribute{
-				MarkdownDescription: "Whether to use the integration. An OAuth integration that isn't `connected` sends nothing until it is.",
+				MarkdownDescription: "Whether to use the integration. An OAuth integration that's active sends nothing until someone connects it in the web UI at `links.web`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(true),
