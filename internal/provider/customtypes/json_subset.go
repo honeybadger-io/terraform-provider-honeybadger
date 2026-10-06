@@ -103,14 +103,12 @@ func parseJSON(s string) (any, error) {
 	return v, nil
 }
 
-// Subset reports whether want is contained in got: a "not set" value
-// matches anything; every key want sets matches got's; arrays holding any
+// Subset reports whether want is contained in got: a key whose value is
+// "not set" matches anything (a whole document or array element is a value,
+// so [] doesn't match a non-empty list); every key want sets matches got's; arrays holding any
 // object or array match position by position; arrays of scalars match as
 // multisets; scalars match by value (numbers numerically).
 func Subset(want, got any) bool {
-	if notSet(want) {
-		return true
-	}
 	switch w := want.(type) {
 	case map[string]any:
 		g, ok := got.(map[string]any)
@@ -118,6 +116,9 @@ func Subset(want, got any) bool {
 			return false
 		}
 		for k, wv := range w {
+			if notSet(wv) {
+				continue
+			}
 			if !Subset(wv, g[k]) {
 				return false
 			}

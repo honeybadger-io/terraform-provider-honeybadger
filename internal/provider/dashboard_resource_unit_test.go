@@ -197,3 +197,26 @@ func TestDashboardImport(t *testing.T) {
 		},
 	})
 }
+
+// A widget added in the web UI to a dashboard Terraform keeps empty shows in
+// the next plan (final review, Codex).
+func TestDashboardDriftFromEmpty(t *testing.T) {
+	f := newFakeHoneybadger(t)
+	cfg := dashboardHCL(f.srv.URL, "")
+	tfresource.UnitTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testFactories,
+		Steps: []tfresource.TestStep{
+			{Config: cfg},
+			{
+				PreConfig: func() {
+					f.mutate(`/dashboards/`, func(o map[string]any) {
+						o["widgets"] = []any{map[string]any{"id": "ui", "type": "errors"}}
+					})
+				},
+				Config:             cfg,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+		},
+	})
+}

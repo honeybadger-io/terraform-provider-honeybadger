@@ -117,3 +117,14 @@ func TestJSONValidator(t *testing.T) {
 		}
 	}
 }
+
+// "Not set" is for a key's value. A whole document of [] is a value: an
+// empty dashboard with widgets added in Honeybadger isn't equal to [].
+func TestEmptyDocumentIsAValue(t *testing.T) {
+	if Subset(decode(t, `[]`), decode(t, `[{"id":"a"}]`)) {
+		t.Error("[] matched a non-empty list: widgets added outside Terraform would go unseen")
+	}
+	if !Subset(decode(t, `[]`), decode(t, `[]`)) {
+		t.Error("[] must match []")
+	}
+}
