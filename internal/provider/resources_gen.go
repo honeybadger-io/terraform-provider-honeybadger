@@ -47,6 +47,7 @@ func generatedResources() []func() resource.Resource {
 		newProjectResource,
 		newProjectKeyResource,
 		newSiteResource,
+		newTeamResource,
 	}
 }
 

@@ -119,3 +119,16 @@ resources:
       last_checked_at: live data
     server_filled: [name]
     use_state_for_unknown: [created_at, links]
+
+  team:
+    create: createTeam
+    read: getTeam
+    update: updateTeam
+    delete: deleteTeam
+    import: "<id>"
+    service: Teams
+    api: {model: Team, create_params: TeamCreateParams, update_params: TeamUpdateParams}
+    find_hint: "your Honeybadger teams"
+    omit:
+      member_count: live data
+    use_state_for_unknown: [account_id, created_at, links]
