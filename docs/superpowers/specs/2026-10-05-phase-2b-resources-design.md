@@ -290,7 +290,9 @@ Plan assertions (`ConfigPlanChecks.PreApply`):
 Specific cases:
 - **Period round trips:**
   - `grace_period = "1 week"` (the API stores "7 days") plans no change;
-  - "01:30:00" versus "1 hour 30 minutes" doesn't diff;
+  - changing the configured "01:30:00" to "1 hour 30 minutes" plans one update
+    (semantic equality covers values the API returns, not two configured
+    forms), and the plan after it is empty;
   - importing a check-in stored as "7 days", with "1 week" in config, plans
     one harmless update and then an empty plan. Import has no prior value
     for semantic equality to keep, so that one update is expected and
