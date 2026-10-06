@@ -45,5 +45,5 @@ Read-Only:
 
 ## Notes
 
-- **Needs a user API Token:** creating, changing or deleting a team needs the `team:write` scope, which only a user API Token can hold. An account API Token never can, by design, so with one the API refuses team changes with a 403 naming the missing scope.
+- **Needs the `team:write` scope:** creating, changing or deleting a team needs an API Token with `team:write`. Account API Tokens made before it was offered to them don't have it; add it in the token's settings.
 - **`project_ids`** is the team's whole project list: projects left out lose the team's access.
