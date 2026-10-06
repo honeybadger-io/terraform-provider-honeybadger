@@ -36,9 +36,14 @@ at that build. Point Terraform at it from your Terraform project, for example
 with direnv:
 
     # .envrc in your Terraform project
-    export TF_CLI_CONFIG_FILE=~/Projects/honeybadger/mcp/terraform-provider-honeybadger/.dev/terraformrc
-    export HONEYBADGER_API_URL=http://localhost:3001
-    export HONEYBADGER_API_TOKEN=...   # an API Token for the local stack
+    export TF_CLI_CONFIG_FILE=/path/to/terraform-provider-honeybadger/.dev/terraformrc
+    export HONEYBADGER_API_TOKEN=...   # an API Token for your Honeybadger account
+
+The provider talks to `https://app.honeybadger.io` unless you set `api_url`
+or `HONEYBADGER_API_URL` (EU accounts: `https://eu-app.honeybadger.io`).
+Applying creates and changes real objects in that account, so try it in a
+test project or account. (Honeybadger staff can point `HONEYBADGER_API_URL`
+at a local stack.)
 
 Then run `terraform plan` and `apply` as usual; `terraform init` isn't
 needed, and Terraform warns that development overrides are in effect. Rerun
@@ -46,10 +51,17 @@ needed, and Terraform warns that development overrides are in effect. Rerun
 Leave the directory, or unset `TF_CLI_CONFIG_FILE`, to use providers from the
 registry again. `examples/resources/` has a config for every resource.
 
-## Acceptance tests
+## Tests
 
-Acceptance tests create and destroy real objects. Run them against a local
-Honeybadger stack, never your everyday account:
+`make test` runs the unit tests. They use an in-memory fake of the API, so
+they need no Honeybadger account; run them before opening a pull request.
+
+## Acceptance tests (maintainers)
+
+Acceptance tests are the release gate. They run against Honeybadger's own
+local stack, which isn't public, so Honeybadger maintainers run them on a
+pull request before it merges. They create and destroy real objects; never
+point them at an everyday account:
 
     export HONEYBADGER_API_URL=http://localhost:3001
     export HONEYBADGER_API_TOKEN=hba_...   # a token for the terraform-acc account
