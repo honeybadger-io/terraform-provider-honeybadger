@@ -55,7 +55,7 @@ Each field's conversion is chosen by its Go type shape:
 
 | Go shape | Write (create / update) | Read |
 | --- | --- | --- |
-| value (`string`, `bool`, `int`) | `x.ValueString()` etc. on create; required, so always sent | `types.StringValue(c.X)` etc. |
+| value (`string`, `bool`, `int`) | `x.ValueString()` etc. on create, for Required attributes only; a create-side value field whose attribute isn't Required is a generation error, since it would be sent as a zero value | `types.StringValue(c.X)` etc. |
 | pointer (`*string`) | create: pointer when known; update: `updateStringPtr(plan, state)`, nil when unchanged | `stringPtrValue` |
 | `nullable.Nullable[T]` | phase 1's `createX` / `updateX` | phase 1's `xValue` |
 | named string (enum), value or pointer | `setEnum` / `setEnumPtr` / `updateEnumPtr`, generic over `T ~string` and inferred from the destination, so generated code never names api-go's internal types | `types.StringValue(string(c.X))` |
@@ -87,10 +87,14 @@ method or a mismatched signature is a generation error.
 `<name>_resource_gen.go` gets the resource type and its constructor, plus:
 
 - `Metadata` (`honeybadger_<name>`), `Schema` and `Configure`, which takes
-  the `*apiv3.Client` from provider data;
+  the `*apiv3.Client` from provider data. `Configure` returns early when
+  provider data is nil, which happens during validation before the provider
+  is configured;
 - **Create:** `createParams`, the client call, then `fromAPI`. If
   `isUnknownOutcome`, it shows the phase 1 "may have been created" error,
-  with the import format and `find_hint`;
+  with the import format and `find_hint`. A 2xx whose result has an empty
+  `id` (api-go accepts `{"data":{}}`) gets the same error instead of saving
+  an empty state (umbrella 6.4);
 - **Read:** a 404 removes the resource from state (spec 5.3);
 - **Update:** `updateParams(state)`, the client call, then `fromAPI`;
 - **Delete:** a 404 counts as success; an unknown outcome gets the "delete
@@ -98,9 +102,11 @@ method or a mismatched signature is a generation error.
 - **ImportState:** parses the generated import format into its attributes;
 - `ConfigValidators`, when `config_validators` names a function.
 
-`resources_gen.go` lists every generated resource; `provider.Resources`
-returns it. A resource with `crud: manual` gets only its schema, model and
-mapping, and its hand-written wrapper is added to the list by hand.
+The generator owns `resources_gen.go`, which defines
+`generatedResources() []func() resource.Resource`. `provider.go`'s
+`Resources` is edited by hand once, to return `generatedResources()` plus any
+`crud: manual` resources. A `crud: manual` resource gets only its schema,
+model and mapping, and its hand-written wrapper is added to that list.
 
 ## 4. The resources
 
@@ -154,7 +160,6 @@ check_in:
     reported_at: live data
     expected_at: live data
     missed_count: live data
-  server_filled: [slug]
   custom_types: {report_period: period, grace_period: period}
   use_state_for_unknown: [created_at, report_url]
 ```
@@ -168,6 +173,15 @@ Notes:
   apply)" on project updates instead.
 - **`report_url` is stable:** it's built from the check-in's hashid, not its
   slug.
+- **`slug` is plain Optional.** The server doesn't generate it (`check_in.rb`
+  only nils a blank one), so an omitted slug stays null and removing one
+  clears it. The bundle's "Generated from the name when omitted" wording is
+  wrong; a fix was requested from honeybadger.
+- **Blocked on honeybadger:** the API omits `cron_timezone` for simple
+  check-ins (`check_in_presenter.rb:23`), while the spec defaults it to `UTC`.
+  Until the API returns `UTC` for simple schedules (fix requested), every
+  simple check-in ends in "inconsistent result after apply". The provider
+  doesn't work around it; check-in acceptance tests wait for the fix.
 - **From the spec, with no override:**
   - defaults: `schedule_type` is `simple`, `cron_timezone` is `UTC`,
     `grace_period` is `00:00:00`, `disable_public_links` is false and
@@ -179,11 +193,17 @@ Notes:
 
 These mirror the API's rules, which the spec states only in prose:
 
-- `schedule_type = "simple"` requires `report_period` and forbids
-  `cron_schedule`;
-- `schedule_type = "cron"` requires `cron_schedule` and forbids
-  `report_period`;
-- a `cron_timezone` other than `UTC` requires `schedule_type = "cron"`.
+- an omitted `schedule_type` counts as `simple`. Config validators see the
+  raw config, before schema defaults apply;
+- `simple` requires `report_period` and forbids `cron_schedule`;
+- `cron` requires `cron_schedule` and forbids `report_period`;
+- a `cron_timezone` other than `UTC` requires `cron`;
+- `report_period` can't be zero (checked with `ParsePeriod`).
+
+Only the API can check that `cron_timezone` is an ActiveSupport zone name,
+that `name` is unique within the project, that `slug` matches
+`[a-z0-9\-_]{1,255}`, and that the account's plan allows cron check-ins
+(403 `feature_unavailable`). Those surface as apply-time diagnostics.
 
 With these rules, the API never changes a field the plan didn't predict when
 the schedule switches (umbrella 5.3), so no plan modification is needed.
@@ -217,7 +237,8 @@ resource and field or method:
   read side;
 - a missing service method;
 - service method parameters in the wrong order;
-- a params type that isn't a struct.
+- a params type that isn't a struct;
+- a create-side value field whose attribute isn't Required.
 
 ### 5.2 Unit tests
 
@@ -229,8 +250,13 @@ resource and field or method:
   clears, defaults sent, unknown fields left out, and the pointer, enum and
   period shapes.
 - One `resource.UnitTest` showing that a 404 on read removes the resource.
+- One `resource.UnitTest` showing that a 404 on delete completes without an
+  error.
 - One `resource.UnitTest` showing that an unknown-outcome create shows the
-  import hint.
+  import hint, and one where the create returns `{"data":{}}`.
+- One `resource.UnitTest` where the fake answers a create with a 429 and
+  `Retry-After: 0`, then succeeds: the body is resent and the apply
+  succeeds.
 - The delete-timeout diagnostic is tested directly, as in phase 1; it isn't
   driven through a 30-second stall.
 
@@ -243,8 +269,9 @@ Setup is documented in `CONTRIBUTING.md`:
 - the token's account `api_hits_per_hour` raised well above 360 before a run,
   because a full run makes about 150–250 requests.
 
-`testAccPreCheck` checks both variables, calls `Tokens.Get`, and fails early
-with a clear message if the remaining rate-limit budget is under 300.
+`testAccPreCheck` checks both variables, calls `Tokens.Get`, then reads
+`client.LastRateLimit().Remaining` and fails early with a clear message if
+fewer than 300 requests remain.
 
 Each resource's lifecycle:
 1. create;
@@ -267,17 +294,23 @@ Specific cases:
   - `grace_period = "1 week"` (the API stores "7 days") plans no change;
   - "01:30:00" versus "1 hour 30 minutes" doesn't diff;
   - importing a check-in stored as "7 days", with "1 week" in config, plans
-    no change.
-- **Defaults after import:** a project created with
-  `disable_public_links = true`, imported with that attribute left out of
-  config, plans an update back to `false` (umbrella 5.2).
-- **Parallel creates:** five check-ins with `count = 5` succeed, exercising
-  429 retries.
+    one harmless update and then an empty plan. Import has no prior value
+    for semantic equality to keep, so that one update is expected and
+    documented.
+- **Defaults when an attribute is removed:** create a project with
+  `disable_public_links = true`, then drop it from config. The next step's
+  `ConfigPlanChecks.PreApply` asserts `ResourceActionUpdate` and
+  `disable_public_links` known as `false` (umbrella 5.2). An import step
+  can't show this, because import verification compares state with state,
+  not with config.
+- **Concurrency:** five check-ins with `count = 5` succeed. (Retries on 429
+  are proven in the unit tests.)
 - **Project and new key in one apply:** `token` shows "(known after apply)"
   and the apply succeeds.
 - **Adding a `slug`** to an existing check-in plans an update.
 - **Cascade:** destroying a project together with its keys and check-ins
-  succeeds; anything already gone counts as deleted.
+  succeeds.
+- **Import IDs:** built with `ImportStateIdFunc` (`<project_id>/<id>`).
 
 A `tf-acc-` sweeper lists projects, filters by prefix and deletes them. Each
 project delete cascades to its keys and check-ins.

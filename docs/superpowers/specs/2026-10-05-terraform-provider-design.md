@@ -586,10 +586,14 @@ work; the provider doesn't work around it.
   no alarm.
 - **A retried alarm delete can fail and leave the alarm undeletable** if Opticon
   already deleted its observer.
-- **Secrets marked `format: password`** (in progress in honeybadger): every
+- **Secrets marked `format: password`** (done in honeybadger): every
   writeOnly integration secret, `StatusPageInput.password`, and the webhook
-  URLs that carry a credential. Until the new bundle is copied in, those use
-  the `sensitive` fallback.
+  URLs that carry a credential. Never the ingestion keys (`Project.token`,
+  `ProjectKey.key`), which aren't secrets.
+- **Simple check-ins omit `cron_timezone`** although the spec defaults it to
+  `UTC` (fix requested); blocks the check-in resource.
+- **`CheckInInput.slug` says it's generated from the name when omitted**; it
+  isn't (fix requested).
 
 ## 11. Out of scope
 
