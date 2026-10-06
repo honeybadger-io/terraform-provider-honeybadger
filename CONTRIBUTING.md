@@ -16,6 +16,7 @@ Design: `docs/superpowers/specs/2026-10-05-terraform-provider-design.md`.
     make build      # compile
     make test       # unit tests (needs terraform on PATH)
     make lint       # golangci-lint
+    make update-spec  # copy honeybadger's bundle into openapi/ (after a spec change)
     make generate   # regenerate docs/ with tfplugindocs; commit the result
     make testacc    # acceptance tests against a Honeybadger stack
 

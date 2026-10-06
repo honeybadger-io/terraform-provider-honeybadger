@@ -1,8 +1,9 @@
 name: Tests
 
+# Manual only until a release bumps go.mod to a pushed api-go: CI can't see the
+# local api-go this provider develops against (spec sections 3.2 and 8.4).
 on:
-  push:
-  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -28,9 +29,9 @@ jobs:
         with:
           version: latest
           install-mode: goinstall
-      - name: Docs are current
+      - name: Generated code is current
         run: |
-          go generate ./...
+          make generate
           git status --porcelain
           test -z "$(git status --porcelain)"
 

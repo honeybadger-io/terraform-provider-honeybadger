@@ -12,7 +12,20 @@ testacc:
 lint:
 	golangci-lint run
 
-generate:
-	go generate ./...
+update-spec:
+	./scripts/update-spec.sh
 
-.PHONY: default build test testacc lint generate
+check-spec:
+	./scripts/check-spec.sh
+
+# Phase 7's release checklist runs this: a release needs the provider and the
+# api-go it requires built from the same bundle.
+check-spec-release:
+	./scripts/check-spec.sh --release
+
+# specgen before tfplugindocs: the docs are built from the generated schemas.
+generate: check-spec
+	go generate ./internal/...
+	go generate .
+
+.PHONY: default build test testacc lint generate update-spec check-spec check-spec-release
