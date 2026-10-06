@@ -120,6 +120,17 @@ as before.
   setting events fails at plan.
 - **UUID elements** (`format: uuid`): string elements in Terraform, with a
   UUID validator; converted to and from api-go's `openapi_types.UUID`.
+- **Collection defaults** (`default: []`): a list or set with a declared
+  empty default is Optional + Computed with that default, like a scalar
+  default. Seven integration arrays treat "left out" and "empty" alike and
+  read back `[]`, never null (`site_ids`, `check_in_ids`, `alarm_alert_ids`,
+  `alarm_ok_ids`, `included_environments`, `excluded_environments`,
+  `filters`). Without a default, a config that leaves one out plans null and
+  reads `[]`, a permanent diff. honeybadger is asked to declare `default: []`
+  on them, which is accurate; leaving one out then plans `[]`, and removing
+  it sends `[]`, which clears it. Reading an empty list as null instead
+  would be an inference from the read schema, and an explicit `[]` in config
+  would then fail with "inconsistent result".
 
 ### 3.5 Go shapes
 
@@ -169,11 +180,11 @@ Each resource's schema:
 | `project_id` | Required, forces replacement |
 | `active` | Optional + Computed, default true |
 | `events` | Optional + Computed set, the type's item enum; server-filled, since the default is the type's events filtered by the account's plan |
-| `filters` | Optional list of objects (`event`, `query`) |
-| `site_ids` | Optional set of UUIDs |
-| `check_in_ids`, `alarm_alert_ids`, `alarm_ok_ids` | Optional sets |
+| `filters` | Optional + Computed list of objects (`event`, `query`), default `[]` |
+| `site_ids` | Optional + Computed set of UUIDs, default `[]` |
+| `check_in_ids`, `alarm_alert_ids`, `alarm_ok_ids` | Optional + Computed sets, default `[]` |
 | `all_sites`, `all_check_ins` | Optional + Computed, default false |
-| `included_environments`, `excluded_environments` | Optional sets |
+| `included_environments`, `excluded_environments` | Optional + Computed sets, default `[]` |
 | `rate`, `threshold`, `notification_limit` | Optional |
 | `config` | The type's settings (section 3.2); required for 33 types, optional for Slack |
 | `links` | Computed object with `web`, the integration's page, where an OAuth type is connected |
@@ -258,6 +269,8 @@ schema, and a committed resource disappearing without a `retired` entry.
   Intercom's `maxItems: 0`.
 - **api-go:** regenerated from the same bundle (mcp-v3), so `make
   check-spec` matches.
+- **honeybadger, requested:** `default: []` on the seven arrays in section
+  3.4.
 - **honeybadger, answered:** which types create without an external call,
   and their minimal configs (section 5.3).
 
