@@ -252,6 +252,10 @@ type SprocketSpeed int
 
 type SprocketMode string
 
+type SprocketTrim struct {
+	Color nullable.Nullable[string] `json:"color,omitempty"`
+}
+
 // Sprocket is the phase-5 fixture: an account-level resource with a UUID id.
 type Sprocket struct {
 	Id        uuid.UUID                            `json:"id"`
@@ -261,6 +265,7 @@ type Sprocket struct {
 	Speed     SprocketSpeed                        `json:"speed"`
 	Mode      SprocketMode                         `json:"mode"`
 	CheckedAt nullable.Nullable[time.Time]         `json:"checked_at"`
+	Trim      SprocketTrim                         `json:"trim"`
 }
 
 type SprocketCreateParams struct {
@@ -269,6 +274,7 @@ type SprocketCreateParams struct {
 	Headers  nullable.Nullable[map[string]string] `json:"headers,omitempty"`
 	Speed    nullable.Nullable[SprocketSpeed]     `json:"speed,omitempty"`
 	Mode     nullable.Nullable[SprocketMode]      `json:"mode,omitempty"`
+	Trim     nullable.Nullable[SprocketTrim]      `json:"trim,omitempty"`
 }
 
 type SprocketUpdateParams struct {
@@ -276,6 +282,7 @@ type SprocketUpdateParams struct {
 	Headers nullable.Nullable[map[string]string] `json:"headers,omitempty"`
 	Speed   nullable.Nullable[SprocketSpeed]     `json:"speed,omitempty"`
 	Mode    nullable.Nullable[SprocketMode]      `json:"mode,omitempty"`
+	Trim    nullable.Nullable[SprocketTrim]      `json:"trim,omitempty"`
 }
 
 type SprocketsService struct{}

@@ -653,6 +653,7 @@ components:
       - parent_id
       - speed
       - mode
+      - trim
       properties:
         id:
           type: string
@@ -683,6 +684,8 @@ components:
           format: date-time
           readOnly: true
           description: When it was last checked; null for one never checked.
+        trim:
+          "$ref": "#/components/schemas/SprocketTrim"
     SprocketInput:
       type: object
       properties:
@@ -709,6 +712,12 @@ components:
           anyOf:
           - "$ref": "#/components/schemas/SprocketMode"
           - type: 'null'
+        trim:
+          description: Finishing. Replaced whole by an update.
+          default: {}
+          anyOf:
+          - "$ref": "#/components/schemas/SprocketTrim"
+          - type: 'null'
     SprocketCreateInput:
       allOf:
       - "$ref": "#/components/schemas/SprocketInput"
@@ -734,3 +743,12 @@ components:
       enum:
       - slow
       - fast
+    SprocketTrim:
+      type: object
+      additionalProperties: false
+      properties:
+        color:
+          type:
+          - string
+          - 'null'
+          description: Paint color.

@@ -190,6 +190,15 @@ func renderAttribute(b *bytes.Buffer, a Attribute, imports map[string]bool, pare
 		fmt.Fprintf(b, "Default: %sdefault.StaticValue(types.%sValueMust(%s, []attr.Value{})),\n", k.pkg, typeName(a.Kind), elem)
 		imports["github.com/hashicorp/terraform-plugin-framework/resource/schema/"+k.pkg+"default"] = true
 		imports["github.com/hashicorp/terraform-plugin-framework/attr"] = true
+	} else if a.Default != nil && a.Kind == "object" {
+		// Only {} is allowed (merge.go): every attribute null.
+		var nulls strings.Builder
+		for _, c := range a.Attributes {
+			fmt.Fprintf(&nulls, "%q: %s,\n", c.Name, nullOf(c))
+		}
+		fmt.Fprintf(b, "Default: objectdefault.StaticValue(types.ObjectValueMust(%sAttrTypes(), map[string]attr.Value{\n%s})),\n", p, nulls.String())
+		imports["github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"] = true
+		imports["github.com/hashicorp/terraform-plugin-framework/attr"] = true
 	} else if a.Default != nil {
 		lit, err := literal(a.Kind, a.Default)
 		if err != nil {

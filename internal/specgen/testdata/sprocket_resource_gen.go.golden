@@ -12,10 +12,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -67,6 +69,20 @@ func sprocketResourceSchema() schema.Schema {
 				Default:             int64default.StaticInt64(5),
 				Validators:          []validator.Int64{int64validator.OneOf(1, 2, 5, 15)},
 			},
+			"trim": schema.SingleNestedAttribute{
+				Attributes: map[string]schema.Attribute{
+					"color": schema.StringAttribute{
+						MarkdownDescription: "Paint color.",
+						Optional:            true,
+					},
+				},
+				MarkdownDescription: "Finishing. Replaced whole by an update.",
+				Optional:            true,
+				Computed:            true,
+				Default: objectdefault.StaticValue(types.ObjectValueMust(sprocketTrimAttrTypes(), map[string]attr.Value{
+					"color": types.StringNull(),
+				})),
+			},
 		},
 	}
 }
@@ -79,6 +95,17 @@ type sprocketResourceModel struct {
 	Name      types.String `tfsdk:"name"`
 	ParentID  types.String `tfsdk:"parent_id"`
 	Speed     types.Int64  `tfsdk:"speed"`
+	Trim      types.Object `tfsdk:"trim"`
+}
+
+type sprocketTrimModel struct {
+	Color types.String `tfsdk:"color"`
+}
+
+func sprocketTrimAttrTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"color": types.StringType,
+	}
 }
 
 // sprocketImportFormat is the ID terraform import takes.
@@ -91,6 +118,7 @@ func (m sprocketResourceModel) createParams(diags *diag.Diagnostics) fakeapi.Spr
 	p.Name = m.Name.ValueString()
 	p.ParentId = fromUUID(m.ParentID)
 	createIntEnum(&p.Speed, m.Speed)
+	p.Trim = nullableOf(sprocketTrimToAPI(m.Trim, path.Root("trim"), diags))
 	return p
 }
 
@@ -100,6 +128,7 @@ func (m sprocketResourceModel) updateParams(state sprocketResourceModel, diags *
 	updateEnum(&p.Mode, m.Mode, state.Mode)
 	p.Name = updateStringPtr(m.Name, state.Name)
 	updateIntEnum(&p.Speed, m.Speed, state.Speed)
+	p.Trim = updateNullableObject(m.Trim, state.Trim, sprocketTrimToAPI(m.Trim, path.Root("trim"), diags))
 	return p
 }
 
@@ -111,6 +140,30 @@ func (m *sprocketResourceModel) fromAPI(c *fakeapi.Sprocket) {
 	m.Name = types.StringValue(c.Name)
 	m.ParentID = types.StringValue(c.ParentId.String())
 	m.Speed = types.Int64Value(int64(c.Speed))
+	m.Trim = sprocketTrimFromAPI(&c.Trim)
+}
+
+// sprocketTrimToAPI converts trim for a request. It's nil when the
+// object is null or unknown, or holds a value that isn't known, which it
+// reports: the API replaces the object whole.
+func sprocketTrimToAPI(o types.Object, at path.Path, diags *diag.Diagnostics) *fakeapi.SprocketTrim {
+	var m sprocketTrimModel
+	if !objectAs(o, &m, at, diags) {
+		return nil
+	}
+	var out fakeapi.SprocketTrim
+	out.Color = createString(m.Color)
+	return &out
+}
+
+// sprocketTrimFromAPI reads trim: null when the API returns none.
+func sprocketTrimFromAPI(c *fakeapi.SprocketTrim) types.Object {
+	if c == nil {
+		return types.ObjectNull(sprocketTrimAttrTypes())
+	}
+	return types.ObjectValueMust(sprocketTrimAttrTypes(), map[string]attr.Value{
+		"color": stringValue(c.Color),
+	})
 }
 
 var (

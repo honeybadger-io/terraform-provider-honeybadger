@@ -335,7 +335,7 @@ func setKind(a *Attribute, f Field) error {
 			return err
 		}
 		a.Kind, a.Attributes = "object", children
-		return nil
+		return emptyObjectDefault(a)
 	}
 	return fmt.Errorf("%s fields aren't supported yet; omit it or extend specgen", f.Type)
 }
@@ -353,6 +353,24 @@ func emptyDefault(a *Attribute) error {
 		return nil
 	}
 	return fmt.Errorf("a non-empty default on a list or set isn't supported yet")
+}
+
+// emptyObjectDefault allows an object default only when it's {} and every
+// attribute is optional with no default: then {} means each one null, which
+// is how the spec says "left out is the same as {}" (phase 5 spec, 3.5).
+func emptyObjectDefault(a *Attribute) error {
+	if a.Default == nil {
+		return nil
+	}
+	if d, ok := a.Default.(map[string]any); !ok || len(d) != 0 {
+		return fmt.Errorf("a non-empty default on an object isn't supported yet")
+	}
+	for _, c := range a.Attributes {
+		if c.Required || c.Default != nil || c.Kind == "object" {
+			return fmt.Errorf("an empty object default needs every attribute optional, with no default and not an object; %s isn't", c.Name)
+		}
+	}
+	return nil
 }
 
 // nestedAttributes decides an object's attributes. A read-only (computed)

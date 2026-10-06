@@ -395,3 +395,15 @@ func TestRenderRefusesFractionalIntegerEnum(t *testing.T) {
 		t.Errorf("err = %v, want a refusal of 1.5", err)
 	}
 }
+
+func TestRenderEmptyObjectDefault(t *testing.T) {
+	_, r := mapSprocket(t)
+	got, err := Render(r, nil)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	want := `Default:\s+objectdefault\.StaticValue\(types\.ObjectValueMust\(sprocketTrimAttrTypes\(\), map\[string\]attr\.Value\{\s*"color":\s+types\.StringNull\(\),\s*\}\)\)`
+	if !regexp.MustCompile(want).Match(got) {
+		t.Errorf("rendered code doesn't match %s\n%s", want, got)
+	}
+}

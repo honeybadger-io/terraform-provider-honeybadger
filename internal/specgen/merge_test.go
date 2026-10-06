@@ -500,3 +500,26 @@ func TestMergeIntegerEnum(t *testing.T) {
 		t.Errorf("speed = %+v; want an int64 enum defaulting to 5", s)
 	}
 }
+
+func TestMergeEmptyObjectDefault(t *testing.T) {
+	r, err := Merge(loadFixture(t), "sprocket", sprocketConfig(t))
+	if err != nil {
+		t.Fatalf("Merge: %v", err)
+	}
+	tr := attrNamed(t, r, "trim")
+	if tr.Kind != "object" || !tr.Optional || !tr.Computed || tr.Default == nil {
+		t.Errorf("trim = %+v; want an optional, computed object with a default", tr)
+	}
+}
+
+func TestEmptyObjectDefaultRefusals(t *testing.T) {
+	for name, a := range map[string]Attribute{
+		"non-empty":      {Name: "o", Kind: "object", Default: map[string]any{"color": "red"}},
+		"required child": {Name: "o", Kind: "object", Default: map[string]any{}, Attributes: []Attribute{{Name: "c", Kind: "string", Required: true}}},
+		"object child":   {Name: "o", Kind: "object", Default: map[string]any{}, Attributes: []Attribute{{Name: "c", Kind: "object", Optional: true}}},
+	} {
+		if err := emptyObjectDefault(&a); err == nil {
+			t.Errorf("%s: no error", name)
+		}
+	}
+}
