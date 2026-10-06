@@ -45,7 +45,9 @@ func (checkInSchedule) ValidateResource(ctx context.Context, req resource.Valida
 	known := func(v interface {
 		IsNull() bool
 		IsUnknown() bool
-	}) bool { return !v.IsNull() && !v.IsUnknown() }
+	}) bool {
+		return !v.IsNull() && !v.IsUnknown()
+	}
 	switch {
 	case cron && cronSchedule.IsNull():
 		resp.Diagnostics.AddAttributeError(path.Root("cron_schedule"), "Missing cron schedule",
