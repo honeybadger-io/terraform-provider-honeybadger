@@ -46,8 +46,8 @@ type fakeHoneybadger struct {
 }
 
 var (
-	collectionPath = regexp.MustCompile(`^/v3/projects(?:/([^/]+)/(check_ins|keys))?$`)
-	objectPath     = regexp.MustCompile(`^/v3/projects/([^/]+)(?:/(check_ins|keys)/([^/]+))?$`)
+	collectionPath = regexp.MustCompile(`^/v3/projects(?:/([^/]+)/(check_ins|keys|alarms))?$`)
+	objectPath     = regexp.MustCompile(`^/v3/projects/([^/]+)(?:/(check_ins|keys|alarms)/([^/]+))?$`)
 )
 
 func newFakeHoneybadger(t *testing.T) *fakeHoneybadger {
@@ -93,6 +93,20 @@ func (f *fakeHoneybadger) remove(pattern string) {
 			delete(f.objects, p)
 		}
 	}
+}
+
+// snapshot is an object as a scripted response body would carry it.
+func (f *fakeHoneybadger) snapshot(pattern string) string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	re := regexp.MustCompile(pattern)
+	for p, obj := range f.objects {
+		if re.MatchString(p) {
+			b, _ := json.Marshal(map[string]any{"data": obj})
+			return string(b)
+		}
+	}
+	return ""
 }
 
 func (f *fakeHoneybadger) serve(w http.ResponseWriter, r *http.Request) {
@@ -165,6 +179,11 @@ func (f *fakeHoneybadger) create(w http.ResponseWriter, collection, projectID, k
 	case "keys":
 		obj["project_id"] = projectID
 		obj["key"] = "hbp_" + id
+	case "alarms":
+		obj["project_id"] = projectID
+		obj["state"] = "initial"
+		obj["updated_at"] = "2026-10-05T00:00:00Z"
+		obj["stream_ids"] = []any{"s-default", "s-internal"}
 	}
 	for k, v := range body {
 		obj[k] = v

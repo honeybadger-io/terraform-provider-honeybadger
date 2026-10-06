@@ -53,3 +53,22 @@ resources:
       missed_count: live data
     custom_types: {report_period: period, grace_period: period}
     use_state_for_unknown: [created_at, report_url]
+
+  alarm:
+    create: createAlarm
+    read: getAlarm
+    update: updateAlarm
+    delete: deleteAlarm
+    import: "<project_id>/<id>"
+    service: Alarms
+    api: {model: Alarm, create_params: AlarmCreateParams, update_params: AlarmUpdateParams}
+    find_hint: "the project's alarms in Honeybadger"
+    omit:
+      links: web UI links, not configuration
+      state: live data; lags its evaluation history (umbrella spec, section 7)
+      error: live data
+      last_checked_at: live data
+      next_check_at: live data
+      updated_at: live data
+    server_filled: [stream_ids]
+    use_state_for_unknown: [created_at]

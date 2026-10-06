@@ -1,0 +1,29 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+{{ if .HasExample -}}
+## Example Usage
+
+{{ tffile .ExampleFile }}
+{{- end }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Notes
+
+- **`stream_ids`:** left out, the alarm gets the project's current streams, and state shows them. Removing `stream_ids` from config stops Terraform managing it and keeps the stored list. To change the streams, list them.
+- **New projects:** a project's streams are set up just after it's created. An alarm created in the same apply, with `stream_ids` left out, waits for them. If they take longer than a few seconds, the apply fails and succeeds when rerun.
+- **Trigger rules:** rules that depend on `trigger_config.type` are checked by the API when the alarm is applied, not at plan time.
+- **An invalid trigger on update** is answered with success and the old trigger kept. Terraform then reports "Provider produced inconsistent result after apply".
+- **Import:** an alarm whose stored copy has no trigger imports with `trigger_config` null, so the next plan adds one.
+- **A create that times out** can leave an evaluator behind in Honeybadger's alarm service with no alarm attached. Check the project's alarms before applying again.
+- **A retried delete can fail** if the alarm service already removed the alarm's evaluator.
+- **When the alarm service is unavailable**, the API answers 503. On create, Terraform reports that the create may have succeeded and how to adopt the alarm with import.

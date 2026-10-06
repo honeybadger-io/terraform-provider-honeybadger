@@ -7,6 +7,7 @@ import "github.com/hashicorp/terraform-plugin-framework/resource"
 // generatedResources lists the resources specgen generates wrappers for.
 func generatedResources() []func() resource.Resource {
 	return []func() resource.Resource{
+		newAlarmResource,
 		newCheckInResource,
 		newProjectResource,
 		newProjectKeyResource,
