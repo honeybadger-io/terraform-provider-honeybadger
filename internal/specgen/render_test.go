@@ -248,3 +248,62 @@ func TestRenderGadgetAlphaMatchesGolden(t *testing.T) {
 		t.Errorf("rendered gadget differs from %s; rerun with -update and review", golden)
 	}
 }
+
+// docsConfig writes a copy of the widget config with a docs category and a
+// templates directory, and returns its path and the templates directory.
+func docsConfig(t *testing.T) (string, string) {
+	t.Helper()
+	dir := t.TempDir()
+	b, err := os.ReadFile("testdata/resources.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := strings.Replace(string(b), "\n  widget:\n", "\n  widget:\n    docs_category: Gadgets\n", 1)
+	s = "docs_templates: tmpl\n" + s
+	cfg := filepath.Join(dir, "resources.yaml")
+	if err := os.WriteFile(cfg, []byte(s), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return cfg, filepath.Join(dir, "tmpl", "resources")
+}
+
+// A docs category puts the resource's registry page in that sidebar group
+// (tfplugindocs reads subcategory from the template).
+func TestGenerateWritesDocsTemplates(t *testing.T) {
+	cfg, tmpl := docsConfig(t)
+	if err := Generate("testdata/openapi.yaml", cfg, t.TempDir(), ""); err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	got, err := os.ReadFile(filepath.Join(tmpl, "widget.md.tmpl"))
+	if err != nil {
+		t.Fatalf("no template: %v", err)
+	}
+	if !strings.Contains(string(got), `subcategory: "Gadgets"`) || !strings.HasPrefix(string(got), docsTemplateMarker) {
+		t.Errorf("template = %s", got)
+	}
+}
+
+// A hand-written template keeps its content, and must agree on the category.
+func TestGenerateChecksHandwrittenTemplateCategory(t *testing.T) {
+	cfg, tmpl := docsConfig(t)
+	if err := os.MkdirAll(tmpl, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(tmpl, "widget.md.tmpl")
+	if err := os.WriteFile(path, []byte("---\nsubcategory: \"Other\"\n---\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	err := Generate("testdata/openapi.yaml", cfg, t.TempDir(), "")
+	if err == nil || !strings.Contains(err.Error(), "widget") || !strings.Contains(err.Error(), "Gadgets") {
+		t.Errorf("err = %v, want one naming widget and Gadgets", err)
+	}
+	if err := os.WriteFile(path, []byte("---\nsubcategory: \"Gadgets\"\n---\nhand-written\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := Generate("testdata/openapi.yaml", cfg, t.TempDir(), ""); err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if got, _ := os.ReadFile(path); !strings.Contains(string(got), "hand-written") {
+		t.Error("a hand-written template was overwritten")
+	}
+}

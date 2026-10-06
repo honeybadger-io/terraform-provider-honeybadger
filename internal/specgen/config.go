@@ -12,9 +12,10 @@ import (
 // Config is resources.yaml: per resource, the operations it uses and the
 // overrides for facts the spec doesn't state (spec section 5.2).
 type Config struct {
-	Retired   []string                  `yaml:"retired"`  // generated resources deliberately removed
-	Provider  string                    `yaml:"provider"` // the provider's type-name prefix, e.g. honeybadger
-	Resources map[string]ResourceConfig `yaml:"resources"`
+	DocsTemplates string                    `yaml:"docs_templates"` // tfplugindocs templates directory, relative to this file
+	Retired       []string                  `yaml:"retired"`        // generated resources deliberately removed
+	Provider      string                    `yaml:"provider"`       // the provider's type-name prefix, e.g. honeybadger
+	Resources     map[string]ResourceConfig `yaml:"resources"`
 }
 
 // ResourceConfig is one resource's entry.
@@ -36,6 +37,7 @@ type ResourceConfig struct {
 	ConfigValidators   string            `yaml:"config_validators"` // hand-written func returning []resource.ConfigValidator
 	CRUD               string            `yaml:"crud"`              // "" or "generated" (wrapper generated), or "manual"
 	Variants           string            `yaml:"variants"`          // discriminator: one resource per create branch
+	DocsCategory       string            `yaml:"docs_category"`     // the registry sidebar group for its pages
 	Entry              string            `yaml:"-"`                 // the entry name, set by Generate
 	Provider           string            `yaml:"-"`                 // the provider prefix, from Config
 }

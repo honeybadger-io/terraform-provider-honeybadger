@@ -2,6 +2,7 @@
 # phase 2b spec section 4). Schemas, models, mappings and CRUD wrappers are
 # generated from these and openapi/bundled.yaml.
 provider: honeybadger
+docs_templates: ../../templates
 resources:
   project:
     create: createProject
@@ -81,6 +82,7 @@ resources:
     delete: deleteIntegration
     import: "<project_id>/<id>"
     variants: type
+    docs_category: Integrations
     service: Integrations
     api: {model: Integration, create_params: IntegrationCreateParams, update_params: IntegrationUpdateParams}
     find_hint: "the project's integrations in Honeybadger"
