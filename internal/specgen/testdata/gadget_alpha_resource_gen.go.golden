@@ -28,7 +28,7 @@ import (
 
 func gadgetAlphaResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "A gadget.",
+		MarkdownDescription: "An alpha gadget, which posts to a URL.",
 		Attributes: map[string]schema.Attribute{
 			"active": schema.BoolAttribute{
 				MarkdownDescription: "Whether the gadget runs.",

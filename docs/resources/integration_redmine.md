@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_redmine Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create a Redmine integration.
 ---
 
 # honeybadger_integration_redmine (Resource)
 
-A notification integration
+Create a Redmine integration.
 
 
 

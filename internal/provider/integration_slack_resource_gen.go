@@ -31,7 +31,7 @@ import (
 
 func integrationSlackResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "A notification integration",
+		MarkdownDescription: "Create a Slack integration. It sends nothing until someone connects it in the web UI at `links.web`.",
 		Attributes: map[string]schema.Attribute{
 			"active": schema.BoolAttribute{
 				MarkdownDescription: "Whether to use the integration. An OAuth integration that isn't `connected` sends nothing until it is.",

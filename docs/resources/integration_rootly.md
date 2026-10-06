@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_rootly Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create a Rootly integration.
 ---
 
 # honeybadger_integration_rootly (Resource)
 
-A notification integration
+Create a Rootly integration.
 
 
 

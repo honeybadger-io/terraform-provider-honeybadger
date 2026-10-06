@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_mattermost Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create a Mattermost integration.
 ---
 
 # honeybadger_integration_mattermost (Resource)
 
-A notification integration
+Create a Mattermost integration.
 
 
 

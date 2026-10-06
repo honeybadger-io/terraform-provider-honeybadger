@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_ilert Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create an ilert integration.
 ---
 
 # honeybadger_integration_ilert (Resource)
 
-A notification integration
+Create an ilert integration.
 
 
 

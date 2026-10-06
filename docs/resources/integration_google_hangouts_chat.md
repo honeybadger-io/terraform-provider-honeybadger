@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_google_hangouts_chat Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create a Google Chat integration.
 ---
 
 # honeybadger_integration_google_hangouts_chat (Resource)
 
-A notification integration
+Create a Google Chat integration.
 
 
 

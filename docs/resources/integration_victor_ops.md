@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_victor_ops Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create a Splunk On-Call integration.
 ---
 
 # honeybadger_integration_victor_ops (Resource)
 
-A notification integration
+Create a Splunk On-Call integration.
 
 
 

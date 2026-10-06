@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_click_up_chat Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create a ClickUp Chat integration. It sends nothing until someone connects it in the web UI at links.web.
 ---
 
 # honeybadger_integration_click_up_chat (Resource)
 
-A notification integration
+Create a ClickUp Chat integration. It sends nothing until someone connects it in the web UI at `links.web`.
 
 
 

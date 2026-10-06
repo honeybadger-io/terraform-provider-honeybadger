@@ -31,7 +31,7 @@ import (
 
 func integrationMicrosoftTeamsV2ResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "A notification integration",
+		MarkdownDescription: "Create a Microsoft Teams integration.",
 		Attributes: map[string]schema.Attribute{
 			"active": schema.BoolAttribute{
 				MarkdownDescription: "Whether to use the integration. An OAuth integration that isn't `connected` sends nothing until it is.",

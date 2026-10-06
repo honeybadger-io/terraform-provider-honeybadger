@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_discord_webhook Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create a Discord integration.
 ---
 
 # honeybadger_integration_discord_webhook (Resource)
 
-A notification integration
+Create a Discord integration.
 
 
 

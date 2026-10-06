@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_datadog Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create a Datadog integration.
 ---
 
 # honeybadger_integration_datadog (Resource)
 
-A notification integration
+Create a Datadog integration.
 
 
 

@@ -485,6 +485,9 @@ func MergeAll(doc *openapi3.T, name string, rc ResourceConfig) ([]Resource, erro
 			return nil, err
 		}
 		r.Variant = &VariantInfo{Field: rc.Variants, Const: v.Const}
+		if d := stripCallerWording(v.Then.Description); d != "" {
+			r.Description = d
+		}
 		out = append(out, r)
 	}
 	return out, nil

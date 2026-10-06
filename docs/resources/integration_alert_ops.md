@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_alert_ops Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create an AlertOps integration.
 ---
 
 # honeybadger_integration_alert_ops (Resource)
 
-A notification integration
+Create an AlertOps integration.
 
 
 

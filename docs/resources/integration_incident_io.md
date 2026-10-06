@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_incident_io Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create an incident.io integration.
 ---
 
 # honeybadger_integration_incident_io (Resource)
 
-A notification integration
+Create an incident.io integration.
 
 
 

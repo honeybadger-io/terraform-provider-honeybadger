@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_jira_cloud Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create a Jira Cloud integration. It sends nothing until someone connects it in the web UI at links.web.
 ---
 
 # honeybadger_integration_jira_cloud (Resource)
 
-A notification integration
+Create a Jira Cloud integration. It sends nothing until someone connects it in the web UI at `links.web`.
 
 
 

@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_zulip Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create a Zulip integration.
 ---
 
 # honeybadger_integration_zulip (Resource)
 
-A notification integration
+Create a Zulip integration.
 
 
 

@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_email Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create an Email integration.
 ---
 
 # honeybadger_integration_email (Resource)
 
-A notification integration
+Create an Email integration.
 
 
 

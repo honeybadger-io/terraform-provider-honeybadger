@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_sprintly Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create a Sprintly integration.
 ---
 
 # honeybadger_integration_sprintly (Resource)
 
-A notification integration
+Create a Sprintly integration.
 
 
 

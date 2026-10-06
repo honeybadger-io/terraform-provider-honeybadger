@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_backlog Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create a Backlog integration.
 ---
 
 # honeybadger_integration_backlog (Resource)
 
-A notification integration
+Create a Backlog integration.
 
 
 

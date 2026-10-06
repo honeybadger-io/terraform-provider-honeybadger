@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_pager_tree Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create a PagerTree integration.
 ---
 
 # honeybadger_integration_pager_tree (Resource)
 
-A notification integration
+Create a PagerTree integration.
 
 
 

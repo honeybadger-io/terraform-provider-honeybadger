@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_ops_genie_v2 Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create an OpsGenie integration.
 ---
 
 # honeybadger_integration_ops_genie_v2 (Resource)
 
-A notification integration
+Create an OpsGenie integration.
 
 
 

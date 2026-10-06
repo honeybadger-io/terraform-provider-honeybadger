@@ -541,6 +541,7 @@ components:
           required:
           - type
         then:
+          description: An alpha gadget, which posts to a URL.
           required:
           - config
           properties:

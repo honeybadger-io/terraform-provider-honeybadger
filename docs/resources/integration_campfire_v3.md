@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_campfire_v3 Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create a Campfire integration.
 ---
 
 # honeybadger_integration_campfire_v3 (Resource)
 
-A notification integration
+Create a Campfire integration.
 
 
 

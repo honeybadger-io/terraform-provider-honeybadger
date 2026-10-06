@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_microsoft_teams_v2 Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create a Microsoft Teams integration.
 ---
 
 # honeybadger_integration_microsoft_teams_v2 (Resource)
 
-A notification integration
+Create a Microsoft Teams integration.
 
 
 

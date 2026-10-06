@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_instatus Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create an Instatus integration.
 ---
 
 # honeybadger_integration_instatus (Resource)
 
-A notification integration
+Create an Instatus integration.
 
 
 

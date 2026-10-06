@@ -446,3 +446,15 @@ func TestWriteOnlyIsSensitive(t *testing.T) {
 		t.Errorf("got %+v, %v; want token Sensitive", got, err)
 	}
 }
+
+// A variant's description is its branch's, when the branch has one, so each
+// type's page says what that type is; otherwise it's the shared model's.
+func TestMergeAllVariantDescription(t *testing.T) {
+	rs, err := MergeAll(loadFixture(t), "gadget", gadgetConfig(t))
+	if err != nil {
+		t.Fatalf("MergeAll: %v", err)
+	}
+	if rs[0].Description != "An alpha gadget, which posts to a URL." || rs[1].Description != "A gadget." {
+		t.Errorf("descriptions = %q, %q", rs[0].Description, rs[1].Description)
+	}
+}

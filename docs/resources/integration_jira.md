@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_jira Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create a Jira integration.
 ---
 
 # honeybadger_integration_jira (Resource)
 
-A notification integration
+Create a Jira integration.
 
 
 

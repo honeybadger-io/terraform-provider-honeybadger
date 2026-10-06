@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_web_hook Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create a Webhook integration.
 ---
 
 # honeybadger_integration_web_hook (Resource)
 
-A notification integration
+Create a Webhook integration.
 
 ## Example Usage
 

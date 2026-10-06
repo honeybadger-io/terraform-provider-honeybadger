@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_slack Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create a Slack integration. It sends nothing until someone connects it in the web UI at links.web.
 ---
 
 # honeybadger_integration_slack (Resource)
 
-A notification integration
+Create a Slack integration. It sends nothing until someone connects it in the web UI at `links.web`.
 
 
 

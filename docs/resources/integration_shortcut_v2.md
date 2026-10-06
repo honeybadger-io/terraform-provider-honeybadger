@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_shortcut_v2 Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  A notification integration
+  Create a Shortcut integration.
 ---
 
 # honeybadger_integration_shortcut_v2 (Resource)
 
-A notification integration
+Create a Shortcut integration.
 
 
 
