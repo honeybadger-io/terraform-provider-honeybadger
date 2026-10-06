@@ -14,6 +14,20 @@ import (
 
 // lastBody checks the most recent request body with this method and path
 // pattern is exactly want.
+// lastBodyKey checks one key of the last matching request's body.
+func lastBodyKey(f *fakeHoneybadger, method, pattern, key string, want any) tfresource.TestCheckFunc {
+	return func(*terraform.State) error {
+		bodies := f.bodies(method, pattern)
+		if len(bodies) == 0 {
+			return fmt.Errorf("no %s request to %s", method, pattern)
+		}
+		if got := bodies[len(bodies)-1][key]; !reflect.DeepEqual(got, want) {
+			return fmt.Errorf("%s %s %s = %v, want %v", method, pattern, key, got, want)
+		}
+		return nil
+	}
+}
+
 func lastBody(f *fakeHoneybadger, method, pattern string, want map[string]any) tfresource.TestCheckFunc {
 	return func(*terraform.State) error {
 		bodies := f.bodies(method, pattern)

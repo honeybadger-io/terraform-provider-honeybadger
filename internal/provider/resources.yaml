@@ -132,3 +132,17 @@ resources:
     omit:
       member_count: live data
     use_state_for_unknown: [account_id, created_at, links]
+
+  status_page:
+    create: createStatusPage
+    read: getStatusPage
+    update: updateStatusPage
+    delete: deleteStatusPage
+    import: "<id>"
+    service: StatusPages
+    api: {model: StatusPage, create_params: StatusPageCreateParams, update_params: StatusPageUpdateParams}
+    find_hint: "your Honeybadger status pages"
+    omit:
+      domain_verified_at: live data
+    server_filled: [incidents_enabled]
+    use_state_for_unknown: [account_id, created_at, url, links]

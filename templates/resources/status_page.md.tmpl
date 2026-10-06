@@ -1,0 +1,26 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+{{ if .HasExample -}}
+## Example Usage
+
+{{ tffile .ExampleFile }}
+{{- end }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Notes
+
+- **`password`** is write-only: Honeybadger never returns it, so Terraform keeps the value it last sent, and a password changed in Honeybadger isn't detected.
+- **Plan features:** `features`, `password_protected`, `username` and `password` need advanced status pages, and `incidents_enabled` needs status page incidents; otherwise the API refuses a change with a 403.
+- **`incidents_enabled`**, left out, is set by Honeybadger from whether the plan has incidents, and state shows it.
+- **`domain`** is unique across Honeybadger, and an account can change at most 30 domains a week.
+- **`sites` and `check_ins`** are in page order.
