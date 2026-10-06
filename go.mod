@@ -5,10 +5,12 @@ go 1.27.1
 require (
 	github.com/getkin/kin-openapi v0.142.0
 	github.com/hashicorp/terraform-plugin-framework v1.19.0
+	github.com/hashicorp/terraform-plugin-framework-validators v0.18.0
 	github.com/hashicorp/terraform-plugin-go v0.31.0
 	github.com/hashicorp/terraform-plugin-log v0.11.0
 	github.com/honeybadger-io/api-go v0.9.1-0.20260929225423-c934ab888aff
 	github.com/oapi-codegen/nullable v1.2.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -79,7 +81,6 @@ require (
 	google.golang.org/grpc v1.79.3 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 tool github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
