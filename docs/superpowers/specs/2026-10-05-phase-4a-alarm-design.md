@@ -151,16 +151,15 @@ The resulting schema:
 | `project_id` | Required, forces replacement | path parameter |
 | `name`, `query` | Required | create input |
 | `description` | Optional; removing it sends null | nullable on update |
-| `evaluation_period`, `lookback_lag` | Required, pattern `^\d+[smhdw]$` | create input; update pattern |
+| `evaluation_period` | Required, pattern `^\d+[smhd]$` | create input |
+| `lookback_lag` | Required, pattern `^\d+[smhdw]$` | create input |
 | `trigger_config` | Required nested: `type` (enum `alert_result_count`), `config` (nested: `operator` enum, `value` number) | `AlarmTriggerConfig` |
 | `stream_ids` | Optional + Computed set, at least one element | server-filled |
 | `id`, `created_at` | Computed | read model |
 
-`created_at` needs honeybadger to list it as required on the `Alarm` read
-schema. Today it's optional there, so api-go generates `*time.Time`, which
-the generator doesn't map. honeybadger has the request (section 6). The
-provider doesn't add a pointer-time shape for a field that's always
-present.
+`created_at` is required and non-null on the `Alarm` read schema from bundle
+`502ca13c`, so api-go generates `time.Time`. The provider doesn't add a
+pointer-time shape.
 
 ### 4.1 `stream_ids`
 
@@ -217,11 +216,11 @@ Documented in the resource docs, not worked around (umbrella 10):
   alarm. The unknown-outcome error's `find_hint` sends the user to the
   project's alarms.
 - **A retried delete can fail** if Opticon already deleted its observer.
-- **An alarm stored with no trigger** (`trigger_config` is nullable on read)
-  reads as null into a Required attribute, so its next plan adds one. That's
-  the intended way it surfaces. honeybadger is asked whether v3 alarms can
-  have no trigger at all (section 6); if not, the read schema becomes
-  non-null and the case disappears.
+- **An alarm stored with no trigger** reads as null into a Required
+  attribute, so importing it plans a change that adds one. `trigger_config`
+  stays nullable on read (Kevin): Opticon always has a trigger, but v3 reads
+  Honeybadger's stored copy of the observer, and an old copy can lack it.
+  The resource docs say so under import.
 - **New defaulted trigger keys after an upgrade** (Opticon's hysteresis
   keys, for example) plan one harmless update on existing alarms the first
   time, as the default fills in.
@@ -309,15 +308,13 @@ running locally.
 
 - **honeybadger, done:** the `streams_provisioning` 429 (da5ec7d0aa, bundle
   `189edafa`), `minItems: 1` and a nullable update `stream_ids`.
-- **honeybadger, requested from the spec review:**
-  - list `created_at` and `updated_at` as required on `Alarm`;
-  - a duration `pattern` on both inputs, matching what each field accepts
-    (the update pattern allows `w`, which `evaluation_period` refuses);
-  - whether a v3 alarm can have no trigger; if not, a non-null
-    `trigger_config` on read;
-  - a description for `AlarmCreateInput.name`.
-- **Bundle:** 4a starts by copying honeybadger's latest bundle, `189edafa`
-  or later with the requested fixes.
+- **honeybadger, done after the spec review** (03a7e54bf5, bundle
+  `502ca13c`): `Alarm` lists every always-returned key as required,
+  `created_at` and `updated_at` included; `evaluation_period` is
+  `^\d+[smhd]$` and `lookback_lag` `^\d+[smhdw]$` on both inputs; a
+  description for `AlarmCreateInput.name`. `trigger_config` stays nullable on
+  read (section 4.3).
+- **Bundle:** 4a starts by copying honeybadger's bundle `502ca13c` or later.
 - **api-go:** regenerated from the same bundle by mcp-v3, so
   `make check-spec` matches. The generator accepts either update shape for
   `stream_ids` (`*[]string` or `Nullable[[]string]`).
