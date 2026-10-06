@@ -30,6 +30,7 @@ type Attribute struct {
 	MaxLength          *int64
 	Minimum            *float64
 	Maximum            *float64
+	NotRead            bool // write-only, never read back
 }
 
 // Resource is a resource's attributes, sorted by name, and its import format.
@@ -38,6 +39,8 @@ type Resource struct {
 	Import     string
 	Attributes []Attribute
 	Warnings   []string // overrides the spec has made redundant
+	Parents    []string // the create operation's path parameters, in order
+	IDParam    string   // the read operation's last path parameter
 }
 
 // customTypes are the custom types resources.yaml may name.
@@ -48,6 +51,9 @@ var customTypes = map[string]bool{"period": true}
 func Merge(doc *openapi3.T, name string, rc ResourceConfig) (Resource, error) {
 	fail := func(format string, args ...any) (Resource, error) {
 		return Resource{}, fmt.Errorf("resource %s: "+format, append([]any{name}, args...)...)
+	}
+	if rc.CRUD != "" && rc.CRUD != "generated" && rc.CRUD != "manual" {
+		return fail("crud is %q; use generated or manual", rc.CRUD)
 	}
 
 	read, err := FindOperation(doc, rc.Read)
@@ -83,7 +89,9 @@ func Merge(doc *openapi3.T, name string, rc ResourceConfig) (Resource, error) {
 	R, C, U := read.Response, create.Request, update
 
 	parents := map[string]Param{}
+	var parentNames []string
 	for _, p := range create.PathParams {
+		parentNames = append(parentNames, p.Name)
 		parents[p.Name] = p
 	}
 
@@ -151,7 +159,7 @@ func Merge(doc *openapi3.T, name string, rc ResourceConfig) (Resource, error) {
 			return fail("%s is updatable but create can't set it: omit it, or extend the resource to set it after create", f)
 		}
 
-		a := Attribute{Name: f}
+		a := Attribute{Name: f, NotRead: !inR}
 		var src Field
 		switch {
 		case inC:
@@ -239,7 +247,12 @@ func Merge(doc *openapi3.T, name string, rc ResourceConfig) (Resource, error) {
 			return fail("import format %q names %s, which isn't an attribute", rc.Import, m[1])
 		}
 	}
-	return Resource{Name: name, Import: rc.Import, Attributes: attrs, Warnings: warnings}, nil
+	idParam := ""
+	if n := len(read.PathParams); n > 0 {
+		idParam = read.PathParams[n-1].Name
+	}
+	return Resource{Name: name, Import: rc.Import, Attributes: attrs, Warnings: warnings,
+		Parents: parentNames, IDParam: idParam}, nil
 }
 
 func setKind(a *Attribute, f Field) error {

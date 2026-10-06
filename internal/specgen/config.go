@@ -27,7 +27,19 @@ type ResourceConfig struct {
 	Replace            []string          `yaml:"replace"`
 	ServerFilled       []string          `yaml:"server_filled"`
 	UseStateForUnknown []string          `yaml:"use_state_for_unknown"`
-	CustomTypes        map[string]string `yaml:"custom_types"` // field -> registry key
+	CustomTypes        map[string]string `yaml:"custom_types"`      // field -> registry key
+	Service            string            `yaml:"service"`           // apiv3.Client field, e.g. CheckIns
+	API                APIConfig         `yaml:"api"`               // apiv3 types the operations use
+	FindHint           string            `yaml:"find_hint"`         // for the unknown-outcome error
+	ConfigValidators   string            `yaml:"config_validators"` // hand-written func returning []resource.ConfigValidator
+	CRUD               string            `yaml:"crud"`              // "" or "generated" (wrapper generated), or "manual"
+}
+
+// APIConfig names the apiv3 types a resource's operations use.
+type APIConfig struct {
+	Model        string `yaml:"model"`
+	CreateParams string `yaml:"create_params"`
+	UpdateParams string `yaml:"update_params"`
 }
 
 // LoadConfig reads resources.yaml, rejecting unknown keys.

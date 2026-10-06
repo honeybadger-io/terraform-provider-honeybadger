@@ -1,6 +1,8 @@
 package specgen
 
 import (
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -33,7 +35,7 @@ func TestMergeFollowsTheMergeRule(t *testing.T) {
 			Description: "How often it spins, such as `5 minutes`."},
 		{Name: "project_id", Kind: "string", Required: true, RequiresReplace: true,
 			Description: "The project's ID."},
-		{Name: "secret", Kind: "string", Optional: true, Sensitive: true,
+		{Name: "secret", Kind: "string", Optional: true, Sensitive: true, NotRead: true,
 			Description: "Webhook signing secret."},
 		{Name: "serial", Kind: "string", Optional: true, RequiresReplace: true, MaxLength: ptr(int64(32)),
 			Description: "Factory serial number, set once."},
@@ -47,6 +49,9 @@ func TestMergeFollowsTheMergeRule(t *testing.T) {
 	}
 	if res.Import != "<project_id>/<id>" {
 		t.Errorf("import = %q", res.Import)
+	}
+	if !reflect.DeepEqual(res.Parents, []string{"project_id"}) || res.IDParam != "widget_id" {
+		t.Errorf("parents = %v, id param = %q, want [project_id] and widget_id", res.Parents, res.IDParam)
 	}
 	if len(res.Warnings) != 1 || !strings.Contains(res.Warnings[0], "token") {
 		t.Errorf("warnings = %v, want one about the redundant sensitive override on token", res.Warnings)
@@ -116,5 +121,32 @@ func TestStripCallerWording(t *testing.T) {
 		if got := stripCallerWording(in); got != want {
 			t.Errorf("stripCallerWording(%q) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+func TestLoadConfigReadsCRUDKeys(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "r.yaml")
+	src := "resources:\n  w:\n    service: Widgets\n    api:\n      model: Widget\n      create_params: WidgetCreateParams\n      update_params: WidgetUpdateParams\n    find_hint: the widgets\n    config_validators: widgetValidators\n    crud: manual\n"
+	if err := os.WriteFile(path, []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	w := cfg.Resources["w"]
+	if w.Service != "Widgets" || w.API.Model != "Widget" || w.API.CreateParams != "WidgetCreateParams" ||
+		w.API.UpdateParams != "WidgetUpdateParams" || w.FindHint != "the widgets" ||
+		w.ConfigValidators != "widgetValidators" || w.CRUD != "manual" {
+		t.Errorf("config = %+v", w)
+	}
+}
+
+func TestMergeRejectsUnknownCRUDMode(t *testing.T) {
+	rc := fixtureConfig(t)
+	rc.CRUD = "automatic"
+	_, err := Merge(loadFixture(t), "widget", rc)
+	if err == nil || !strings.Contains(err.Error(), "automatic") {
+		t.Errorf("err = %v, want one naming the crud value", err)
 	}
 }
