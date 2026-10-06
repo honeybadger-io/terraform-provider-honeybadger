@@ -75,7 +75,7 @@ func integrationClickUpResourceSchema() schema.Schema {
 					"description_format": schema.StringAttribute{
 						Optional: true,
 						Computed: true,
-						Default:  stringdefault.StaticString("[class]: [message]\n\nBacktrace:\n\n[backtrace]\n\nView full backtrace and more info at honeybadger.io: [url]\n"),
+						Default:  stringdefault.StaticString("[class]: [message]\n\nBacktrace:\n\n[backtrace]\n\nView full backtrace and more info at honeybadger.io: [url]"),
 					},
 					"folder_id": schema.StringAttribute{
 						MarkdownDescription: "The web UI loads the choices from the connected account. Through the API, send the value itself, as that service's API returns it.",

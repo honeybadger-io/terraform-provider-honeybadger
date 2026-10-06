@@ -75,7 +75,7 @@ func integrationLinearResourceSchema() schema.Schema {
 					"description_format": schema.StringAttribute{
 						Optional: true,
 						Computed: true,
-						Default:  stringdefault.StaticString("[class]: [message]\n\nBacktrace:\n\n[backtrace]\n\nView full backtrace and more info at honeybadger.io: [url]\n"),
+						Default:  stringdefault.StaticString("[class]: [message]\n\nBacktrace:\n\n[backtrace]\n\nView full backtrace and more info at honeybadger.io: [url]"),
 					},
 					"label": schema.StringAttribute{
 						MarkdownDescription: "Optional label to show in the integrations list.",
