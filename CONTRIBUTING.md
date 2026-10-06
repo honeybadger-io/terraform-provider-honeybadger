@@ -11,6 +11,13 @@ A release bumps `go.mod` to a tagged api-go and builds with `GOWORK=off`.
 
 Design: `docs/superpowers/specs/2026-10-05-terraform-provider-design.md`.
 
+Resource schemas aren't written by hand. `make generate` reads
+`openapi/bundled.yaml` and `internal/provider/resources.yaml` and writes each
+resource's schema and model to `internal/provider/<name>_resource_gen.go`
+(spec section 3.3). To change a schema, change the OpenAPI spec in honeybadger
+(then `make update-spec`) or the resource's entry in `resources.yaml`. Never
+edit a `_gen.go` file.
+
 ## Commands
 
     make build      # compile

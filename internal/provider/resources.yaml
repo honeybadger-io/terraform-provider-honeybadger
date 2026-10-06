@@ -1,0 +1,5 @@
+# Per-resource operations and overrides for specgen (spec sections 3.3, 5.2).
+# Each resource's schema and model are generated from these and
+# openapi/bundled.yaml into <name>_resource_gen.go. Phase 2b adds the first
+# resources.
+resources: {}
