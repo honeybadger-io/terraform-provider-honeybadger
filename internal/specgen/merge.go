@@ -25,6 +25,8 @@ type Attribute struct {
 	RequiresReplace    bool
 	UseStateForUnknown bool
 	Enum               []string
+	ElemEnum           []string // list and set items
+	ElemFormat         string   // uuid
 	Default            any
 	MinLength          int64
 	MaxLength          *int64
@@ -213,9 +215,6 @@ func Merge(doc *openapi3.T, name string, rc ResourceConfig) (Resource, error) {
 		if inR && rf.UniqueItems {
 			src.UniqueItems = true
 		}
-		if !writable && src.Type == "object" {
-			return fail("%s: read-only objects aren't supported yet; omit it", f)
-		}
 		if err := setKind(&a, src); err != nil {
 			return fail("%s: %v", f, err)
 		}
@@ -273,27 +272,39 @@ func setKind(a *Attribute, f Field) error {
 		return nil
 	}
 	if f.Type == "array" && f.Items != nil {
+		if f.Items.Type == "object" {
+			if f.Items.Properties == nil {
+				return fmt.Errorf("arrays of objects without properties aren't supported")
+			}
+			children, err := nestedAttributes(*f.Items.Properties, false)
+			if err != nil {
+				return err
+			}
+			a.Kind, a.ElemKind, a.Attributes = "list", "object", children
+			return emptyDefault(a)
+		}
 		elem, ok := scalar[f.Items.Type]
 		if !ok {
 			return fmt.Errorf("arrays of %s aren't supported yet; omit it or extend specgen", f.Items.Type)
 		}
-		if len(f.Items.Enum) > 0 || f.Items.Pattern != "" {
-			return fmt.Errorf("enums and patterns on array items aren't supported yet; omit it or extend specgen")
+		if (len(f.Items.Enum) > 0 || f.Items.Pattern != "") && elem != "string" {
+			return fmt.Errorf("enums and patterns on %s items aren't supported yet", f.Items.Type)
 		}
 		a.Kind, a.ElemKind = "list", elem
 		if f.UniqueItems {
 			a.Kind = "set"
 		}
-		if a.Default != nil {
-			return fmt.Errorf("defaults on lists and sets aren't supported yet")
+		a.ElemEnum = f.Items.Enum
+		if f.Items.Format == "uuid" {
+			a.ElemFormat = "uuid"
 		}
-		return nil
+		return emptyDefault(a)
 	}
 	if f.Type == "object" {
 		if f.Properties == nil {
 			return fmt.Errorf("objects without properties aren't supported; omit it or extend specgen")
 		}
-		children, err := nestedAttributes(*f.Properties)
+		children, err := nestedAttributes(*f.Properties, a.Computed && !a.Optional)
 		if err != nil {
 			return err
 		}
@@ -303,29 +314,57 @@ func setKind(a *Attribute, f Field) error {
 	return fmt.Errorf("%s fields aren't supported yet; omit it or extend specgen", f.Type)
 }
 
-// nestedAttributes decides an object's attributes. Each must be required:
-// the API replaces the object whole, so optional and defaulted keys need
-// rules of their own, which wait until the bundle has one (phase 4a spec,
-// section 3.1).
-func nestedAttributes(obj Object) ([]Attribute, error) {
+// emptyDefault allows a collection default only when it's empty: that's
+// how the spec says "left out is the same as []" (phase 4b spec, 3.4).
+func emptyDefault(a *Attribute) error {
+	if a.Default == nil {
+		return nil
+	}
+	if d, ok := a.Default.([]any); ok && len(d) == 0 {
+		return nil
+	}
+	return fmt.Errorf("a non-empty default on a list or set isn't supported yet")
+}
+
+// nestedAttributes decides an object's attributes. A read-only (computed)
+// object's attributes are all Computed. Otherwise an optional attribute
+// must be nullable, or removing it couldn't clear it; a defaulted one is
+// Optional and Computed; a write-only one is never read back (phase 4b
+// spec, 3.2).
+func nestedAttributes(obj Object, computed bool) ([]Attribute, error) {
 	names := keys(obj.Fields)
 	sort.Strings(names)
 	var out []Attribute
 	for _, n := range names {
 		f := obj.Fields[n]
+		if computed {
+			a := Attribute{Name: n, Computed: true, Description: stripCallerWording(f.Description)}
+			if err := setKind(&a, f); err != nil {
+				return nil, fmt.Errorf("%s: %w", n, err)
+			}
+			out = append(out, a)
+			continue
+		}
 		switch {
 		case f.ReadOnly:
 			return nil, fmt.Errorf("%s: read-only attributes inside objects aren't supported yet; extend specgen", n)
-		case f.WriteOnly:
-			return nil, fmt.Errorf("%s: write-only attributes inside objects aren't supported yet; extend specgen", n)
-		case f.Default != nil:
-			return nil, fmt.Errorf("%s: defaults inside objects aren't supported yet; extend specgen", n)
-		case !obj.Required[n]:
-			return nil, fmt.Errorf("%s: optional attributes inside objects aren't supported yet; extend specgen", n)
+		case !obj.Required[n] && !f.Nullable && f.Default == nil:
+			return nil, fmt.Errorf("%s: an optional attribute inside an object must be nullable, or removing it can't clear it", n)
 		}
-		a := Attribute{Name: n, Required: true, Description: stripCallerWording(f.Description), Sensitive: f.Secret,
+		a := Attribute{Name: n, Description: stripCallerWording(f.Description), Sensitive: f.Secret,
 			Enum: f.Enum, Pattern: f.Pattern, MinLength: f.MinLength, MaxLength: f.MaxLength,
 			Minimum: f.Minimum, Maximum: f.Maximum, MinItems: f.MinItems, MaxItems: f.MaxItems}
+		switch {
+		case obj.Required[n]:
+			a.Required = true
+		case f.Default != nil:
+			a.Optional, a.Computed, a.Default = true, true, f.Default
+		default:
+			a.Optional = true
+		}
+		if f.WriteOnly {
+			a.NotRead = true
+		}
 		if err := setKind(&a, f); err != nil {
 			return nil, fmt.Errorf("%s: %w", n, err)
 		}

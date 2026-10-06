@@ -91,7 +91,6 @@ func TestMergeErrors(t *testing.T) {
 		wantErr string
 	}{
 		{"input-only field not omitted", func(rc *ResourceConfig) { delete(rc.Omit, "note") }, "note"},
-		{"array item enum not omitted", func(rc *ResourceConfig) { delete(rc.Omit, "events") }, "events"},
 		{"update-only field not omitted", func(rc *ResourceConfig) { delete(rc.Omit, "archived") }, "archived"},
 		{"writeOnly non-secret not omitted", func(rc *ResourceConfig) { delete(rc.Omit, "quiet") }, "quiet"},
 		{"server_filled on a computed field", func(rc *ResourceConfig) { rc.ServerFilled = append(rc.ServerFilled, "token") }, "token"},
@@ -99,7 +98,6 @@ func TestMergeErrors(t *testing.T) {
 		{"replace on a computed field", func(rc *ResourceConfig) { rc.Replace = append(rc.Replace, "created_at") }, "created_at"},
 		{"import names a missing attribute", func(rc *ResourceConfig) { rc.Import = "<project_id>/<nope>" }, "nope"},
 		{"update operation without a request body", func(rc *ResourceConfig) { rc.Update = "getWidget" }, "getWidget"},
-		{"nested object not omitted", func(rc *ResourceConfig) { delete(rc.Omit, "links") }, "links"},
 		{"server_filled names a nested attribute", func(rc *ResourceConfig) { rc.ServerFilled = append(rc.ServerFilled, "teeth") }, "teeth"},
 		{"override names a missing field", func(rc *ResourceConfig) { rc.Sensitive = append(rc.Sensitive, "nope") }, "nope"},
 		{"unknown custom type", func(rc *ResourceConfig) { rc.CustomTypes = map[string]string{"period": "nope"} }, "nope"},
@@ -223,27 +221,76 @@ func TestNestedAttributesRejectUnsupported(t *testing.T) {
 		field    Field
 		required bool
 	}{
-		{"optional", Field{Name: "note", Type: "string"}, false},
-		{"defaulted", Field{Name: "mode", Type: "string", Default: "static"}, true},
 		{"read-only", Field{Name: "made_at", Type: "string", ReadOnly: true}, true},
-		{"write-only", Field{Name: "key", Type: "string", WriteOnly: true}, true},
 		{"exclusive bound", Field{Name: "ratio", Type: "number", ExclusiveMinimum: &zero}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			obj := Object{Required: map[string]bool{tt.field.Name: tt.required}, Fields: map[string]Field{tt.field.Name: tt.field}}
-			if _, err := nestedAttributes(obj); err == nil || !strings.Contains(err.Error(), tt.field.Name) {
+			if _, err := nestedAttributes(obj, false); err == nil || !strings.Contains(err.Error(), tt.field.Name) {
 				t.Errorf("err = %v, want one naming %s", err, tt.field.Name)
 			}
 		})
 	}
 }
 
-// Arrays of objects wait for phase 4b (integration filters).
-func TestSetKindRejectsArrayOfObjects(t *testing.T) {
-	a := Attribute{Name: "filters"}
-	f := Field{Name: "filters", Type: "array", Items: &Field{Type: "object", Properties: &Object{}}}
-	if err := setKind(&a, f); err == nil || !strings.Contains(err.Error(), "arrays of object") {
-		t.Errorf("err = %v, want arrays of object aren't supported", err)
+func TestNestedAttributesOptionalDefaultedWriteOnly(t *testing.T) {
+	obj := Object{Required: map[string]bool{"url": true}, Fields: map[string]Field{
+		"url":   {Name: "url", Type: "string", Nullable: true},
+		"token": {Name: "token", Type: "string", Nullable: true, WriteOnly: true, Secret: true},
+		"mode":  {Name: "mode", Type: "string", Nullable: true, Default: "fast"},
+		"note":  {Name: "note", Type: "string", Nullable: true},
+	}}
+	got, err := nestedAttributes(obj, false)
+	if err != nil {
+		t.Fatalf("nestedAttributes: %v", err)
+	}
+	want := []Attribute{
+		{Name: "mode", Kind: "string", Optional: true, Computed: true, Default: "fast"},
+		{Name: "note", Kind: "string", Optional: true},
+		{Name: "token", Kind: "string", Optional: true, Sensitive: true, NotRead: true},
+		{Name: "url", Kind: "string", Required: true},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got  %+v\nwant %+v", got, want)
+	}
+}
+
+func TestNestedAttributesRejectOptionalNonNullable(t *testing.T) {
+	obj := Object{Required: map[string]bool{}, Fields: map[string]Field{"note": {Name: "note", Type: "string"}}}
+	if _, err := nestedAttributes(obj, false); err == nil || !strings.Contains(err.Error(), "note") {
+		t.Errorf("err = %v, want one naming note", err)
+	}
+}
+
+// A read-only object's keys are all Computed, whatever their nullability.
+func TestNestedAttributesComputed(t *testing.T) {
+	obj := Object{Required: map[string]bool{}, Fields: map[string]Field{"web": {Name: "web", Type: "string"}}}
+	got, err := nestedAttributes(obj, true)
+	if err != nil || len(got) != 1 || !got[0].Computed || got[0].Optional || got[0].Required {
+		t.Errorf("got %+v, %v; want web Computed only", got, err)
+	}
+}
+
+func TestSetKindCollections(t *testing.T) {
+	a := Attribute{Name: "spot_ids", Default: []any{}}
+	f := Field{Type: "array", UniqueItems: true, Items: &Field{Type: "string", Format: "uuid"}}
+	if err := setKind(&a, f); err != nil || a.Kind != "set" || a.ElemFormat != "uuid" {
+		t.Errorf("uuid set: %+v, %v", a, err)
+	}
+	b := Attribute{Name: "events"}
+	g := Field{Type: "array", Items: &Field{Type: "string", Enum: []string{"spun"}}}
+	if err := setKind(&b, g); err != nil || !reflect.DeepEqual(b.ElemEnum, []string{"spun"}) {
+		t.Errorf("enum list: %+v, %v", b, err)
+	}
+	c := Attribute{Name: "filters"}
+	h := Field{Type: "array", Items: &Field{Type: "object", Properties: &Object{
+		Required: map[string]bool{"query": true}, Fields: map[string]Field{"query": {Name: "query", Type: "string"}}}}}
+	if err := setKind(&c, h); err != nil || c.Kind != "list" || c.ElemKind != "object" || len(c.Attributes) != 1 {
+		t.Errorf("object list: %+v, %v", c, err)
+	}
+	d := Attribute{Name: "tags", Default: []any{"x"}}
+	if err := setKind(&d, Field{Type: "array", Items: &Field{Type: "string"}}); err == nil {
+		t.Error("a non-empty collection default: want an error")
 	}
 }
