@@ -42,21 +42,40 @@ func TestAccProject(t *testing.T) {
 		ProtoV6ProviderFactories: testFactories,
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
-			{Config: config(name, "  language = \"ruby\"\n  disable_public_links = true\n")},
+			{Config: config(name, `  language = "ruby"
+  disable_public_links = true
+  resolve_errors_on_deploy = false
+  customer_throttle = 100
+  source_url = "https://example.com/a/[file]#L[line]"
+  user_url = "https://example.com/a/users/[user_id]"
+  user_search_field = "context.account_id"
+`)},
 			{
-				Config: config(name+"-2", "  language = \"python\"\n  disable_public_links = true\n"),
+				Config: config(name+"-2", `  language = "python"
+  disable_public_links = true
+  resolve_errors_on_deploy = false
+  customer_throttle = 200
+  source_url = "https://example.com/b/[file]#L[line]"
+  user_url = "https://example.com/b/users/[user_id]"
+  user_search_field = "context.uid"
+`),
 				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
 					plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
 					plancheck.ExpectUnknownValue(addr, tfjsonpath.New("token")),
 				}},
 			},
 			{
-				// Removing them resets the default and clears the language.
+				// Removing them resets the defaults and clears the rest.
 				Config: config(name+"-2", ""),
 				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
 					plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
 					plancheck.ExpectKnownValue(addr, tfjsonpath.New("disable_public_links"), knownvalue.Bool(false)),
+					plancheck.ExpectKnownValue(addr, tfjsonpath.New("resolve_errors_on_deploy"), knownvalue.Bool(true)),
 					plancheck.ExpectKnownValue(addr, tfjsonpath.New("language"), knownvalue.Null()),
+					plancheck.ExpectKnownValue(addr, tfjsonpath.New("customer_throttle"), knownvalue.Null()),
+					plancheck.ExpectKnownValue(addr, tfjsonpath.New("source_url"), knownvalue.Null()),
+					plancheck.ExpectKnownValue(addr, tfjsonpath.New("user_url"), knownvalue.Null()),
+					plancheck.ExpectKnownValue(addr, tfjsonpath.New("user_search_field"), knownvalue.Null()),
 				}},
 			},
 			{ResourceName: addr, ImportState: true, ImportStateVerify: true},
@@ -71,9 +90,15 @@ func TestAccProjectKeyAndTokenInOneApply(t *testing.T) {
 	config := func(project, keys string) string {
 		return accProvider() + fmt.Sprintf("resource \"honeybadger_project\" \"t\" {\n  name = %q\n}\n", project) + keys
 	}
-	key := func(n, label string) string {
-		return fmt.Sprintf("resource \"honeybadger_project_key\" %q {\n  project_id = honeybadger_project.t.id\n  label = %q\n}\n", n, label)
+	keyIn := func(n, project, label string) string {
+		attrs := "  project_id = honeybadger_project." + project + ".id\n"
+		if label != "" {
+			attrs += fmt.Sprintf("  label = %q\n", label)
+		}
+		return fmt.Sprintf("resource \"honeybadger_project_key\" %q {\n%s}\n", n, attrs)
 	}
+	key := func(n, label string) string { return keyIn(n, "t", label) }
+	other := fmt.Sprintf("resource \"honeybadger_project\" \"u\" {\n  name = %q\n}\n", name+"-u")
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testFactories,
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -89,6 +114,21 @@ func TestAccProjectKeyAndTokenInOneApply(t *testing.T) {
 				Config: config(name+"-2", key("one", "renamed")+key("two", "second")),
 				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
 					plancheck.ExpectResourceAction("honeybadger_project_key.one", plancheck.ResourceActionUpdate),
+				}},
+			},
+			{
+				// Removing the label clears it.
+				Config: config(name+"-2", key("one", "")+key("two", "second")),
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction("honeybadger_project_key.one", plancheck.ResourceActionUpdate),
+					plancheck.ExpectKnownValue("honeybadger_project_key.one", tfjsonpath.New("label"), knownvalue.Null()),
+				}},
+			},
+			{
+				// A key can't move between projects: it's replaced.
+				Config: config(name+"-2", key("one", "")+keyIn("two", "u", "second")+other),
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction("honeybadger_project_key.two", plancheck.ResourceActionReplace),
 				}},
 			},
 			{

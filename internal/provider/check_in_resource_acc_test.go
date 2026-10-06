@@ -28,7 +28,6 @@ resource "honeybadger_project" "b" {
 
 resource "honeybadger_check_in" "t" {
   project_id = honeybadger_project.%s.id
-  name       = "nightly"
 %s}
 `, projectName, projectName, project, attrs)
 }
@@ -41,7 +40,7 @@ func expectUpdate(addr string, extra ...plancheck.PlanCheck) resource.ConfigPlan
 
 func TestAccCheckIn(t *testing.T) {
 	name := accName()
-	simple := "  report_period = \"1 day\"\n  grace_period = \"1 week\"\n"
+	simple := "  name = \"nightly\"\n  report_period = \"1 day\"\n  grace_period = \"1 week\"\n"
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testFactories,
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -50,14 +49,24 @@ func TestAccCheckIn(t *testing.T) {
 			// empty because semantic equality keeps "1 week".
 			{Config: checkInAccConfig(name, "a", simple)},
 			{
-				Config:           checkInAccConfig(name, "a", "  report_period = \"01:30:00\"\n  grace_period = \"1 week\"\n  slug = \"nightly-job\"\n"),
+				Config:           checkInAccConfig(name, "a", "  name = \"nightly-2\"\n  report_period = \"01:30:00\"\n  grace_period = \"1 week\"\n  slug = \"nightly-job\"\n"),
 				ConfigPlanChecks: expectUpdate(checkInAddr),
 			},
 			{
 				// Two configured forms of one duration are different text: one
 				// update, then an empty plan.
-				Config:           checkInAccConfig(name, "a", "  report_period = \"1 hour 30 minutes\"\n  grace_period = \"1 week\"\n  slug = \"nightly-job\"\n"),
+				Config:           checkInAccConfig(name, "a", "  name = \"nightly-2\"\n  report_period = \"1 hour 30 minutes\"\n  grace_period = \"1 week\"\n  slug = \"nightly-job\"\n"),
 				ConfigPlanChecks: expectUpdate(checkInAddr),
+			},
+			{
+				// Removing name and slug clears them; removing grace_period
+				// resets it to the default.
+				Config: checkInAccConfig(name, "a", "  report_period = \"1 hour 30 minutes\"\n"),
+				ConfigPlanChecks: expectUpdate(checkInAddr,
+					plancheck.ExpectKnownValue(checkInAddr, tfjsonpath.New("name"), knownvalue.Null()),
+					plancheck.ExpectKnownValue(checkInAddr, tfjsonpath.New("slug"), knownvalue.Null()),
+					plancheck.ExpectKnownValue(checkInAddr, tfjsonpath.New("grace_period"), knownvalue.StringExact("00:00:00")),
+				),
 			},
 			{
 				Config: checkInAccConfig(name, "a", "  schedule_type = \"cron\"\n  cron_schedule = \"0 3 * * *\"\n  grace_period = \"1 week\"\n"),
@@ -66,7 +75,18 @@ func TestAccCheckIn(t *testing.T) {
 					plancheck.ExpectKnownValue(checkInAddr, tfjsonpath.New("cron_timezone"), knownvalue.StringExact("UTC")),
 				),
 			},
-			{Config: checkInAccConfig(name, "a", simple), ConfigPlanChecks: expectUpdate(checkInAddr)},
+			{
+				Config:           checkInAccConfig(name, "a", "  schedule_type = \"cron\"\n  cron_schedule = \"0 4 * * *\"\n  cron_timezone = \"Mountain Time (US & Canada)\"\n  grace_period = \"1 week\"\n"),
+				ConfigPlanChecks: expectUpdate(checkInAddr),
+			},
+			{
+				// Back to simple: removing cron_timezone resets it to UTC.
+				Config: checkInAccConfig(name, "a", simple),
+				ConfigPlanChecks: expectUpdate(checkInAddr,
+					plancheck.ExpectKnownValue(checkInAddr, tfjsonpath.New("cron_timezone"), knownvalue.StringExact("UTC")),
+					plancheck.ExpectKnownValue(checkInAddr, tfjsonpath.New("cron_schedule"), knownvalue.Null()),
+				),
+			},
 			{
 				Config: checkInAccConfig(name, "b", simple),
 				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
