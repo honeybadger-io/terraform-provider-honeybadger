@@ -228,7 +228,7 @@ Against `http://localhost:3001`:
 
 ## 6. Dependencies
 
-- **honeybadger**: done at `a681addd94` (bundle `dee0bbc3`):
+- **honeybadger**: done at `a681addd94` and `897f0b5269` (bundle `cb1c77f2`):
   - declared defaults on SiteInput, StatusPageInput, TeamInput and
     EnvironmentInput, including `[]` for `locations`, `project_ids`, `sites`
     and `check_ins`, and `{}` for `request_headers` and `features`;
@@ -243,8 +243,9 @@ Against `http://localhost:3001`:
     `request_headers` values; named components for the status page's site and
     check-in items;
   - environment `created_at` stays nullable: legacy rows can be null.
-- **api-go** (mcp-v3): Environments, Sites and Teams are at `54eed1c`.
-  StatusPages ships with the bundle above.
+- **api-go** (mcp-v3): all four services at `eea3069`, on bundle `cb1c77f2`
+  (honeybadger `897f0b5269`, which also names the status page read items
+  `StatusPageSite` and `StatusPageCheckIn`).
 - **Local account**: advanced status pages and uptime-timeout enabled for the
   feature-gated acceptance steps.
 
