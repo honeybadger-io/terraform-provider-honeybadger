@@ -163,7 +163,9 @@ The provider generates schema data from the spec, not resource code.
   Input descriptions keep sentences that start "Send null to …", because the
   spec is the API reference first. The generator drops those sentences: in
   Terraform, removing the attribute is how a value is cleared or reset, and
-  the reset value comes from `default:`.
+  the reset value comes from `default:`. Other advice written for API
+  callers (e.g. `report_period`'s "Compare periods by duration, not text")
+  stays in the docs for now: accepted as is, with no per-field overrides.
 
 ### 3.4 Repository layout
 
