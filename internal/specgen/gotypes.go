@@ -36,8 +36,10 @@ func LoadAPI(dir, path string) (*API, error) {
 // GoField is one struct field, found by its JSON name.
 type GoField struct {
 	Name  string // Go field name
-	Shape string // value, pointer, nullable, enum, enum_pointer, time or unsupported
-	Elem  string // string, int, bool or float64, for value, pointer and nullable
+	Shape string // value, pointer, nullable, enum, enum_pointer, time, struct, struct_pointer,
+	// nullable_struct, slice, slice_pointer, nullable_slice or unsupported
+	Elem string // string, int, bool or float64, for value, pointer, nullable and slice shapes
+	Type string // for struct shapes: the API package's exported name for the struct
 }
 
 // Fields returns a named struct's fields keyed by JSON name.
@@ -56,7 +58,7 @@ func (a *API) Fields(typeName string) (map[string]GoField, error) {
 		if name == "" || name == "-" {
 			continue
 		}
-		f, ok := shapeOf(st.Field(i).Type())
+		f, ok := a.shapeOf(st.Field(i).Type())
 		if !ok {
 			f = GoField{Shape: "unsupported"}
 		}
@@ -66,20 +68,30 @@ func (a *API) Fields(typeName string) (map[string]GoField, error) {
 	return out, nil
 }
 
-func shapeOf(t types.Type) (GoField, bool) {
+func (a *API) shapeOf(t types.Type) (GoField, bool) {
 	t = types.Unalias(t)
 	switch t := t.(type) {
 	case *types.Basic:
 		if e, ok := basicElem(t); ok {
 			return GoField{Shape: "value", Elem: e}, true
 		}
+	case *types.Slice:
+		if b, ok := types.Unalias(t.Elem()).(*types.Basic); ok {
+			if e, ok := basicElem(b); ok {
+				return GoField{Shape: "slice", Elem: e}, true
+			}
+		}
 	case *types.Pointer:
-		inner, ok := shapeOf(t.Elem())
+		inner, ok := a.shapeOf(t.Elem())
 		switch {
 		case ok && inner.Shape == "value":
 			return GoField{Shape: "pointer", Elem: inner.Elem}, true
 		case ok && inner.Shape == "enum":
 			return GoField{Shape: "enum_pointer"}, true
+		case ok && inner.Shape == "struct":
+			return GoField{Shape: "struct_pointer", Type: inner.Type}, true
+		case ok && inner.Shape == "slice":
+			return GoField{Shape: "slice_pointer", Elem: inner.Elem}, true
 		}
 	case *types.Named:
 		obj := t.Obj()
@@ -91,20 +103,48 @@ func shapeOf(t types.Type) (GoField, bool) {
 		case pkg == "time" && obj.Name() == "Time":
 			return GoField{Shape: "time"}, true
 		case pkg == "github.com/oapi-codegen/nullable" && obj.Name() == "Nullable":
-			if t.TypeArgs().Len() == 1 {
-				if b, ok := types.Unalias(t.TypeArgs().At(0)).(*types.Basic); ok {
-					if e, ok := basicElem(b); ok {
-						return GoField{Shape: "nullable", Elem: e}, true
-					}
-				}
+			if t.TypeArgs().Len() != 1 {
+				return GoField{}, false
+			}
+			inner, ok := a.shapeOf(t.TypeArgs().At(0))
+			switch {
+			case ok && inner.Shape == "value":
+				return GoField{Shape: "nullable", Elem: inner.Elem}, true
+			case ok && inner.Shape == "struct":
+				return GoField{Shape: "nullable_struct", Type: inner.Type}, true
+			case ok && inner.Shape == "slice":
+				return GoField{Shape: "nullable_slice", Elem: inner.Elem}, true
 			}
 			return GoField{}, false
 		}
-		if b, ok := t.Underlying().(*types.Basic); ok && b.Kind() == types.String {
-			return GoField{Shape: "enum"}, true
+		switch u := t.Underlying().(type) {
+		case *types.Basic:
+			if u.Kind() == types.String {
+				return GoField{Shape: "enum"}, true
+			}
+		case *types.Struct:
+			if name, ok := a.exportedName(t); ok {
+				return GoField{Shape: "struct", Type: name}, true
+			}
 		}
 	}
 	return GoField{}, false
+}
+
+// exportedName is the name generated code can use for a struct: its own name
+// when the API package declares it, or an exported alias for it (apiv3
+// re-exports api-go's internal types as aliases).
+func (a *API) exportedName(t *types.Named) (string, bool) {
+	if t.Obj().Pkg() == a.pkg {
+		return t.Obj().Name(), t.Obj().Exported()
+	}
+	for _, n := range a.pkg.Scope().Names() {
+		tn, ok := a.pkg.Scope().Lookup(n).(*types.TypeName)
+		if ok && tn.Exported() && types.Identical(types.Unalias(tn.Type()), t) {
+			return n, true
+		}
+	}
+	return "", false
 }
 
 func basicElem(b *types.Basic) (string, bool) {

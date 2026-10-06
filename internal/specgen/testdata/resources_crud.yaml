@@ -17,12 +17,11 @@ resources:
       quiet: create-only flag, not stored and not a secret
       events: item enums aren't supported yet
       archived: update-only; create can't set it
-      gear: nested objects aren't supported yet
-      parts: item counts aren't supported yet
-      tags: arrays aren't mapped yet
-      badges: arrays aren't mapped yet
+      tags: a plain slice in the create params, which isn't mapped
+      badges: a plain slice in the create params, which isn't mapped
     server_filled:
     - size
+    - parts
     use_state_for_unknown:
     - created_at
     custom_types:

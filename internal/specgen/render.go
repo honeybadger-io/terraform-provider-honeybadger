@@ -54,6 +54,11 @@ func Render(r Resource, m *Mapping) ([]byte, error) {
 
 	if m != nil {
 		imports[m.PkgPath] = true
+		imports["github.com/hashicorp/terraform-plugin-framework/diag"] = true
+		if len(m.Nested) > 0 {
+			imports["github.com/hashicorp/terraform-plugin-framework/path"] = true
+			imports["github.com/hashicorp/terraform-plugin-framework/attr"] = true
+		}
 		if m.Period {
 			imports["github.com/honeybadger-io/terraform-provider-honeybadger/internal/provider/customtypes"] = true
 		}

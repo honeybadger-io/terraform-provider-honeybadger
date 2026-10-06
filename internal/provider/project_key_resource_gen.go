@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -58,13 +59,13 @@ type projectKeyResourceModel struct {
 // projectKeyImportFormat is the ID terraform import takes.
 const projectKeyImportFormat = "<project_id>/<id>"
 
-func (m projectKeyResourceModel) createParams() apiv3.ProjectKeyParams {
+func (m projectKeyResourceModel) createParams(diags *diag.Diagnostics) apiv3.ProjectKeyParams {
 	var p apiv3.ProjectKeyParams
 	p.Label = createString(m.Label)
 	return p
 }
 
-func (m projectKeyResourceModel) updateParams(state projectKeyResourceModel) apiv3.ProjectKeyParams {
+func (m projectKeyResourceModel) updateParams(state projectKeyResourceModel, diags *diag.Diagnostics) apiv3.ProjectKeyParams {
 	var p apiv3.ProjectKeyParams
 	p.Label = updateString(m.Label, state.Label)
 	return p
@@ -119,7 +120,11 @@ func (r *projectKeyResource) Create(ctx context.Context, req resource.CreateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	out, err := r.client.ProjectKeys.Create(ctx, plan.ProjectID.ValueString(), plan.createParams())
+	params := plan.createParams(&resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	out, err := r.client.ProjectKeys.Create(ctx, plan.ProjectID.ValueString(), params)
 	if err == nil && (out == nil || out.Id == "") {
 		err = errNoResult
 	}
@@ -174,7 +179,11 @@ func (r *projectKeyResource) Update(ctx context.Context, req resource.UpdateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	out, err := r.client.ProjectKeys.Update(ctx, state.ProjectID.ValueString(), state.ID.ValueString(), plan.updateParams(state))
+	params := plan.updateParams(state, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	out, err := r.client.ProjectKeys.Update(ctx, state.ProjectID.ValueString(), state.ID.ValueString(), params)
 	if err == nil && (out == nil || out.Id == "") {
 		err = errNoResult
 	}

@@ -31,7 +31,7 @@ func newWrapperData(r Resource, m *Mapping) wrapperData {
 }
 
 var mappingTmpl = template.Must(template.New("mapping").Parse(`
-func (m {{.Camel}}ResourceModel) createParams() {{.PkgName}}.{{.CreateParams}} {
+func (m {{.Camel}}ResourceModel) createParams(diags *diag.Diagnostics) {{.PkgName}}.{{.CreateParams}} {
 	var p {{.PkgName}}.{{.CreateParams}}
 {{- range .CreateBody}}
 	{{.}}
@@ -39,7 +39,7 @@ func (m {{.Camel}}ResourceModel) createParams() {{.PkgName}}.{{.CreateParams}} {
 	return p
 }
 {{if .UpdateParams}}
-func (m {{.Camel}}ResourceModel) updateParams(state {{.Camel}}ResourceModel) {{.PkgName}}.{{.UpdateParams}} {
+func (m {{.Camel}}ResourceModel) updateParams(state {{.Camel}}ResourceModel, diags *diag.Diagnostics) {{.PkgName}}.{{.UpdateParams}} {
 	var p {{.PkgName}}.{{.UpdateParams}}
 {{- range .UpdateBody}}
 	{{.}}
@@ -52,6 +52,34 @@ func (m *{{.Camel}}ResourceModel) fromAPI(c *{{.PkgName}}.{{.Model}}) {
 	{{.}}
 {{- end}}
 }
+{{range .Nested}}
+// {{.Prefix}}ToAPI converts {{.Path}} for a request. It's nil when the
+// object is null or unknown, or holds a value that isn't known, which it
+// reports: the API replaces the object whole.
+func {{.Prefix}}ToAPI(o types.Object, at path.Path, diags *diag.Diagnostics) *{{$.PkgName}}.{{.GoType}} {
+	var m {{.Prefix}}Model
+	if !objectAs(o, &m, at, diags) {
+		return nil
+	}
+	var out {{$.PkgName}}.{{.GoType}}
+{{- range .ToBody}}
+	{{.}}
+{{- end}}
+	return &out
+}
+
+// {{.Prefix}}FromAPI reads {{.Path}}: null when the API returns none.
+func {{.Prefix}}FromAPI(c *{{$.PkgName}}.{{.ReadType}}) types.Object {
+	if c == nil {
+		return types.ObjectNull({{.Prefix}}AttrTypes())
+	}
+	return types.ObjectValueMust({{.Prefix}}AttrTypes(), map[string]attr.Value{
+{{- range .FromBody}}
+		{{.}}
+{{- end}}
+	})
+}
+{{end}}
 `))
 
 var wrapperTmpl = template.Must(template.New("wrapper").Parse(`
@@ -103,7 +131,11 @@ func (r *{{.Camel}}Resource) Create(ctx context.Context, req resource.CreateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	out, err := r.client.{{.Service}}.Create(ctx, {{.CreateArgs}}plan.createParams())
+	params := plan.createParams(&resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	out, err := r.client.{{.Service}}.Create(ctx, {{.CreateArgs}}params)
 	if err == nil && (out == nil || out.{{.IDField}} == "") {
 		err = errNoResult
 	}
@@ -159,7 +191,11 @@ func (r *{{.Camel}}Resource) Update(ctx context.Context, req resource.UpdateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	out, err := r.client.{{.Service}}.Update(ctx, {{.IDArgs}}, plan.updateParams(state))
+	params := plan.updateParams(state, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	out, err := r.client.{{.Service}}.Update(ctx, {{.IDArgs}}, params)
 	if err == nil && (out == nil || out.{{.IDField}} == "") {
 		err = errNoResult
 	}

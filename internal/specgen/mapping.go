@@ -18,8 +18,19 @@ type Mapping struct {
 	FindHint, Validators             string
 	Parents                          []string
 	CreateBody, UpdateBody, ReadBody []string
-	Wrapper                          bool // generate the CRUD wrapper
-	Period                           bool // the model uses customtypes
+	Wrapper                          bool           // generate the CRUD wrapper
+	Period                           bool           // the model uses customtypes
+	Nested                           []NestedObject // converters for object attributes, parents first
+}
+
+// NestedObject is one object attribute's converters (phase 4a spec, 3.1).
+type NestedObject struct {
+	Prefix   string // names its model, attribute types and converters
+	Path     string // e.g. trigger_config.config, for comments
+	GoType   string // the struct a request carries
+	ReadType string // the struct a response carries
+	ToBody   []string
+	FromBody []string // map entries: "name": expression,
 }
 
 // Map builds a resource's mapping against the client package's real types.
@@ -55,6 +66,8 @@ func Map(api *API, r Resource, rc ResourceConfig) (*Mapping, error) {
 		field := upperCamel(a.Name)
 		writable := a.Required || a.Optional
 		parent := slices.Contains(r.Parents, a.Name)
+		prefix := nestedPrefix(lowerCamel(r.Name), a.Name)
+		at := fmt.Sprintf("path.Root(%q)", a.Name)
 		suffix := ""
 		if a.CustomType != "" {
 			suffix = ".StringValue"
@@ -66,7 +79,7 @@ func Map(api *API, r Resource, rc ResourceConfig) (*Mapping, error) {
 			if !ok {
 				return fail("%s has no field in %s.%s", a.Name, api.Name, rc.API.CreateParams)
 			}
-			line, err := createLine(a, gf, "m."+field+suffix)
+			line, err := createLine(a, gf, "m."+field+suffix, "p", at, prefix)
 			if err != nil {
 				return fail("%v", err)
 			}
@@ -78,7 +91,7 @@ func Map(api *API, r Resource, rc ResourceConfig) (*Mapping, error) {
 			if !ok {
 				return fail("%s has no field in %s.%s", a.Name, api.Name, rc.API.UpdateParams)
 			}
-			line, err := updateLine(a, gf, "m."+field+suffix, "state."+field+suffix)
+			line, err := updateLine(a, gf, "m."+field+suffix, "state."+field+suffix, at, prefix)
 			if err != nil {
 				return fail("%v", err)
 			}
@@ -92,11 +105,20 @@ func Map(api *API, r Resource, rc ResourceConfig) (*Mapping, error) {
 		if !ok {
 			return fail("%s has no field in %s.%s", a.Name, api.Name, rc.API.Model)
 		}
-		line, err := readLine(a, gf, field)
+		expr, err := readExpr(a, gf, "c", prefix)
 		if err != nil {
 			return fail("%v", err)
 		}
-		m.ReadBody = append(m.ReadBody, line)
+		m.ReadBody = append(m.ReadBody, fmt.Sprintf("m.%s = %s", field, expr))
+		if a.Kind == "object" {
+			toType := create[a.Name].Type
+			if u, ok := update[a.Name]; ok && u.Type != "" && u.Type != toType {
+				return fail("%s: create sends %s but update sends %s; specgen needs one struct for both", a.Name, toType, u.Type)
+			}
+			if err := addNested(api, m, a, prefix, a.Name, toType, gf.Type); err != nil {
+				return fail("%v", err)
+			}
+		}
 		if a.Name == "id" {
 			m.IDField = gf.Name
 		}
@@ -117,83 +139,151 @@ func Map(api *API, r Resource, rc ResourceConfig) (*Mapping, error) {
 	return m, nil
 }
 
-func createLine(a Attribute, gf GoField, v string) (string, error) {
+// elemConv names the helpers that convert a collection's elements. Only
+// strings are needed today; other elements fail generation until they are.
+func elemConv(elem string) (from, to string, ok bool) {
+	if elem == "string" {
+		return "fromString", "stringElem", true
+	}
+	return "", "", false
+}
+
+func createLine(a Attribute, gf GoField, v, dst, at, prefix string) (string, error) {
+	conv := fmt.Sprintf("%sToAPI(%s, %s, diags)", prefix, v, at)
+	from, _, elemOK := elemConv(gf.Elem)
+	if strings.Contains(gf.Shape, "slice") && !elemOK {
+		return "", fmt.Errorf("%s: slices of %s aren't mapped yet; extend specgen", a.Name, gf.Elem)
+	}
 	switch gf.Shape {
 	case "value":
 		if !a.Required {
 			return "", fmt.Errorf("%s is a plain %s in the create params but isn't Required, so it would be sent as a zero value", a.Name, gf.Elem)
 		}
-		return fmt.Sprintf("p.%s = %s", gf.Name, valueOf(gf.Elem, v)), nil
+		return fmt.Sprintf("%s.%s = %s", dst, gf.Name, valueOf(gf.Elem, v)), nil
 	case "pointer":
 		if gf.Elem == "string" {
-			return fmt.Sprintf("p.%s = createStringPtr(%s)", gf.Name, v), nil
+			return fmt.Sprintf("%s.%s = createStringPtr(%s)", dst, gf.Name, v), nil
 		}
 	case "nullable":
 		if h, ok := map[string]string{"string": "createString", "int": "createInt", "bool": "createBool"}[gf.Elem]; ok {
-			return fmt.Sprintf("p.%s = %s(%s)", gf.Name, h, v), nil
+			return fmt.Sprintf("%s.%s = %s(%s)", dst, gf.Name, h, v), nil
 		}
 	case "enum":
 		if !a.Required {
 			return "", fmt.Errorf("%s is a plain enum in the create params but isn't Required, so it would be sent as an empty string", a.Name)
 		}
-		return fmt.Sprintf("setEnum(&p.%s, %s)", gf.Name, v), nil
+		return fmt.Sprintf("setEnum(&%s.%s, %s)", dst, gf.Name, v), nil
 	case "enum_pointer":
-		return fmt.Sprintf("setEnumPtr(&p.%s, %s)", gf.Name, v), nil
+		return fmt.Sprintf("setEnumPtr(&%s.%s, %s)", dst, gf.Name, v), nil
+	case "struct":
+		if !a.Required {
+			return "", fmt.Errorf("%s is a plain struct in the create params but isn't Required, so it would be sent as a zero value", a.Name)
+		}
+		return fmt.Sprintf("%s.%s = orZero(%s)", dst, gf.Name, conv), nil
+	case "struct_pointer":
+		return fmt.Sprintf("%s.%s = %s", dst, gf.Name, conv), nil
+	case "nullable_struct":
+		return fmt.Sprintf("%s.%s = nullableOf(%s)", dst, gf.Name, conv), nil
+	case "slice":
+		return "", fmt.Errorf("%s is a plain slice in the create params; only a pointer or nullable slice is mapped", a.Name)
+	case "slice_pointer":
+		return fmt.Sprintf("setSlicePtr(&%s.%s, %s, %s)", dst, gf.Name, v, from), nil
+	case "nullable_slice":
+		return fmt.Sprintf("createNullableSlice(&%s.%s, %s, %s)", dst, gf.Name, v, from), nil
 	}
 	return "", fmt.Errorf("%s: specgen doesn't map a %s create field", a.Name, describeShape(gf))
 }
 
-func updateLine(a Attribute, gf GoField, plan, state string) (string, error) {
+func updateLine(a Attribute, gf GoField, plan, state, at, prefix string) (string, error) {
 	canBeNull := a.Optional && !a.Computed
+	from, _, elemOK := elemConv(gf.Elem)
+	if strings.Contains(gf.Shape, "slice") && !elemOK {
+		return "", fmt.Errorf("%s: slices of %s aren't mapped yet; extend specgen", a.Name, gf.Elem)
+	}
 	switch gf.Shape {
 	case "nullable":
 		if h, ok := map[string]string{"string": "updateString", "int": "updateInt", "bool": "updateBool"}[gf.Elem]; ok {
 			return fmt.Sprintf("p.%s = %s(%s, %s)", gf.Name, h, plan, state), nil
 		}
-	case "pointer", "enum_pointer":
+	case "nullable_struct":
+		return fmt.Sprintf("p.%s = updateNullableObject(%s, %s, %sToAPI(%s, %s, diags))", gf.Name, plan, state, prefix, plan, at), nil
+	case "nullable_slice":
+		return fmt.Sprintf("updateNullableSlice(&p.%s, %s, %s, %s)", gf.Name, plan, state, from), nil
+	case "pointer", "enum_pointer", "struct_pointer", "slice_pointer":
 		if canBeNull {
 			return "", fmt.Errorf("%s can be removed from config, but the update params' pointer field can't send null to clear it", a.Name)
 		}
-		if gf.Shape == "enum_pointer" {
+		switch gf.Shape {
+		case "enum_pointer":
 			return fmt.Sprintf("updateEnumPtr(&p.%s, %s, %s)", gf.Name, plan, state), nil
+		case "struct_pointer":
+			return fmt.Sprintf("p.%s = changedPtr(%s, %s, %sToAPI(%s, %s, diags))", gf.Name, plan, state, prefix, plan, at), nil
+		case "slice_pointer":
+			return fmt.Sprintf("updateSlicePtr(&p.%s, %s, %s, %s)", gf.Name, plan, state, from), nil
 		}
 		if gf.Elem == "string" {
 			return fmt.Sprintf("p.%s = updateStringPtr(%s, %s)", gf.Name, plan, state), nil
 		}
-	case "value", "enum":
+	case "value", "enum", "struct", "slice":
 		return "", fmt.Errorf("%s is a plain value in the update params, so an update can't leave it unchanged", a.Name)
 	}
 	return "", fmt.Errorf("%s: specgen doesn't map a %s update field", a.Name, describeShape(gf))
 }
 
-func readLine(a Attribute, gf GoField, field string) (string, error) {
+// readExpr is the expression that reads a field of recv into an attribute.
+func readExpr(a Attribute, gf GoField, recv, prefix string) (string, error) {
+	x := recv + "." + gf.Name
 	if a.CustomType == "period" {
 		switch {
 		case gf.Shape == "value" && gf.Elem == "string":
-			return fmt.Sprintf("m.%s = customtypes.NewPeriodValue(c.%s)", field, gf.Name), nil
+			return fmt.Sprintf("customtypes.NewPeriodValue(%s)", x), nil
 		case gf.Shape == "nullable" && gf.Elem == "string":
-			return fmt.Sprintf("m.%s = periodValue(c.%s)", field, gf.Name), nil
+			return fmt.Sprintf("periodValue(%s)", x), nil
 		}
 		return "", fmt.Errorf("%s: a period needs a string field, got %s", a.Name, describeShape(gf))
 	}
+	coll := "setOf"
+	if a.Kind == "list" {
+		coll = "listOf"
+	}
+	_, to, elemOK := elemConv(gf.Elem)
+	if strings.Contains(gf.Shape, "slice") && !elemOK {
+		return "", fmt.Errorf("%s: slices of %s aren't mapped yet; extend specgen", a.Name, gf.Elem)
+	}
+	elemType := ""
+	if k, ok := kinds[a.ElemKind]; ok {
+		elemType = k.elemType
+	}
 	switch gf.Shape {
 	case "value":
-		return fmt.Sprintf("m.%s = %s", field, map[string]string{
-			"string": "types.StringValue(c." + gf.Name + ")", "int": "types.Int64Value(int64(c." + gf.Name + "))",
-			"bool": "types.BoolValue(c." + gf.Name + ")", "float64": "types.Float64Value(c." + gf.Name + ")",
-		}[gf.Elem]), nil
+		return map[string]string{
+			"string": "types.StringValue(" + x + ")", "int": "types.Int64Value(int64(" + x + "))",
+			"bool": "types.BoolValue(" + x + ")", "float64": "types.Float64Value(" + x + ")",
+		}[gf.Elem], nil
 	case "pointer":
 		if gf.Elem == "string" {
-			return fmt.Sprintf("m.%s = stringPtrValue(c.%s)", field, gf.Name), nil
+			return fmt.Sprintf("stringPtrValue(%s)", x), nil
 		}
 	case "nullable":
 		if h, ok := map[string]string{"string": "stringValue", "int": "int64Value", "bool": "boolValue"}[gf.Elem]; ok {
-			return fmt.Sprintf("m.%s = %s(c.%s)", field, h, gf.Name), nil
+			return fmt.Sprintf("%s(%s)", h, x), nil
 		}
 	case "enum":
-		return fmt.Sprintf("m.%s = types.StringValue(string(c.%s))", field, gf.Name), nil
+		return fmt.Sprintf("types.StringValue(string(%s))", x), nil
 	case "time":
-		return fmt.Sprintf("m.%s = timeValue(c.%s)", field, gf.Name), nil
+		return fmt.Sprintf("timeValue(%s)", x), nil
+	case "struct":
+		return fmt.Sprintf("%sFromAPI(&%s)", prefix, x), nil
+	case "struct_pointer":
+		return fmt.Sprintf("%sFromAPI(%s)", prefix, x), nil
+	case "nullable_struct":
+		return fmt.Sprintf("%sFromAPI(nullablePtr(%s))", prefix, x), nil
+	case "slice":
+		return fmt.Sprintf("%s(%s, %s, %s)", coll, x, elemType, to), nil
+	case "slice_pointer":
+		return fmt.Sprintf("%s(derefSlice(%s), %s, %s)", coll, x, elemType, to), nil
+	case "nullable_slice":
+		return fmt.Sprintf("%s(nullableSlice(%s), %s, %s)", coll, x, elemType, to), nil
 	}
 	return "", fmt.Errorf("%s: specgen doesn't map a %s read field", a.Name, describeShape(gf))
 }
@@ -206,10 +296,68 @@ func valueOf(elem, v string) string {
 }
 
 func describeShape(gf GoField) string {
-	if gf.Elem != "" {
+	switch {
+	case gf.Type != "":
+		return gf.Shape + " " + gf.Type
+	case gf.Elem != "":
 		return gf.Shape + " " + gf.Elem
 	}
 	return gf.Shape
+}
+
+// addNested builds an object's converters, then its child objects'. Every
+// child is required (Merge refuses the rest), and the object is sent whole,
+// so each child is written the way create writes it.
+func addNested(api *API, m *Mapping, a Attribute, prefix, pathName, toType, fromType string) error {
+	if toType == "" || fromType == "" {
+		return fmt.Errorf("%s: the client has no exported struct for it", pathName)
+	}
+	to, err := api.Fields(toType)
+	if err != nil {
+		return err
+	}
+	from, err := api.Fields(fromType)
+	if err != nil {
+		return err
+	}
+	n := NestedObject{Prefix: prefix, Path: pathName, GoType: toType, ReadType: fromType}
+	type child struct {
+		a        Attribute
+		to, from GoField
+	}
+	var objects []child
+	for _, c := range a.Attributes {
+		field := upperCamel(c.Name)
+		cp := nestedPrefix(prefix, c.Name)
+		tf, ok := to[c.Name]
+		if !ok {
+			return fmt.Errorf("%s.%s has no field in %s.%s", pathName, c.Name, api.Name, toType)
+		}
+		line, err := createLine(c, tf, "m."+field, "out", fmt.Sprintf("at.AtName(%q)", c.Name), cp)
+		if err != nil {
+			return fmt.Errorf("%s: %w", pathName, err)
+		}
+		n.ToBody = append(n.ToBody, line)
+		rf, ok := from[c.Name]
+		if !ok {
+			return fmt.Errorf("%s.%s has no field in %s.%s", pathName, c.Name, api.Name, fromType)
+		}
+		expr, err := readExpr(c, rf, "c", cp)
+		if err != nil {
+			return fmt.Errorf("%s: %w", pathName, err)
+		}
+		n.FromBody = append(n.FromBody, fmt.Sprintf("%q: %s,", c.Name, expr))
+		if c.Kind == "object" {
+			objects = append(objects, child{c, tf, rf})
+		}
+	}
+	m.Nested = append(m.Nested, n)
+	for _, o := range objects {
+		if err := addNested(api, m, o.a, nestedPrefix(prefix, o.a.Name), pathName+"."+o.a.Name, o.to.Type, o.from.Type); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // checkService confirms the client's methods take the resource's path

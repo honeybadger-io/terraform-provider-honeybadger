@@ -166,7 +166,7 @@ func TestCRUDGoldenCompiles(t *testing.T) {
 		}
 	}
 	copyFile("testdata/widget_crud_resource_gen.go.golden", "widget_resource_gen.go")
-	for _, f := range []string{"convert.go", "nullable.go", "diagnostics.go", "import.go"} {
+	for _, f := range []string{"convert.go", "nullable.go", "diagnostics.go", "import.go", "collections.go", "objects.go"} {
 		copyFile(filepath.Join("..", "provider", f), f)
 	}
 	out, err := exec.Command("go", "vet", "./testdata/crudcheck").CombinedOutput()

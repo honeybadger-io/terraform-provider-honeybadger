@@ -27,7 +27,9 @@ func TestFieldsClassifyShapes(t *testing.T) {
 		"shape":      {Name: "Shape", Shape: "enum"},
 		"size":       {Name: "Size", Shape: "nullable", Elem: "int"},
 		"color":      {Name: "Color", Shape: "nullable", Elem: "string"},
-		"tags":       {Name: "Tags", Shape: "unsupported"},
+		"tags":       {Name: "Tags", Shape: "slice", Elem: "string"},
+		"gear":       {Name: "Gear", Shape: "nullable_struct", Type: "Gear"},
+		"parts":      {Name: "Parts", Shape: "nullable_slice", Elem: "string"},
 		"serial":     {Name: "Serial", Shape: "pointer", Elem: "string"},
 		"created_at": {Name: "CreatedAt", Shape: "time"},
 	}
@@ -86,5 +88,31 @@ func TestRealAPIShapes(t *testing.T) {
 	pp, err := api.Fields("ProjectParams")
 	if err != nil || pp["name"].Shape != "pointer" {
 		t.Errorf("ProjectParams.name = %+v, %v; want pointer", pp["name"], err)
+	}
+}
+
+func TestFieldsClassifyWriteShapes(t *testing.T) {
+	api := loadFakeAPI(t)
+	create, err := api.Fields("WidgetCreateParams")
+	if err != nil {
+		t.Fatal(err)
+	}
+	update, err := api.Fields("WidgetUpdateParams")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mesh, err := api.Fields("Mesh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, pair := range map[string][2]GoField{
+		"create gear":  {create["gear"], {Name: "Gear", Shape: "struct", Type: "Gear"}},
+		"create parts": {create["parts"], {Name: "Parts", Shape: "slice_pointer", Elem: "string"}},
+		"update gear":  {update["gear"], {Name: "Gear", Shape: "struct_pointer", Type: "Gear"}},
+		"mesh pitch":   {mesh["pitch"], {Name: "Pitch", Shape: "value", Elem: "float64"}},
+	} {
+		if !reflect.DeepEqual(pair[0], pair[1]) {
+			t.Errorf("%s = %+v, want %+v", name, pair[0], pair[1])
+		}
 	}
 }

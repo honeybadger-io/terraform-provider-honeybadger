@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -110,7 +111,7 @@ type projectResourceModel struct {
 // projectImportFormat is the ID terraform import takes.
 const projectImportFormat = "<id>"
 
-func (m projectResourceModel) createParams() apiv3.ProjectCreateParams {
+func (m projectResourceModel) createParams(diags *diag.Diagnostics) apiv3.ProjectCreateParams {
 	var p apiv3.ProjectCreateParams
 	p.AsanaWorkspaceId = createString(m.AsanaWorkspaceID)
 	p.CustomerThrottle = createInt(m.CustomerThrottle)
@@ -125,7 +126,7 @@ func (m projectResourceModel) createParams() apiv3.ProjectCreateParams {
 	return p
 }
 
-func (m projectResourceModel) updateParams(state projectResourceModel) apiv3.ProjectParams {
+func (m projectResourceModel) updateParams(state projectResourceModel, diags *diag.Diagnostics) apiv3.ProjectParams {
 	var p apiv3.ProjectParams
 	p.AsanaWorkspaceId = updateString(m.AsanaWorkspaceID, state.AsanaWorkspaceID)
 	p.CustomerThrottle = updateInt(m.CustomerThrottle, state.CustomerThrottle)
@@ -198,7 +199,11 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	out, err := r.client.Projects.Create(ctx, plan.createParams())
+	params := plan.createParams(&resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	out, err := r.client.Projects.Create(ctx, params)
 	if err == nil && (out == nil || out.Id == "") {
 		err = errNoResult
 	}
@@ -253,7 +258,11 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	out, err := r.client.Projects.Update(ctx, state.ID.ValueString(), plan.updateParams(state))
+	params := plan.updateParams(state, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	out, err := r.client.Projects.Update(ctx, state.ID.ValueString(), params)
 	if err == nil && (out == nil || out.Id == "") {
 		err = errNoResult
 	}

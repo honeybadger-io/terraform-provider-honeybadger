@@ -40,7 +40,9 @@ func TestMapBuildsStatementsByShape(t *testing.T) {
 	}
 	wantCreate := []string{
 		"p.Color = createString(m.Color)",
+		`p.Gear = orZero(widgetGearToAPI(m.Gear, path.Root("gear"), diags))`,
 		"p.Name = m.Name.ValueString()",
+		"setSlicePtr(&p.Parts, m.Parts, fromString)",
 		"p.Period = createString(m.Period.StringValue)",
 		"p.Secret = createString(m.Secret)",
 		"p.Serial = createStringPtr(m.Serial)",
@@ -49,7 +51,9 @@ func TestMapBuildsStatementsByShape(t *testing.T) {
 	}
 	wantUpdate := []string{
 		"p.Color = updateString(m.Color, state.Color)",
+		`p.Gear = changedPtr(m.Gear, state.Gear, widgetGearToAPI(m.Gear, path.Root("gear"), diags))`,
 		"p.Name = updateStringPtr(m.Name, state.Name)",
+		"updateNullableSlice(&p.Parts, m.Parts, state.Parts, fromString)",
 		"p.Period = updateString(m.Period.StringValue, state.Period.StringValue)",
 		"p.Secret = updateString(m.Secret, state.Secret)",
 		"updateEnumPtr(&p.Shape, m.Shape, state.Shape)",
@@ -58,8 +62,10 @@ func TestMapBuildsStatementsByShape(t *testing.T) {
 	wantRead := []string{
 		"m.Color = stringValue(c.Color)",
 		"m.CreatedAt = timeValue(c.CreatedAt)",
+		"m.Gear = widgetGearFromAPI(nullablePtr(c.Gear))",
 		"m.ID = types.StringValue(c.Id)",
 		"m.Name = types.StringValue(c.Name)",
+		"m.Parts = setOf(nullableSlice(c.Parts), types.StringType, stringElem)",
 		"m.Period = periodValue(c.Period)",
 		"m.ProjectID = types.StringValue(c.ProjectId)",
 		"m.Serial = stringPtrValue(c.Serial)",
@@ -94,6 +100,11 @@ func TestMapErrors(t *testing.T) {
 		{"optional enum as a plain value", func(rc *ResourceConfig) { rc.API.CreateParams = "WidgetEnumCreateParams" }, "shape"},
 		{"missing method", func(rc *ResourceConfig) { rc.Service = "WidgetsNoDelete" }, "Delete"},
 		{"no import format", func(rc *ResourceConfig) { rc.Import = "" }, "import"},
+		{"removable slice as a pointer on update", func(rc *ResourceConfig) {
+			rc.ServerFilled = []string{"size"}
+			rc.API.UpdateParams = "WidgetSlicePointerUpdateParams"
+		}, "parts"},
+		{"nested object as a map", func(rc *ResourceConfig) { rc.API.UpdateParams = "WidgetMapGearUpdateParams" }, "gear"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -114,5 +125,37 @@ func TestMapRejectsNullablePointerUpdate(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "color") {
 		t.Errorf("err = %v, want one naming color", err)
+	}
+}
+
+func TestMapNestedConverters(t *testing.T) {
+	m, err := mapWidget(t, nil)
+	if err != nil {
+		t.Fatalf("Map: %v", err)
+	}
+	if len(m.Nested) != 2 {
+		t.Fatalf("Nested = %+v, want gear and gear.mesh", m.Nested)
+	}
+	gear, mesh := m.Nested[0], m.Nested[1]
+	if gear.Prefix != "widgetGear" || gear.GoType != "Gear" || gear.ReadType != "Gear" {
+		t.Errorf("gear = %+v", gear)
+	}
+	wantTo := []string{
+		"setEnum(&out.Kind, m.Kind)",
+		`out.Mesh = orZero(widgetGearMeshToAPI(m.Mesh, at.AtName("mesh"), diags))`,
+	}
+	wantFrom := []string{
+		`"kind": types.StringValue(string(c.Kind)),`,
+		`"mesh": widgetGearMeshFromAPI(&c.Mesh),`,
+	}
+	if !reflect.DeepEqual(gear.ToBody, wantTo) || !reflect.DeepEqual(gear.FromBody, wantFrom) {
+		t.Errorf("gear bodies:\n to   %q\n from %q", gear.ToBody, gear.FromBody)
+	}
+	wantMeshTo := []string{
+		"out.Pitch = m.Pitch.ValueFloat64()",
+		"out.Teeth = int(m.Teeth.ValueInt64())",
+	}
+	if mesh.Prefix != "widgetGearMesh" || !reflect.DeepEqual(mesh.ToBody, wantMeshTo) {
+		t.Errorf("mesh = %+v", mesh)
 	}
 }

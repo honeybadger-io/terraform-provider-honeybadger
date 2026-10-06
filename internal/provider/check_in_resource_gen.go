@@ -9,6 +9,7 @@ import (
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -104,7 +105,7 @@ type checkInResourceModel struct {
 // checkInImportFormat is the ID terraform import takes.
 const checkInImportFormat = "<project_id>/<id>"
 
-func (m checkInResourceModel) createParams() apiv3.CheckInCreateParams {
+func (m checkInResourceModel) createParams(diags *diag.Diagnostics) apiv3.CheckInCreateParams {
 	var p apiv3.CheckInCreateParams
 	p.CronSchedule = createString(m.CronSchedule)
 	p.CronTimezone = createString(m.CronTimezone)
@@ -116,7 +117,7 @@ func (m checkInResourceModel) createParams() apiv3.CheckInCreateParams {
 	return p
 }
 
-func (m checkInResourceModel) updateParams(state checkInResourceModel) apiv3.CheckInUpdateParams {
+func (m checkInResourceModel) updateParams(state checkInResourceModel, diags *diag.Diagnostics) apiv3.CheckInUpdateParams {
 	var p apiv3.CheckInUpdateParams
 	p.CronSchedule = updateString(m.CronSchedule, state.CronSchedule)
 	p.CronTimezone = updateString(m.CronTimezone, state.CronTimezone)
@@ -188,7 +189,11 @@ func (r *checkInResource) Create(ctx context.Context, req resource.CreateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	out, err := r.client.CheckIns.Create(ctx, plan.ProjectID.ValueString(), plan.createParams())
+	params := plan.createParams(&resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	out, err := r.client.CheckIns.Create(ctx, plan.ProjectID.ValueString(), params)
 	if err == nil && (out == nil || out.Id == "") {
 		err = errNoResult
 	}
@@ -243,7 +248,11 @@ func (r *checkInResource) Update(ctx context.Context, req resource.UpdateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	out, err := r.client.CheckIns.Update(ctx, state.ProjectID.ValueString(), state.ID.ValueString(), plan.updateParams(state))
+	params := plan.updateParams(state, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	out, err := r.client.CheckIns.Update(ctx, state.ProjectID.ValueString(), state.ID.ValueString(), params)
 	if err == nil && (out == nil || out.Id == "") {
 		err = errNoResult
 	}
