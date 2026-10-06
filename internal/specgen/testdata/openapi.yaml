@@ -651,6 +651,7 @@ components:
       - id
       - name
       - parent_id
+      - speed
       properties:
         id:
           type: string
@@ -670,6 +671,8 @@ components:
             type: string
             format: password
           description: Headers sent with each turn.
+        speed:
+          "$ref": "#/components/schemas/SprocketSpeed"
     SprocketInput:
       type: object
       properties:
@@ -684,6 +687,12 @@ components:
             format: password
           default: {}
           description: Headers sent with each turn. Replaces the stored headers.
+        speed:
+          description: Turns a minute. Send null to reset to 5.
+          default: 5
+          anyOf:
+          - "$ref": "#/components/schemas/SprocketSpeed"
+          - type: 'null'
     SprocketCreateInput:
       allOf:
       - "$ref": "#/components/schemas/SprocketInput"
@@ -696,3 +705,11 @@ components:
             type: string
             format: uuid
             description: The sprocket this one hangs from.
+    SprocketSpeed:
+      type: integer
+      enum:
+      - 1
+      - 2
+      - 5
+      - 15
+      description: Turns a minute.

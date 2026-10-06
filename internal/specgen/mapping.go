@@ -213,6 +213,13 @@ func createLine(a Attribute, gf GoField, v, dst, at, prefix string) (string, err
 		return fmt.Sprintf("%s.%s = %sToMap(%s, types.ObjectNull(%sAttrTypes()), %s, diags)", dst, gf.Name, prefix, v, prefix, at), nil
 	case "nullable_string_map":
 		return fmt.Sprintf("createStringMap(&%s.%s, %s)", dst, gf.Name, v), nil
+	case "int_enum":
+		if !a.Required {
+			return "", fmt.Errorf("%s is a plain integer enum in the create params but isn't Required, so it would be sent as 0", a.Name)
+		}
+		return fmt.Sprintf("setIntEnum(&%s.%s, %s)", dst, gf.Name, v), nil
+	case "nullable_int_enum":
+		return fmt.Sprintf("createIntEnum(&%s.%s, %s)", dst, gf.Name, v), nil
 	case "nullable":
 		if h, ok := map[string]string{"string": "createString", "int": "createInt", "bool": "createBool"}[gf.Elem]; ok {
 			return fmt.Sprintf("%s.%s = %s(%s)", dst, gf.Name, h, v), nil
@@ -267,6 +274,8 @@ func updateLine(a Attribute, gf GoField, plan, state, at, prefix string) (string
 		}
 	case "nullable_string_map":
 		return fmt.Sprintf("updateStringMap(&p.%s, %s, %s)", gf.Name, plan, state), nil
+	case "nullable_int_enum":
+		return fmt.Sprintf("updateIntEnum(&p.%s, %s, %s)", gf.Name, plan, state), nil
 	case "nullable_struct":
 		return fmt.Sprintf("p.%s = updateNullableObject(%s, %s, %sToAPI(%s, %s, diags))", gf.Name, plan, state, prefix, plan, at), nil
 	case "nullable_slice":
@@ -297,7 +306,7 @@ func updateLine(a Attribute, gf GoField, plan, state, at, prefix string) (string
 		case "bool":
 			return fmt.Sprintf("p.%s = updateBoolPtr(%s, %s)", gf.Name, plan, state), nil
 		}
-	case "value", "enum", "struct", "slice":
+	case "value", "enum", "int_enum", "struct", "slice":
 		return "", fmt.Errorf("%s is a plain value in the update params, so an update can't leave it unchanged", a.Name)
 	}
 	return "", fmt.Errorf("%s: specgen doesn't map a %s update field", a.Name, describeShape(gf))
@@ -360,6 +369,10 @@ func readExpr(a Attribute, gf GoField, recv, prefix string) (string, error) {
 		return fmt.Sprintf("%sFromMap(%s, m.%s)", prefix, x, upperCamel(a.Name)), nil
 	case "nullable_string_map":
 		return fmt.Sprintf("stringMapValue(%s)", x), nil
+	case "int_enum":
+		return fmt.Sprintf("types.Int64Value(int64(%s))", x), nil
+	case "nullable_int_enum":
+		return fmt.Sprintf("intEnumValue(%s)", x), nil
 	case "slice":
 		if gf.Elem == "struct" {
 			return fmt.Sprintf("objectList(%s, %sFromAPI, %sAttrTypes())", x, prefix, prefix), nil

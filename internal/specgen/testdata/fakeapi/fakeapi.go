@@ -248,23 +248,28 @@ func (s *GadgetsService) Update(ctx context.Context, projectID, gadgetID string,
 }
 func (s *GadgetsService) Delete(ctx context.Context, projectID, gadgetID string) error { return nil }
 
+type SprocketSpeed int
+
 // Sprocket is the phase-5 fixture: an account-level resource with a UUID id.
 type Sprocket struct {
 	Id       uuid.UUID                            `json:"id"`
 	Name     string                               `json:"name"`
 	ParentId uuid.UUID                            `json:"parent_id"`
 	Headers  nullable.Nullable[map[string]string] `json:"headers"`
+	Speed    SprocketSpeed                        `json:"speed"`
 }
 
 type SprocketCreateParams struct {
 	Name     string                               `json:"name"`
 	ParentId uuid.UUID                            `json:"parent_id"`
 	Headers  nullable.Nullable[map[string]string] `json:"headers,omitempty"`
+	Speed    nullable.Nullable[SprocketSpeed]     `json:"speed,omitempty"`
 }
 
 type SprocketUpdateParams struct {
 	Name    *string                              `json:"name,omitempty"`
 	Headers nullable.Nullable[map[string]string] `json:"headers,omitempty"`
+	Speed   nullable.Nullable[SprocketSpeed]     `json:"speed,omitempty"`
 }
 
 type SprocketsService struct{}

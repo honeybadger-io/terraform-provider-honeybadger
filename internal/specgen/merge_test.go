@@ -489,3 +489,14 @@ func TestSetKindRefusesNonStringMap(t *testing.T) {
 		t.Errorf("err = %v, want a refusal naming string values", err)
 	}
 }
+
+func TestMergeIntegerEnum(t *testing.T) {
+	r, err := Merge(loadFixture(t), "sprocket", sprocketConfig(t))
+	if err != nil {
+		t.Fatalf("Merge: %v", err)
+	}
+	s := attrNamed(t, r, "speed")
+	if s.Kind != "int64" || !reflect.DeepEqual(s.Enum, []string{"1", "2", "5", "15"}) || s.Default != float64(5) {
+		t.Errorf("speed = %+v; want an int64 enum defaulting to 5", s)
+	}
+}

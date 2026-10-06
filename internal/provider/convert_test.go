@@ -100,3 +100,12 @@ func TestIsZero(t *testing.T) {
 		t.Error("isZero must be true only for \"\" and the zero UUID")
 	}
 }
+
+func TestSetIntEnum(t *testing.T) {
+	var s testSpeed
+	setIntEnum(&s, types.Int64Value(5))
+	setIntEnum(&s, types.Int64Null())
+	if s != 5 {
+		t.Errorf("s = %d, want 5 (a null leaves it unchanged)", s)
+	}
+}

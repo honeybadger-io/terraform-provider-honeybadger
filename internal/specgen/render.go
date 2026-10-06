@@ -230,7 +230,18 @@ func renderAttribute(b *bytes.Buffer, a Attribute, imports map[string]bool, pare
 	if len(validators) > 0 && a.Kind == "string" {
 		imports["github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"] = true
 	}
-	if len(a.Enum) > 0 {
+	if len(a.Enum) > 0 && a.Kind == "int64" {
+		nums := make([]string, len(a.Enum))
+		for i, e := range a.Enum {
+			n, err := strconv.ParseInt(e, 10, 64)
+			if err != nil {
+				return fmt.Errorf("%s: enum value %q isn't an integer", a.Name, e)
+			}
+			nums[i] = strconv.FormatInt(n, 10)
+		}
+		validators = append(validators, "int64validator.OneOf("+strings.Join(nums, ", ")+")")
+		imports["github.com/hashicorp/terraform-plugin-framework-validators/int64validator"] = true
+	} else if len(a.Enum) > 0 {
 		quoted := make([]string, len(a.Enum))
 		for i, e := range a.Enum {
 			quoted[i] = strconv.Quote(e)

@@ -38,7 +38,7 @@ type GoField struct {
 	Name  string // Go field name
 	Shape string // value, pointer, nullable, enum, enum_pointer, time, uuid, struct, struct_pointer,
 	// nullable_struct, slice, slice_pointer, nullable_slice, map, map_pointer, string_map,
-	// nullable_string_map or unsupported
+	// nullable_string_map, int_enum, nullable_int_enum or unsupported
 	Elem string // string, int, bool or float64, for value, pointer, nullable and slice shapes
 	Type string // for struct shapes: the API package's exported name for the struct
 }
@@ -126,6 +126,8 @@ func (a *API) shapeOf(t types.Type) (GoField, bool) {
 				return GoField{Shape: "nullable_struct", Type: inner.Type}, true
 			case ok && inner.Shape == "slice":
 				return GoField{Shape: "nullable_slice", Elem: inner.Elem, Type: inner.Type}, true
+			case ok && inner.Shape == "int_enum":
+				return GoField{Shape: "nullable_int_enum", Elem: "int"}, true
 			case ok && inner.Shape == "string_map":
 				return GoField{Shape: "nullable_string_map"}, true
 			}
@@ -135,6 +137,9 @@ func (a *API) shapeOf(t types.Type) (GoField, bool) {
 		case *types.Basic:
 			if u.Kind() == types.String {
 				return GoField{Shape: "enum"}, true
+			}
+			if u.Kind() == types.Int || u.Kind() == types.Int64 {
+				return GoField{Shape: "int_enum", Elem: "int"}, true
 			}
 		case *types.Struct:
 			if name, ok := a.exportedName(t); ok {

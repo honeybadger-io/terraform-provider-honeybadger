@@ -103,3 +103,10 @@ func isZero[T comparable](v T) bool {
 	var zero T
 	return v == zero
 }
+
+func setIntEnum[T ~int](dst *T, v types.Int64) {
+	if v.IsNull() || v.IsUnknown() {
+		return
+	}
+	*dst = T(v.ValueInt64())
+}

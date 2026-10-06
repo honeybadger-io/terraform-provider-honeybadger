@@ -284,7 +284,7 @@ func setKind(a *Attribute, f Field) error {
 	scalar := map[string]string{"string": "string", "integer": "int64", "number": "float64", "boolean": "bool"}
 	if k, ok := scalar[f.Type]; ok {
 		a.Kind = k
-		if len(a.Enum) > 0 && k != "string" {
+		if len(a.Enum) > 0 && k != "string" && k != "int64" {
 			return fmt.Errorf("enums on %s aren't supported yet", f.Type)
 		}
 		if k == "string" && f.Format == "uuid" {

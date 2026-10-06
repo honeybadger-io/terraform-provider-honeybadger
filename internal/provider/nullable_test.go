@@ -112,3 +112,26 @@ func TestReadMapsNullAndUnsetToTerraformNull(t *testing.T) {
 		t.Errorf("boolValue = %v, want false", got)
 	}
 }
+
+type testSpeed int
+
+func TestIntEnumHelpers(t *testing.T) {
+	var c nullable.Nullable[testSpeed]
+	createIntEnum(&c, types.Int64Value(15))
+	if v, err := c.Get(); err != nil || v != 15 {
+		t.Errorf("create = %v, %v", v, err)
+	}
+	var unset, same, removed nullable.Nullable[testSpeed]
+	createIntEnum(&unset, types.Int64Unknown())
+	updateIntEnum(&same, types.Int64Value(5), types.Int64Value(5))
+	updateIntEnum(&removed, types.Int64Null(), types.Int64Value(5))
+	if unset.IsSpecified() || same.IsSpecified() || !removed.IsNull() {
+		t.Errorf("unknown specified=%v, unchanged specified=%v, removed null=%v", unset.IsSpecified(), same.IsSpecified(), removed.IsNull())
+	}
+	if got := intEnumValue(nullable.NewNullableWithValue(testSpeed(2))); got.ValueInt64() != 2 {
+		t.Errorf("read = %v", got)
+	}
+	if got := intEnumValue(nullable.NewNullNullable[testSpeed]()); !got.IsNull() {
+		t.Errorf("read null = %v", got)
+	}
+}

@@ -374,3 +374,24 @@ func TestRenderPlainStringMap(t *testing.T) {
 		t.Errorf("rendered = %s", b.String())
 	}
 }
+
+func TestRenderIntegerEnum(t *testing.T) {
+	_, r := mapSprocket(t)
+	got, err := Render(r, nil)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	for _, want := range []string{`int64validator\.OneOf\(1, 2, 5, 15\)`, `Default:\s+int64default\.StaticInt64\(5\)`} {
+		if !regexp.MustCompile(want).Match(got) {
+			t.Errorf("rendered code doesn't match %s", want)
+		}
+	}
+}
+
+func TestRenderRefusesFractionalIntegerEnum(t *testing.T) {
+	var b bytes.Buffer
+	err := renderAttribute(&b, Attribute{Name: "n", Kind: "int64", Optional: true, Enum: []string{"1.5"}}, map[string]bool{}, "x")
+	if err == nil || !strings.Contains(err.Error(), "isn't an integer") {
+		t.Errorf("err = %v, want a refusal of 1.5", err)
+	}
+}

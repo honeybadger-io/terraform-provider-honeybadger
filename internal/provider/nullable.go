@@ -76,3 +76,21 @@ func boolValue(n nullable.Nullable[bool]) types.Bool {
 	}
 	return types.BoolNull()
 }
+
+// Integer enums (apiv3 named ints, such as SiteFrequency) convert like
+// nullable ints; T is inferred from the destination.
+
+func createIntEnum[T ~int](dst *nullable.Nullable[T], v types.Int64) {
+	*dst = createValue(v.IsNull() || v.IsUnknown(), T(v.ValueInt64()))
+}
+
+func updateIntEnum[T ~int](dst *nullable.Nullable[T], plan, state types.Int64) {
+	*dst = updateValue(plan.IsUnknown(), plan.IsNull(), plan.Equal(state), T(plan.ValueInt64()))
+}
+
+func intEnumValue[T ~int](n nullable.Nullable[T]) types.Int64 {
+	if v, err := n.Get(); err == nil {
+		return types.Int64Value(int64(v))
+	}
+	return types.Int64Null()
+}
