@@ -66,7 +66,7 @@ func alarmResourceSchema() schema.Schema {
 			},
 			"stream_ids": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "Streams the query runs against. A set; can't be empty. Left out, every current stream in the project, which a read then lists. An ID that isn't one of the project's streams fails the request with 422. A set; order is ignored and duplicates are dropped.",
+				MarkdownDescription: "Streams the query runs against. A set: order is ignored, duplicates are dropped, and it can't be empty. Left out, every current stream in the project, which a read then lists. An ID that isn't one of the project's streams fails the request with 422.",
 				Optional:            true,
 				Computed:            true,
 				Validators:          []validator.Set{setvalidator.SizeAtLeast(1)},
@@ -77,8 +77,9 @@ func alarmResourceSchema() schema.Schema {
 					"config": schema.SingleNestedAttribute{
 						Attributes: map[string]schema.Attribute{
 							"operator": schema.StringAttribute{
-								Required:   true,
-								Validators: []validator.String{stringvalidator.OneOf("gt", "gte", "lt", "lte", "eq", "neq")},
+								MarkdownDescription: "How the query's result is compared with `value`: greater than, greater than or equal, less than, less than or equal, equal, or not equal.",
+								Required:            true,
+								Validators:          []validator.String{stringvalidator.OneOf("gt", "gte", "lt", "lte", "eq", "neq")},
 							},
 							"value": schema.Float64Attribute{
 								MarkdownDescription: "Threshold to compare against. `alert_result_count` takes a whole number >= 0.",

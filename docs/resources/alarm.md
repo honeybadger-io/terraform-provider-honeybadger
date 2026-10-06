@@ -45,7 +45,7 @@ resource "honeybadger_alarm" "errors" {
 ### Optional
 
 - `description` (String) What the alarm watches for, shown with it in Honeybadger.
-- `stream_ids` (Set of String) Streams the query runs against. A set; can't be empty. Left out, every current stream in the project, which a read then lists. An ID that isn't one of the project's streams fails the request with 422. A set; order is ignored and duplicates are dropped.
+- `stream_ids` (Set of String) Streams the query runs against. A set: order is ignored, duplicates are dropped, and it can't be empty. Left out, every current stream in the project, which a read then lists. An ID that isn't one of the project's streams fails the request with 422.
 
 ### Read-Only
 
@@ -65,7 +65,7 @@ Required:
 
 Required:
 
-- `operator` (String)
+- `operator` (String) How the query's result is compared with `value`: greater than, greater than or equal, less than, less than or equal, equal, or not equal.
 - `value` (Number) Threshold to compare against. `alert_result_count` takes a whole number >= 0.
 
 ## Notes

@@ -3,12 +3,12 @@
 page_title: "honeybadger_project_key Resource - honeybadger"
 subcategory: ""
 description: |-
-  A project's ingestion key, the API key a notifier sends error reports with
+  A Project Key: what an app sends errors and events with, set as api_key in a notifier's config. It only sends data; reading or managing anything through the API takes an API Token.
 ---
 
 # honeybadger_project_key (Resource)
 
-A project's ingestion key, the API key a notifier sends error reports with
+A Project Key: what an app sends errors and events with, set as `api_key` in a notifier's config. It only sends data; reading or managing anything through the API takes an API Token.
 
 ## Example Usage
 
@@ -34,4 +34,4 @@ resource "honeybadger_project_key" "deploy" {
 
 - `created_at` (String) When the key was created
 - `id` (String) Identifier for this key. Use it in paths.
-- `key` (String) The ingestion key a notifier sends. Returned in full — unlike an API credential, this value is meant to be distributed with your application.
+- `key` (String) The Project Key value a notifier sends. Returned in full: unlike an API Token, it's meant to ship with your application.

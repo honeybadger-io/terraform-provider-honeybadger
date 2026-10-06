@@ -32,7 +32,7 @@ resources:
     import: "<project_id>/<id>"
     service: ProjectKeys
     api: {model: ProjectKey, create_params: ProjectKeyParams, update_params: ProjectKeyParams}
-    find_hint: "the project's API keys in Honeybadger"
+    find_hint: "the project's Project Keys in Honeybadger"
     use_state_for_unknown: [created_at, key]
 
   check_in:

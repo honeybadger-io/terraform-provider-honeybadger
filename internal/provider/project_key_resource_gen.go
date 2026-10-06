@@ -18,7 +18,7 @@ import (
 
 func projectKeyResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "A project's ingestion key, the API key a notifier sends error reports with",
+		MarkdownDescription: "A Project Key: what an app sends errors and events with, set as `api_key` in a notifier's config. It only sends data; reading or managing anything through the API takes an API Token.",
 		Attributes: map[string]schema.Attribute{
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "When the key was created",
@@ -31,7 +31,7 @@ func projectKeyResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"key": schema.StringAttribute{
-				MarkdownDescription: "The ingestion key a notifier sends. Returned in full — unlike an API credential, this value is meant to be distributed with your application.",
+				MarkdownDescription: "The Project Key value a notifier sends. Returned in full: unlike an API Token, it's meant to ship with your application.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
@@ -135,7 +135,7 @@ func (r *projectKeyResource) Create(ctx context.Context, req resource.CreateRequ
 				ProjectID:    plan.ProjectID.ValueString(),
 				Name:         plan.Label.ValueString(),
 				ImportFormat: projectKeyImportFormat,
-				FindHint:     "the project's API keys in Honeybadger",
+				FindHint:     "the project's Project Keys in Honeybadger",
 			}, err)
 			return
 		}

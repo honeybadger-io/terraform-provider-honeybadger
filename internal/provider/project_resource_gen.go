@@ -75,10 +75,6 @@ func projectResourceSchema() schema.Schema {
 				MarkdownDescription: "Template for linking a backtrace line to your source host. `[file]` and `[line]` are substituted.",
 				Optional:            true,
 			},
-			"token": schema.StringAttribute{
-				MarkdownDescription: "API key for error reporting: the newest of the project's keys. Null when the project has none, which deleting every project key produces.",
-				Computed:            true,
-			},
 			"user_search_field": schema.StringAttribute{
 				MarkdownDescription: "Context key identifying the affected user, for when it is not in the default `context.user_email` or `context.user_id`.",
 				Optional:            true,
@@ -103,7 +99,6 @@ type projectResourceModel struct {
 	PurgeDays             types.Int64  `tfsdk:"purge_days"`
 	ResolveErrorsOnDeploy types.Bool   `tfsdk:"resolve_errors_on_deploy"`
 	SourceURL             types.String `tfsdk:"source_url"`
-	Token                 types.String `tfsdk:"token"`
 	UserSearchField       types.String `tfsdk:"user_search_field"`
 	UserURL               types.String `tfsdk:"user_url"`
 }
@@ -153,7 +148,6 @@ func (m *projectResourceModel) fromAPI(c *apiv3.Project) {
 	m.PurgeDays = int64Value(c.PurgeDays)
 	m.ResolveErrorsOnDeploy = types.BoolValue(c.ResolveErrorsOnDeploy)
 	m.SourceURL = stringValue(c.SourceUrl)
-	m.Token = stringValue(c.Token)
 	m.UserSearchField = stringValue(c.UserSearchField)
 	m.UserURL = stringValue(c.UserUrl)
 }

@@ -61,7 +61,6 @@ func TestAccProject(t *testing.T) {
 `),
 				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
 					plancheck.ExpectResourceAction(addr, plancheck.ResourceActionUpdate),
-					plancheck.ExpectUnknownValue(addr, tfjsonpath.New("token")),
 				}},
 			},
 			{
@@ -83,9 +82,9 @@ func TestAccProject(t *testing.T) {
 	})
 }
 
-// A new key changes the project's token, so a project update in the same
-// apply plans token as unknown and the apply succeeds.
-func TestAccProjectKeyAndTokenInOneApply(t *testing.T) {
+// A project and its Project Keys change together in one apply. Configs get a
+// key's value from honeybadger_project_key: project reads don't include one.
+func TestAccProjectAndKeysInOneApply(t *testing.T) {
 	name := accName()
 	config := func(project, keys string) string {
 		return accProvider() + fmt.Sprintf("resource \"honeybadger_project\" \"t\" {\n  name = %q\n}\n", project) + keys
@@ -107,7 +106,8 @@ func TestAccProjectKeyAndTokenInOneApply(t *testing.T) {
 			{
 				Config: config(name+"-2", key("one", "first")+key("two", "second")),
 				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
-					plancheck.ExpectUnknownValue("honeybadger_project.t", tfjsonpath.New("token")),
+					plancheck.ExpectResourceAction("honeybadger_project.t", plancheck.ResourceActionUpdate),
+					plancheck.ExpectResourceAction("honeybadger_project_key.two", plancheck.ResourceActionCreate),
 				}},
 			},
 			{

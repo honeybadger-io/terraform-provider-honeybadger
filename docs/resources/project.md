@@ -43,4 +43,3 @@ resource "honeybadger_project" "app" {
 - `account_id` (String) ID of the account this project belongs to
 - `created_at` (String) When the project was created
 - `id` (String) Unique identifier
-- `token` (String) API key for error reporting: the newest of the project's keys. Null when the project has none, which deleting every project key produces.

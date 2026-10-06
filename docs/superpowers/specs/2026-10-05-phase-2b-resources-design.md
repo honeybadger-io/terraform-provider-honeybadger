@@ -22,7 +22,7 @@ Honeybadger stack.
 | CRUD wrappers | Generated (section 3.3), with escape hatches |
 | Live-data fields (counts, timestamps, check-in state) | Omitted from the resources |
 | `honeybadger_project` data source (umbrella D5) | Deferred; nothing in 2b needs it |
-| `token` and project key `key` | Computed, not Sensitive: they're ingestion keys meant to ship with the application |
+| `token` and project key `key` | Computed, not Sensitive: they're ingestion keys meant to ship with the application. (Superseded 2026-10-06: project reads no longer include `token`; a key's value comes from `honeybadger_project_key.key`.) |
 | Acceptance tests | Written and run in 2b against Kevin's local stack, with a token he provides at run time |
 
 ## 3. Generator extensions
@@ -166,6 +166,9 @@ check_in:
 
 Notes:
 
+- **Superseded 2026-10-06:** honeybadger dropped `token` from project reads,
+  so the next note no longer applies; configs read a key from
+  `honeybadger_project_key.key`.
 - **`token` has no `UseStateForUnknown`.** It's the project's newest key, so
   it changes whenever a `honeybadger_project_key` is created or deleted.
   Keeping its prior value at plan time would make a project update applied
@@ -305,8 +308,9 @@ Specific cases:
   not with config.
 - **Concurrency:** five check-ins with `count = 5` succeed. (Retries on 429
   are proven in the unit tests.)
-- **Project and new key in one apply:** `token` shows "(known after apply)"
-  and the apply succeeds.
+- **Project and new key in one apply:** the apply succeeds. (It also checked
+  that `token` showed "(known after apply)" until honeybadger dropped `token`
+  on 2026-10-06.)
 - **Adding a `slug`** to an existing check-in plans an update.
 - **Cascade:** destroying a project together with its keys and check-ins
   succeeds.
