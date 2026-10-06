@@ -11,8 +11,9 @@ as phases 2b, 4a and 4b left it.
 
 Ship four resources, generated from honeybadger's bundle and api-go's `apiv3`
 types with one `resources.yaml` entry each and no hand-written per-resource
-code. The generator gains two generic features: string maps and integer
-enums. Everything else these schemas use already exists.
+code. The generator gains generic Go shapes that api-go's new types use:
+UUID scalars and IDs, integer enums, nullable enums and times, and string
+maps (section 3). Everything else these schemas use already exists.
 
 The standing rules hold: the generator contains as little Honeybadger domain
 logic as possible; a schema that would need a generator exception gets fixed
