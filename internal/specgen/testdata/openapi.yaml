@@ -83,6 +83,70 @@ paths:
       responses:
         '204':
           description: deleted
+  "/projects/{project_id}/gadgets":
+    parameters:
+    - "$ref": "#/components/parameters/ProjectId"
+    post:
+      operationId: createGadget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/GadgetCreateInput"
+      responses:
+        '201':
+          description: created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    "$ref": "#/components/schemas/Gadget"
+  "/projects/{project_id}/gadgets/{gadget_id}":
+    parameters:
+    - "$ref": "#/components/parameters/ProjectId"
+    - name: gadget_id
+      in: path
+      required: true
+      schema:
+        type: string
+    get:
+      operationId: getGadget
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    "$ref": "#/components/schemas/Gadget"
+    patch:
+      operationId: updateGadget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/GadgetUpdateInput"
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    "$ref": "#/components/schemas/Gadget"
+    delete:
+      operationId: deleteGadget
+      responses:
+        '204':
+          description: deleted
 components:
   parameters:
     ProjectId:
@@ -313,3 +377,206 @@ components:
             type: boolean
             writeOnly: true
             description: Create without notifying anyone. Not stored.
+    GadgetEvent:
+      type: string
+      enum:
+      - spun
+      - stopped
+      - jammed
+    GadgetFilter:
+      type: object
+      required:
+      - event
+      - query
+      properties:
+        event:
+          type: string
+          enum:
+          - spun
+          - all
+        query:
+          type: string
+          minLength: 1
+    GadgetLinks:
+      type: object
+      readOnly: true
+      required:
+      - web
+      properties:
+        web:
+          type: string
+          description: The gadget's page
+    GadgetConfigAlpha:
+      type: object
+      properties:
+        url:
+          type:
+          - string
+          - 'null'
+          description: Where to send.
+        token:
+          type:
+          - string
+          - 'null'
+          format: password
+          writeOnly: true
+          description: Signing secret.
+    GadgetConfigBeta:
+      type: object
+      properties:
+        mode:
+          type:
+          - string
+          - 'null'
+          default: fast
+          description: How it runs.
+    Gadget:
+      type: object
+      description: A gadget.
+      required:
+      - id
+      - project_id
+      - type
+      properties:
+        id:
+          type: string
+          readOnly: true
+        project_id:
+          type: string
+          readOnly: true
+        type:
+          type: string
+        active:
+          type: boolean
+        events:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+        spot_ids:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+        filters:
+          type: array
+          items:
+            "$ref": "#/components/schemas/GadgetFilter"
+        config:
+          type: object
+          additionalProperties: true
+        links:
+          "$ref": "#/components/schemas/GadgetLinks"
+    GadgetUpdateInput:
+      type: object
+      properties:
+        active:
+          type: boolean
+        events:
+          type:
+          - array
+          - 'null'
+          items:
+            "$ref": "#/components/schemas/GadgetEvent"
+        spot_ids:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+            format: uuid
+        filters:
+          type:
+          - array
+          - 'null'
+          items:
+            "$ref": "#/components/schemas/GadgetFilter"
+        config:
+          type: object
+          additionalProperties: true
+    GadgetCreateInput:
+      type: object
+      required:
+      - type
+      properties:
+        type:
+          type: string
+          enum:
+          - Alpha
+          - Beta
+          - Gamma
+        active:
+          type: boolean
+        events:
+          type:
+          - array
+          - 'null'
+          items:
+            "$ref": "#/components/schemas/GadgetEvent"
+        spot_ids:
+          type:
+          - array
+          - 'null'
+          default: []
+          items:
+            type: string
+            format: uuid
+        filters:
+          type:
+          - array
+          - 'null'
+          default: []
+          items:
+            "$ref": "#/components/schemas/GadgetFilter"
+        config:
+          type: object
+          additionalProperties: true
+      allOf:
+      - if:
+          properties:
+            type:
+              const: Alpha
+          required:
+          - type
+        then:
+          required:
+          - config
+          properties:
+            config:
+              "$ref": "#/components/schemas/GadgetConfigAlpha"
+              required:
+              - url
+            events:
+              items:
+                enum:
+                - spun
+                - stopped
+            active:
+              default: true
+      - if:
+          properties:
+            type:
+              const: Beta
+          required:
+          - type
+        then:
+          properties:
+            config:
+              "$ref": "#/components/schemas/GadgetConfigBeta"
+            active:
+              default: true
+      - if:
+          properties:
+            type:
+              const: Gamma
+          required:
+          - type
+        then:
+          properties:
+            config:
+              "$ref": "#/components/schemas/GadgetConfigBeta"
+            events:
+              maxItems: 0
+            active:
+              default: false

@@ -174,3 +174,71 @@ func TestObjectFactsDescription(t *testing.T) {
 		t.Errorf("Widget description = %q", d)
 	}
 }
+
+func TestVariants(t *testing.T) {
+	doc := loadFixture(t)
+	vs, err := Variants(doc.Components.Schemas["GadgetCreateInput"], "type")
+	if err != nil {
+		t.Fatalf("Variants: %v", err)
+	}
+	var consts []string
+	for _, v := range vs {
+		consts = append(consts, v.Const)
+	}
+	if !reflect.DeepEqual(consts, []string{"Alpha", "Beta", "Gamma"}) {
+		t.Fatalf("consts = %v", consts)
+	}
+	alpha := vs[0].Then
+	cfg := alpha.Fields["config"]
+	if !alpha.Required["config"] || cfg.Properties == nil || !cfg.Properties.Required["url"] {
+		t.Errorf("alpha then = %+v, want required config with required url", alpha)
+	}
+	if !cfg.Properties.Fields["token"].WriteOnly {
+		t.Error("alpha token isn't writeOnly")
+	}
+	if ev := alpha.Fields["events"]; ev.Items == nil || len(ev.Items.Enum) != 2 {
+		t.Errorf("alpha events = %+v, want an item enum of 2", ev)
+	}
+	if d := alpha.Fields["active"].Default; d != true {
+		t.Errorf("alpha active default = %v", d)
+	}
+	if mx := vs[2].Then.Fields["events"].MaxItems; mx == nil || *mx != 0 {
+		t.Errorf("gamma events maxItems = %v", mx)
+	}
+}
+
+// Malformed unions are generation errors (phase 4b spec, 3.1).
+func TestVariantsRejectMalformedBranches(t *testing.T) {
+	str := &openapi3.SchemaRef{Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}}
+	branch := func(c any) *openapi3.SchemaRef {
+		return &openapi3.SchemaRef{Value: &openapi3.Schema{
+			If: &openapi3.SchemaRef{Value: &openapi3.Schema{Properties: openapi3.Schemas{
+				"type": {Value: &openapi3.Schema{Const: c}}}}},
+			Then: &openapi3.SchemaRef{Value: &openapi3.Schema{}},
+		}}
+	}
+	tests := map[string]openapi3.SchemaRefs{
+		"if without then": {{Value: &openapi3.Schema{If: branch("A").Value.If}}},
+		"if without const": {{Value: &openapi3.Schema{If: &openapi3.SchemaRef{Value: &openapi3.Schema{
+			Properties: openapi3.Schemas{"type": str}}}, Then: &openapi3.SchemaRef{Value: &openapi3.Schema{}}}}},
+		"duplicate const": {branch("A"), branch("A")},
+	}
+	for name, allOf := range tests {
+		_, err := Variants(&openapi3.SchemaRef{Value: &openapi3.Schema{AllOf: allOf}}, "type")
+		if err == nil {
+			t.Errorf("%s: want an error", name)
+		}
+	}
+}
+
+// This one pins existing behaviour (format and defaults were already read);
+// it may pass before the implementation.
+func TestFieldFactsUUIDItemsAndCollectionDefault(t *testing.T) {
+	spots := schemaFacts(t, loadFixture(t), "GadgetCreateInput").Fields["spot_ids"]
+	if spots.Items == nil || spots.Items.Format != "uuid" {
+		t.Errorf("spot_ids items = %+v, want format uuid", spots.Items)
+	}
+	if d, ok := spots.Default.([]any); !ok || len(d) != 0 {
+		t.Errorf("spot_ids default = %#v, want []", spots.Default)
+	}
+}

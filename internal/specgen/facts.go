@@ -42,6 +42,7 @@ type Field struct {
 	MaxItems         *int64
 	Items            *Field
 	Properties       *Object // an object's own properties
+	Const            any     // OpenAPI 3.1 const
 }
 
 // Object is a schema's properties, with allOf flattened.
@@ -145,6 +146,9 @@ func FieldFacts(name string, ref *openapi3.SchemaRef) (Field, error) {
 	if s.Default != nil {
 		f.Default = s.Default
 	}
+	if s.Const != nil {
+		f.Const = s.Const
+	}
 	if len(s.Enum) > 0 {
 		f.Enum = nil
 		for _, e := range s.Enum {
@@ -190,7 +194,7 @@ func FieldFacts(name string, ref *openapi3.SchemaRef) (Field, error) {
 		n := int64(*s.MaxItems)
 		f.MaxItems = &n
 	}
-	if f.Type == "array" && s.Items != nil {
+	if s.Items != nil {
 		item, err := FieldFacts(name, s.Items)
 		if err != nil {
 			return Field{}, fmt.Errorf("items: %w", err)
@@ -222,4 +226,49 @@ func nullableBranch(branches openapi3.SchemaRefs) (*openapi3.SchemaRef, bool) {
 		return branches[0], true
 	}
 	return nil, false
+}
+
+// Variant is one branch of a union: the discriminator's value and the
+// branch's schema, which narrows the shared input.
+type Variant struct {
+	Const string
+	Then  Object
+}
+
+// Variants reads a schema's allOf branches of the form
+// if {properties: {<field>: {const: X}}} then {…}, in spec order. A branch
+// whose if isn't a const on field is an error.
+func Variants(input *openapi3.SchemaRef, field string) ([]Variant, error) {
+	if input == nil || input.Value == nil {
+		return nil, fmt.Errorf("no schema")
+	}
+	var out []Variant
+	seen := map[string]bool{}
+	for i, part := range input.Value.AllOf {
+		p := part.Value
+		if p == nil || (p.If == nil && p.Then == nil) {
+			continue
+		}
+		if p.If == nil || p.Then == nil {
+			return nil, fmt.Errorf("allOf[%d]: a branch needs both if and then", i)
+		}
+		disc := p.If.Value.Properties[field]
+		if disc == nil || disc.Value == nil || disc.Value.Const == nil {
+			return nil, fmt.Errorf("allOf[%d]: its if doesn't fix %s with a const", i, field)
+		}
+		c, ok := disc.Value.Const.(string)
+		if !ok {
+			return nil, fmt.Errorf("allOf[%d]: %s const %v isn't a string", i, field, disc.Value.Const)
+		}
+		if seen[c] {
+			return nil, fmt.Errorf("allOf[%d]: a second branch for %s %s", i, field, c)
+		}
+		seen[c] = true
+		then, err := ObjectFacts(c, p.Then)
+		if err != nil {
+			return nil, fmt.Errorf("%s branch: %w", c, err)
+		}
+		out = append(out, Variant{Const: c, Then: then})
+	}
+	return out, nil
 }

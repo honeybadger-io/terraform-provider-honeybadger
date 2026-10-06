@@ -16,12 +16,13 @@ type Param struct {
 
 // Operation is what a resource needs from one API operation.
 type Operation struct {
-	ID         string
-	Method     string
-	Path       string
-	PathParams []Param // in path order
-	Request    *Object // nil without a JSON request body
-	Response   *Object // the success response's data object; nil when there isn't one
+	ID            string
+	Method        string
+	Path          string
+	PathParams    []Param             // in path order
+	Request       *Object             // nil without a JSON request body
+	RequestSchema *openapi3.SchemaRef // the request body's schema, for unions
+	Response      *Object             // the success response's data object; nil when there isn't one
 }
 
 var pathParam = regexp.MustCompile(`\{([^}]+)\}`)
@@ -61,6 +62,7 @@ func describe(path, method string, item *openapi3.PathItem, op *openapi3.Operati
 				return Operation{}, fmt.Errorf("%s request: %w", op.OperationID, err)
 			}
 			out.Request = &obj
+			out.RequestSchema = media.Schema
 		}
 	}
 
