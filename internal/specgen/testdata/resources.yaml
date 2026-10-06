@@ -1,0 +1,19 @@
+resources:
+  widget:
+    create: createWidget
+    read: getWidget
+    update: updateWidget
+    delete: deleteWidget
+    import: "<project_id>/<id>"
+    omit:
+      links: web UI links, not configuration
+      note: create-only and never returned
+      quiet: create-only flag, not stored and not a secret
+    sensitive:
+    - token # redundant: the spec marks it format: password, so generation warns
+    server_filled:
+    - size
+    use_state_for_unknown:
+    - created_at
+    custom_types:
+      period: period
