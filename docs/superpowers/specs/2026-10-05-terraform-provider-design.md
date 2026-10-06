@@ -590,10 +590,6 @@ work; the provider doesn't work around it.
   writeOnly integration secret, `StatusPageInput.password`, and the webhook
   URLs that carry a credential. Never the ingestion keys (`Project.token`,
   `ProjectKey.key`), which aren't secrets.
-- **Simple check-ins omit `cron_timezone`** although the spec defaults it to
-  `UTC` (fix requested); blocks the check-in resource.
-- **`CheckInInput.slug` says it's generated from the name when omitted**; it
-  isn't (fix requested).
 
 ## 11. Out of scope
 

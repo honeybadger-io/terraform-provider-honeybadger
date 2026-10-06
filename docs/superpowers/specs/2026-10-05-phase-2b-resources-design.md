@@ -173,15 +173,13 @@ Notes:
   apply)" on project updates instead.
 - **`report_url` is stable:** it's built from the check-in's hashid, not its
   slug.
-- **`slug` is plain Optional.** The server doesn't generate it (`check_in.rb`
-  only nils a blank one), so an omitted slug stays null and removing one
-  clears it. The bundle's "Generated from the name when omitted" wording is
-  wrong; a fix was requested from honeybadger.
-- **Blocked on honeybadger:** the API omits `cron_timezone` for simple
-  check-ins (`check_in_presenter.rb:23`), while the spec defaults it to `UTC`.
-  Until the API returns `UTC` for simple schedules (fix requested), every
-  simple check-in ends in "inconsistent result after apply". The provider
-  doesn't work around it; check-in acceptance tests wait for the fix.
+- **`slug` is plain Optional.** The server doesn't generate it, so an
+  omitted slug stays null and removing one clears it. honeybadger has
+  corrected the spec's wording.
+- **`cron_timezone` is always read back.** honeybadger fixed the API to
+  return `UTC` for simple check-ins and lists the field as required in the
+  read schema (bundle `2c4aa8fc…`). 2b copies that bundle in before the
+  check-in resource is generated.
 - **From the spec, with no override:**
   - defaults: `schedule_type` is `simple`, `cron_timezone` is `UTC`,
     `grace_period` is `00:00:00`, `disable_public_links` is false and
