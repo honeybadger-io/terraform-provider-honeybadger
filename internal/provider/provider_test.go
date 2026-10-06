@@ -313,6 +313,10 @@ func TestProviderRegistersTheResources(t *testing.T) {
 	}
 	sort.Strings(names)
 	want := []string{"honeybadger_alarm", "honeybadger_check_in", "honeybadger_project", "honeybadger_project_key"}
+	for _, name := range integrationVariants {
+		want = append(want, name)
+	}
+	sort.Strings(want)
 	if !reflect.DeepEqual(names, want) {
 		t.Errorf("resources = %v, want %v", names, want)
 	}

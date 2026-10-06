@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -46,8 +47,8 @@ type fakeHoneybadger struct {
 }
 
 var (
-	collectionPath = regexp.MustCompile(`^/v3/projects(?:/([^/]+)/(check_ins|keys|alarms))?$`)
-	objectPath     = regexp.MustCompile(`^/v3/projects/([^/]+)(?:/(check_ins|keys|alarms)/([^/]+))?$`)
+	collectionPath = regexp.MustCompile(`^/v3/projects(?:/([^/]+)/(check_ins|keys|alarms|integrations))?$`)
+	objectPath     = regexp.MustCompile(`^/v3/projects/([^/]+)(?:/(check_ins|keys|alarms|integrations)/([^/]+))?$`)
 )
 
 func newFakeHoneybadger(t *testing.T) *fakeHoneybadger {
@@ -146,12 +147,24 @@ func (f *fakeHoneybadger) serve(w http.ResponseWriter, r *http.Request) {
 		}
 		switch r.Method {
 		case http.MethodGet:
-			writeJSON(w, http.StatusOK, map[string]any{"data": obj})
+			writeJSON(w, http.StatusOK, map[string]any{"data": readable(obj)})
 		case http.MethodPatch:
 			for k, v := range body {
+				if k == "config" {
+					// v3 merges config: a key left out keeps its value; null deletes it.
+					stored, _ := obj["config"].(map[string]any)
+					for ck, cv := range v.(map[string]any) {
+						if cv == nil {
+							delete(stored, ck)
+						} else {
+							stored[ck] = cv
+						}
+					}
+					continue
+				}
 				obj[k] = v
 			}
-			writeJSON(w, http.StatusOK, map[string]any{"data": obj})
+			writeJSON(w, http.StatusOK, map[string]any{"data": readable(obj)})
 		case http.MethodDelete:
 			delete(f.objects, r.URL.Path)
 			w.WriteHeader(http.StatusNoContent)
@@ -184,12 +197,61 @@ func (f *fakeHoneybadger) create(w http.ResponseWriter, collection, projectID, k
 		obj["state"] = "initial"
 		obj["updated_at"] = "2026-10-05T00:00:00Z"
 		obj["stream_ids"] = []any{"s-default", "s-internal"}
+	case "integrations":
+		obj["project_id"] = projectID
+		obj["links"] = map[string]any{"web": "https://app.honeybadger.io/projects/" + projectID + "/integrations/" + id}
+		obj["events"] = []any{"occurred"}
+		for _, k := range []string{"site_ids", "check_in_ids", "alarm_alert_ids", "alarm_ok_ids", "included_environments", "excluded_environments", "filters"} {
+			obj[k] = []any{}
+		}
+		obj["rate"], obj["threshold"] = "wday", 100
+		stored := map[string]any{}
+		if cfg, ok := body["config"].(map[string]any); ok {
+			maps.Copy(stored, cfg)
+		}
+		obj["config"] = stored
 	}
 	for k, v := range body {
+		if k == "config" {
+			continue
+		}
 		obj[k] = v
 	}
 	f.objects[collection+"/"+id] = obj
-	writeJSON(w, http.StatusCreated, map[string]any{"data": obj})
+	writeJSON(w, http.StatusCreated, map[string]any{"data": readable(obj)})
+}
+
+// writeOnlyConfigKeys are the write-only integration settings of the types
+// the tests use (WebHook, Jira); v3 never returns them.
+var writeOnlyConfigKeys = map[string]bool{"bearer_token": true, "password": true}
+
+// readable is an object as the API returns it: without write-only config keys.
+func readable(obj map[string]any) map[string]any {
+	cfg, ok := obj["config"].(map[string]any)
+	if !ok {
+		return obj
+	}
+	out := maps.Clone(obj)
+	read := map[string]any{}
+	for k, v := range cfg {
+		if !writeOnlyConfigKeys[k] {
+			read[k] = v
+		}
+	}
+	out["config"] = read
+	return out
+}
+
+// mutate changes a stored object, as an edit in Honeybadger's UI would.
+func (f *fakeHoneybadger) mutate(pattern string, change func(map[string]any)) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	re := regexp.MustCompile(pattern)
+	for p, obj := range f.objects {
+		if re.MatchString(p) {
+			change(obj)
+		}
+	}
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

@@ -73,3 +73,20 @@ resources:
       updated_at: live data
     server_filled: [stream_ids]
     use_state_for_unknown: [created_at]
+
+  integration:
+    create: createIntegration
+    read: getIntegration
+    update: updateIntegration
+    delete: deleteIntegration
+    import: "<project_id>/<id>"
+    variants: type
+    service: Integrations
+    api: {model: Integration, create_params: IntegrationCreateParams, update_params: IntegrationUpdateParams}
+    find_hint: "the project's integrations in Honeybadger"
+    omit:
+      error: live data
+      error_reason: live data
+      connected: authentication status, Honeybadger's state rather than config
+    server_filled: [events]
+    use_state_for_unknown: [created_at]
