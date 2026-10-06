@@ -1,0 +1,27 @@
+resources:
+  widget:
+    create: createWidget
+    read: getWidget
+    update: updateWidget
+    delete: deleteWidget
+    import: "<project_id>/<id>"
+    service: Widgets
+    api:
+      model: Widget
+      create_params: WidgetCreateParams
+      update_params: WidgetUpdateParams
+    find_hint: the project's widgets
+    omit:
+      links: web UI links, not configuration
+      note: create-only and never returned
+      quiet: create-only flag, not stored and not a secret
+      events: item enums aren't supported yet
+      archived: update-only; create can't set it
+      tags: arrays aren't mapped yet
+      badges: arrays aren't mapped yet
+    server_filled:
+    - size
+    use_state_for_unknown:
+    - created_at
+    custom_types:
+      period: period
