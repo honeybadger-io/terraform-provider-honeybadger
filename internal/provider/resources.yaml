@@ -1,5 +1,55 @@
-# Per-resource operations and overrides for specgen (spec sections 3.3, 5.2).
-# Each resource's schema and model are generated from these and
-# openapi/bundled.yaml into <name>_resource_gen.go. Phase 2b adds the first
-# resources.
-resources: {}
+# Per-resource operations and overrides for specgen (spec sections 3.3, 5.2;
+# phase 2b spec section 4). Schemas, models, mappings and CRUD wrappers are
+# generated from these and openapi/bundled.yaml.
+resources:
+  project:
+    create: createProject
+    read: getProject
+    update: updateProject
+    delete: deleteProject
+    import: "<id>"
+    service: Projects
+    api: {model: Project, create_params: ProjectCreateParams, update_params: ProjectParams}
+    find_hint: "your Honeybadger projects"
+    omit:
+      links: web UI links, not configuration
+      team_id: team membership belongs to the teams resource
+      disable_email_notifications: create-only flag, never stored
+      fault_count: live data
+      unresolved_fault_count: live data
+      last_notice_at: live data
+      earliest_notice_at: live data
+      environments: live data
+      active: live data
+    server_filled: [purge_days]
+    use_state_for_unknown: [account_id, created_at]
+
+  project_key:
+    create: createProjectKey
+    read: getProjectKey
+    update: updateProjectKey
+    delete: deleteProjectKey
+    import: "<project_id>/<id>"
+    service: ProjectKeys
+    api: {model: ProjectKey, create_params: ProjectKeyParams, update_params: ProjectKeyParams}
+    find_hint: "the project's API keys in Honeybadger"
+    use_state_for_unknown: [created_at, key]
+
+  check_in:
+    create: createCheckIn
+    read: getCheckIn
+    update: updateCheckIn
+    delete: deleteCheckIn
+    import: "<project_id>/<id>"
+    service: CheckIns
+    api: {model: CheckIn, create_params: CheckInCreateParams, update_params: CheckInUpdateParams}
+    find_hint: "the project's check-ins in Honeybadger"
+    config_validators: checkInConfigValidators
+    omit:
+      links: web UI links, not configuration
+      state: live data
+      reported_at: live data
+      expected_at: live data
+      missed_count: live data
+    custom_types: {report_period: period, grace_period: period}
+    use_state_for_unknown: [created_at, report_url]

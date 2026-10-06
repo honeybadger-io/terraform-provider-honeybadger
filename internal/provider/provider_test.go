@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"net/http"
+	"reflect"
+	"sort"
 	"net/http/httptest"
 	"sync"
 	"testing"
@@ -10,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
@@ -297,5 +300,20 @@ func TestConfiguredClientRetriesRateLimits(t *testing.T) {
 	defer mu.Unlock()
 	if calls != 2 {
 		t.Errorf("requests = %d, want 2 (one 429, one retry)", calls)
+	}
+}
+
+func TestProviderRegistersTheResources(t *testing.T) {
+	ctx := context.Background()
+	var names []string
+	for _, f := range New("test")().Resources(ctx) {
+		resp := &resource.MetadataResponse{}
+		f().Metadata(ctx, resource.MetadataRequest{ProviderTypeName: "honeybadger"}, resp)
+		names = append(names, resp.TypeName)
+	}
+	sort.Strings(names)
+	want := []string{"honeybadger_check_in", "honeybadger_project", "honeybadger_project_key"}
+	if !reflect.DeepEqual(names, want) {
+		t.Errorf("resources = %v, want %v", names, want)
 	}
 }
