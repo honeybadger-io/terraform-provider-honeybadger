@@ -34,8 +34,9 @@ type fakeResponse struct {
 	Headers map[string]string
 }
 
-// fakeHoneybadger is an in-memory v3 API for the project, project key and
-// check-in endpoints. It records every request and fills server-side defaults
+// fakeHoneybadger is an in-memory v3 API for the project, project key,
+// check-in, alarm, integration, environment, site, team and status page
+// endpoints. It records every request and fills server-side defaults
 // the way the API does. It isn't a general emulator (spec 8.2).
 type fakeHoneybadger struct {
 	srv      *httptest.Server
@@ -47,8 +48,8 @@ type fakeHoneybadger struct {
 }
 
 var (
-	collectionPath = regexp.MustCompile(`^/v3/projects(?:/([^/]+)/(check_ins|keys|alarms|integrations))?$`)
-	objectPath     = regexp.MustCompile(`^/v3/projects/([^/]+)(?:/(check_ins|keys|alarms|integrations)/([^/]+))?$`)
+	collectionPath = regexp.MustCompile(`^/v3/(?:projects/([^/]+)/(check_ins|keys|alarms|integrations|environments|sites)|(projects|teams|status_pages))$`)
+	objectPath     = regexp.MustCompile(`^/v3/(?:projects/[^/]+/(?:check_ins|keys|alarms|integrations|environments|sites)|projects|teams|status_pages)/[^/]+$`)
 )
 
 func newFakeHoneybadger(t *testing.T) *fakeHoneybadger {
@@ -135,7 +136,11 @@ func (f *fakeHoneybadger) serve(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		if m := collectionPath.FindStringSubmatch(r.URL.Path); m != nil {
-			f.create(w, r.URL.Path, m[1], m[2], body)
+			kind := m[2]
+			if kind == "" {
+				kind = m[3]
+			}
+			f.create(w, r.URL.Path, m[1], kind, body)
 			return
 		}
 	}
@@ -177,9 +182,12 @@ func (f *fakeHoneybadger) serve(w http.ResponseWriter, r *http.Request) {
 func (f *fakeHoneybadger) create(w http.ResponseWriter, collection, projectID, kind string, body map[string]any) {
 	f.next++
 	id := fmt.Sprintf("x%d", f.next)
+	if kind == "sites" {
+		id = fmt.Sprintf("00000000-0000-4000-8000-%012d", f.next) // site IDs are UUIDs
+	}
 	obj := map[string]any{"id": id, "created_at": "2026-10-05T00:00:00Z"}
 	switch kind {
-	case "":
+	case "projects":
 		obj["account_id"] = "a1"
 		obj["disable_public_links"] = false
 		obj["resolve_errors_on_deploy"] = true
@@ -210,6 +218,33 @@ func (f *fakeHoneybadger) create(w http.ResponseWriter, collection, projectID, k
 			maps.Copy(stored, cfg)
 		}
 		obj["config"] = stored
+	case "environments":
+		obj["project_id"] = projectID
+		obj["notifications"] = true
+	case "sites":
+		obj["project_id"] = projectID
+		obj["name"] = body["url"] // name defaults to the URL
+		obj["links"] = map[string]any{"web": "https://app.honeybadger.io/projects/" + projectID + "/sites/" + id}
+		obj["state"], obj["last_checked_at"] = "pending", nil
+		obj["frequency"], obj["match_type"], obj["match"], obj["request_method"] = 5, "success", nil, "GET"
+		obj["validate_ssl"], obj["active"] = true, true
+		obj["locations"], obj["request_headers"] = []any{}, map[string]any{}
+		obj["request_body"], obj["outage_threshold"], obj["timeout"] = nil, nil, nil
+	case "teams":
+		obj["account_id"], obj["member_count"] = "a1", 0
+		obj["project_ids"] = []any{}
+		obj["links"] = map[string]any{"web": "https://app.honeybadger.io/teams/" + id}
+	case "status_pages":
+		obj["account_id"] = "a1"
+		obj["url"] = "https://status.example.com/" + id
+		obj["links"] = map[string]any{"web": "https://app.honeybadger.io/status_pages/" + id}
+		for _, k := range []string{"domain", "domain_verified_at", "username", "message_title", "message_body", "google_analytics_id"} {
+			obj[k] = nil
+		}
+		for _, k := range []string{"hide_branding", "password_protected", "incidents_enabled", "search_engine_indexing_disabled", "message_enabled"} {
+			obj[k] = false
+		}
+		obj["features"], obj["sites"], obj["check_ins"] = map[string]any{}, []any{}, []any{}
 	}
 	for k, v := range body {
 		if k == "config" {
@@ -225,20 +260,20 @@ func (f *fakeHoneybadger) create(w http.ResponseWriter, collection, projectID, k
 // the tests use (WebHook, Jira); v3 never returns them.
 var writeOnlyConfigKeys = map[string]bool{"bearer_token": true, "password": true}
 
-// readable is an object as the API returns it: without write-only config keys.
+// readable is an object as the API returns it: without write-only keys (a
+// status page's password, integration config secrets).
 func readable(obj map[string]any) map[string]any {
-	cfg, ok := obj["config"].(map[string]any)
-	if !ok {
-		return obj
-	}
 	out := maps.Clone(obj)
-	read := map[string]any{}
-	for k, v := range cfg {
-		if !writeOnlyConfigKeys[k] {
-			read[k] = v
+	delete(out, "password")
+	if cfg, ok := obj["config"].(map[string]any); ok {
+		read := map[string]any{}
+		for k, v := range cfg {
+			if !writeOnlyConfigKeys[k] {
+				read[k] = v
+			}
 		}
+		out["config"] = read
 	}
-	out["config"] = read
 	return out
 }
 

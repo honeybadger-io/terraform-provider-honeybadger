@@ -312,7 +312,7 @@ func TestProviderRegistersTheResources(t *testing.T) {
 		names = append(names, resp.TypeName)
 	}
 	sort.Strings(names)
-	want := []string{"honeybadger_alarm", "honeybadger_check_in", "honeybadger_project", "honeybadger_project_key"}
+	want := []string{"honeybadger_alarm", "honeybadger_check_in", "honeybadger_environment", "honeybadger_project", "honeybadger_project_key"}
 	for _, name := range integrationVariants {
 		want = append(want, name)
 	}

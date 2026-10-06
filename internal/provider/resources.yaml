@@ -92,3 +92,15 @@ resources:
       connected: authentication status, Honeybadger's state rather than config
     server_filled: [events]
     use_state_for_unknown: [created_at, links]
+
+  environment:
+    create: createEnvironment
+    read: getEnvironment
+    update: updateEnvironment
+    delete: deleteEnvironment
+    import: "<project_id>/<id>"
+    service: Environments
+    api: {model: Environment, create_params: EnvironmentCreateParams, update_params: EnvironmentUpdateParams}
+    find_hint: "the project's environments in Honeybadger"
+    replace: [name]
+    use_state_for_unknown: [created_at]

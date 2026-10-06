@@ -9,6 +9,7 @@ func generatedResources() []func() resource.Resource {
 	return []func() resource.Resource{
 		newAlarmResource,
 		newCheckInResource,
+		newEnvironmentResource,
 		newIntegrationCampfireV3Resource,
 		newIntegrationDatadogResource,
 		newIntegrationDiscordWebhookResource,
