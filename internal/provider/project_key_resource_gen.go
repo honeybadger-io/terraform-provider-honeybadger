@@ -135,7 +135,9 @@ func (r *projectKeyResource) Create(ctx context.Context, req resource.CreateRequ
 		addAPIError(ctx, &resp.Diagnostics, projectKeyResourceSchema(), "Creating project key", err)
 		return
 	}
-	// Start from the plan so semantic equality keeps the configured form.
+	// Start from the plan so attributes the API doesn't return, such as
+	// write-only ones, keep their planned values. The framework compares the
+	// result with the plan for semantic equality itself.
 	state := plan
 	state.fromAPI(out)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -151,6 +153,9 @@ func (r *projectKeyResource) Read(ctx context.Context, req resource.ReadRequest,
 	if errors.Is(err, apiv3.ErrNotFound) {
 		resp.State.RemoveResource(ctx)
 		return
+	}
+	if err == nil && (out == nil || out.Id == "") {
+		err = errNoResult
 	}
 	if err != nil {
 		addAPIError(ctx, &resp.Diagnostics, projectKeyResourceSchema(), "Reading project key", err)
@@ -168,6 +173,9 @@ func (r *projectKeyResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 	out, err := r.client.ProjectKeys.Update(ctx, state.ProjectID.ValueString(), state.ID.ValueString(), plan.updateParams(state))
+	if err == nil && (out == nil || out.Id == "") {
+		err = errNoResult
+	}
 	if err != nil {
 		addAPIError(ctx, &resp.Diagnostics, projectKeyResourceSchema(), "Updating project key", err)
 		return

@@ -121,7 +121,9 @@ func (r *{{.Camel}}Resource) Create(ctx context.Context, req resource.CreateRequ
 		addAPIError(ctx, &resp.Diagnostics, {{.Camel}}ResourceSchema(), "Creating {{.Human}}", err)
 		return
 	}
-	// Start from the plan so semantic equality keeps the configured form.
+	// Start from the plan so attributes the API doesn't return, such as
+	// write-only ones, keep their planned values. The framework compares the
+	// result with the plan for semantic equality itself.
 	state := plan
 	state.fromAPI(out)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -137,6 +139,9 @@ func (r *{{.Camel}}Resource) Read(ctx context.Context, req resource.ReadRequest,
 	if errors.Is(err, {{.PkgName}}.ErrNotFound) {
 		resp.State.RemoveResource(ctx)
 		return
+	}
+	if err == nil && (out == nil || out.{{.IDField}} == "") {
+		err = errNoResult
 	}
 	if err != nil {
 		addAPIError(ctx, &resp.Diagnostics, {{.Camel}}ResourceSchema(), "Reading {{.Human}}", err)
@@ -155,6 +160,9 @@ func (r *{{.Camel}}Resource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 	out, err := r.client.{{.Service}}.Update(ctx, {{.IDArgs}}, plan.updateParams(state))
+	if err == nil && (out == nil || out.{{.IDField}} == "") {
+		err = errNoResult
+	}
 	if err != nil {
 		addAPIError(ctx, &resp.Diagnostics, {{.Camel}}ResourceSchema(), "Updating {{.Human}}", err)
 		return

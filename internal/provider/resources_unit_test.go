@@ -176,6 +176,42 @@ func TestCreateWithEmptyResultIsUnknownOutcome(t *testing.T) {
 	})
 }
 
+// A read or update that answers 2xx without an id fails, leaving state as it
+// was, instead of saving an empty id.
+func TestReadWithEmptyResultFails(t *testing.T) {
+	f := newFakeHoneybadger(t)
+	tfresource.UnitTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testFactories,
+		Steps: []tfresource.TestStep{
+			{Config: checkInConfigHCL(f.srv.URL, "")},
+			{
+				PreConfig: func() {
+					f.script("GET", "/v3/projects/p1/check_ins/x1", fakeResponse{Status: 200, Body: `{"data":{}}`})
+				},
+				Config:      checkInConfigHCL(f.srv.URL, ""),
+				ExpectError: regexp.MustCompile("Reading check in"),
+			},
+		},
+	})
+}
+
+func TestUpdateWithEmptyResultFails(t *testing.T) {
+	f := newFakeHoneybadger(t)
+	tfresource.UnitTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testFactories,
+		Steps: []tfresource.TestStep{
+			{Config: checkInConfigHCL(f.srv.URL, "")},
+			{
+				PreConfig: func() {
+					f.script("PATCH", "/v3/projects/p1/check_ins/x1", fakeResponse{Status: 200, Body: `{"data":{}}`})
+				},
+				Config:      checkInConfigHCL(f.srv.URL, "  slug = \"nightly-job\"\n"),
+				ExpectError: regexp.MustCompile("Updating check in"),
+			},
+		},
+	})
+}
+
 // A 429 is retried by api-go's policy, resending the same body.
 func TestCreateRetriesRateLimit(t *testing.T) {
 	f := newFakeHoneybadger(t)
