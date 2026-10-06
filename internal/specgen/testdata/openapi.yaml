@@ -662,11 +662,28 @@ components:
           type: string
           format: uuid
           description: The sprocket this one hangs from.
+        headers:
+          type:
+          - object
+          - 'null'
+          additionalProperties:
+            type: string
+            format: password
+          description: Headers sent with each turn.
     SprocketInput:
       type: object
       properties:
         name:
           type: string
+        headers:
+          type:
+          - object
+          - 'null'
+          additionalProperties:
+            type: string
+            format: password
+          default: {}
+          description: Headers sent with each turn. Replaces the stored headers.
     SprocketCreateInput:
       allOf:
       - "$ref": "#/components/schemas/SprocketInput"

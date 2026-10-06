@@ -250,18 +250,21 @@ func (s *GadgetsService) Delete(ctx context.Context, projectID, gadgetID string)
 
 // Sprocket is the phase-5 fixture: an account-level resource with a UUID id.
 type Sprocket struct {
-	Id       uuid.UUID `json:"id"`
-	Name     string    `json:"name"`
-	ParentId uuid.UUID `json:"parent_id"`
+	Id       uuid.UUID                            `json:"id"`
+	Name     string                               `json:"name"`
+	ParentId uuid.UUID                            `json:"parent_id"`
+	Headers  nullable.Nullable[map[string]string] `json:"headers"`
 }
 
 type SprocketCreateParams struct {
-	Name     string    `json:"name"`
-	ParentId uuid.UUID `json:"parent_id"`
+	Name     string                               `json:"name"`
+	ParentId uuid.UUID                            `json:"parent_id"`
+	Headers  nullable.Nullable[map[string]string] `json:"headers,omitempty"`
 }
 
 type SprocketUpdateParams struct {
-	Name *string `json:"name,omitempty"`
+	Name    *string                              `json:"name,omitempty"`
+	Headers nullable.Nullable[map[string]string] `json:"headers,omitempty"`
 }
 
 type SprocketsService struct{}

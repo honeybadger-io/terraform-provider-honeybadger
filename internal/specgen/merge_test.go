@@ -458,3 +458,34 @@ func TestMergeAllVariantDescription(t *testing.T) {
 		t.Errorf("descriptions = %q, %q", rs[0].Description, rs[1].Description)
 	}
 }
+
+func attrNamed(t *testing.T, r Resource, name string) Attribute {
+	t.Helper()
+	for _, a := range r.Attributes {
+		if a.Name == name {
+			return a
+		}
+	}
+	t.Fatalf("resource %s has no attribute %s", r.Name, name)
+	return Attribute{}
+}
+
+func TestMergeStringMap(t *testing.T) {
+	r, err := Merge(loadFixture(t), "sprocket", sprocketConfig(t))
+	if err != nil {
+		t.Fatalf("Merge: %v", err)
+	}
+	h := attrNamed(t, r, "headers")
+	if h.Kind != "map" || h.ElemKind != "string" || !h.Sensitive || !h.Optional || !h.Computed {
+		t.Errorf("headers = %+v; want an optional, computed, sensitive map of strings", h)
+	}
+}
+
+// A map whose values aren't strings is refused until a schema needs one.
+func TestSetKindRefusesNonStringMap(t *testing.T) {
+	a := Attribute{Name: "counts"}
+	err := setKind(&a, Field{Type: "object", Values: &Field{Type: "integer"}})
+	if err == nil || !strings.Contains(err.Error(), "values are strings") {
+		t.Errorf("err = %v, want a refusal naming string values", err)
+	}
+}

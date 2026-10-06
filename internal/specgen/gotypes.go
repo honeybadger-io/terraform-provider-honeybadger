@@ -37,7 +37,8 @@ func LoadAPI(dir, path string) (*API, error) {
 type GoField struct {
 	Name  string // Go field name
 	Shape string // value, pointer, nullable, enum, enum_pointer, time, uuid, struct, struct_pointer,
-	// nullable_struct, slice, slice_pointer, nullable_slice, map, map_pointer or unsupported
+	// nullable_struct, slice, slice_pointer, nullable_slice, map, map_pointer, string_map,
+	// nullable_string_map or unsupported
 	Elem string // string, int, bool or float64, for value, pointer, nullable and slice shapes
 	Type string // for struct shapes: the API package's exported name for the struct
 }
@@ -81,6 +82,9 @@ func (a *API) shapeOf(t types.Type) (GoField, bool) {
 		}
 	case *types.Map:
 		k, kok := types.Unalias(t.Key()).(*types.Basic)
+		if s, ok := types.Unalias(t.Elem()).(*types.Basic); kok && k.Kind() == types.String && ok && s.Kind() == types.String {
+			return GoField{Shape: "string_map"}, true
+		}
 		v, vok := types.Unalias(t.Elem()).Underlying().(*types.Interface)
 		if kok && k.Kind() == types.String && vok && v.Empty() {
 			return GoField{Shape: "map"}, true
@@ -122,6 +126,8 @@ func (a *API) shapeOf(t types.Type) (GoField, bool) {
 				return GoField{Shape: "nullable_struct", Type: inner.Type}, true
 			case ok && inner.Shape == "slice":
 				return GoField{Shape: "nullable_slice", Elem: inner.Elem, Type: inner.Type}, true
+			case ok && inner.Shape == "string_map":
+				return GoField{Shape: "nullable_string_map"}, true
 			}
 			return GoField{}, false
 		}

@@ -19,6 +19,7 @@ var kinds = map[string]struct {
 	"bool":    {"BoolAttribute", "types.Bool", "bool", "types.BoolType"},
 	"list":    {"ListAttribute", "types.List", "list", ""},
 	"set":     {"SetAttribute", "types.Set", "set", ""},
+	"map":     {"MapAttribute", "types.Map", "map", ""},
 	"object":  {"SingleNestedAttribute", "types.Object", "object", ""},
 }
 
@@ -145,7 +146,7 @@ func renderAttribute(b *bytes.Buffer, a Attribute, imports map[string]bool, pare
 			}
 		}
 		b.WriteString("},\n},\n")
-	case a.Kind == "list" || a.Kind == "set":
+	case a.Kind == "list" || a.Kind == "set" || a.Kind == "map":
 		fmt.Fprintf(b, "%q: schema.%s{\n", a.Name, k.schema)
 		fmt.Fprintf(b, "ElementType: %s,\n", kinds[a.ElemKind].elemType)
 	case a.Kind == "object":
@@ -175,7 +176,12 @@ func renderAttribute(b *bytes.Buffer, a Attribute, imports map[string]bool, pare
 		fmt.Fprintf(b, "CustomType: %s,\n", customTypeCode[a.CustomType][0])
 		imports["github.com/honeybadger-io/terraform-provider-honeybadger/internal/provider/customtypes"] = true
 	}
-	if a.Default != nil && (a.Kind == "list" || a.Kind == "set") {
+	if a.Default != nil && a.Kind == "map" {
+		// Only an empty map default is allowed (merge.go).
+		fmt.Fprintf(b, "Default: mapdefault.StaticValue(types.MapValueMust(%s, map[string]attr.Value{})),\n", kinds[a.ElemKind].elemType)
+		imports["github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"] = true
+		imports["github.com/hashicorp/terraform-plugin-framework/attr"] = true
+	} else if a.Default != nil && (a.Kind == "list" || a.Kind == "set") {
 		// Only an empty collection default is allowed (merge.go).
 		elem := kinds[a.ElemKind].elemType
 		if objectList {
@@ -344,7 +350,7 @@ func staticName(kind string) string {
 
 func typeName(kind string) string {
 	return map[string]string{"string": "String", "int64": "Int64", "float64": "Float64", "bool": "Bool",
-		"list": "List", "set": "Set", "object": "Object"}[kind]
+		"list": "List", "set": "Set", "map": "Map", "object": "Object"}[kind]
 }
 
 // initialisms are rendered in capitals, as Go names them.
@@ -443,6 +449,8 @@ func attrTypeExpr(a Attribute, prefix string) string {
 		return "types.ListType{ElemType: " + kinds[a.ElemKind].elemType + "}"
 	case "set":
 		return "types.SetType{ElemType: " + kinds[a.ElemKind].elemType + "}"
+	case "map":
+		return "types.MapType{ElemType: " + kinds[a.ElemKind].elemType + "}"
 	case "object":
 		return "types.ObjectType{AttrTypes: " + nestedPrefix(prefix, a.Name) + "AttrTypes()}"
 	}

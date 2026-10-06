@@ -242,3 +242,13 @@ func TestFieldFactsUUIDItemsAndCollectionDefault(t *testing.T) {
 		t.Errorf("spot_ids default = %#v, want []", spots.Default)
 	}
 }
+
+func TestFieldFactsStringMap(t *testing.T) {
+	h := schemaFacts(t, loadFixture(t), "SprocketInput").Fields["headers"]
+	if h.Type != "object" || !h.Nullable || h.Values == nil || h.Values.Type != "string" || !h.Values.Secret {
+		t.Errorf("headers = %+v, values %+v; want a nullable object of secret strings", h, h.Values)
+	}
+	if d, ok := h.Default.(map[string]any); !ok || len(d) != 0 {
+		t.Errorf("headers default = %#v, want {}", h.Default)
+	}
+}

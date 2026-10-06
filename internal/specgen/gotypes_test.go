@@ -93,6 +93,9 @@ func TestRealAPIShapes(t *testing.T) {
 	if err != nil || site["id"].Shape != "uuid" {
 		t.Errorf("Site.id = %+v, %v; want uuid", site["id"], err)
 	}
+	if site["request_headers"].Shape != "nullable_string_map" {
+		t.Errorf("Site.request_headers = %+v", site["request_headers"])
+	}
 	get, err := api.Method("Sites", "Get")
 	if err != nil || len(get.Params) != 2 || !get.Params[1].UUID {
 		t.Errorf("Sites.Get = %+v, %v; want a UUID site ID", get, err)
@@ -150,8 +153,10 @@ func TestFieldsClassifySprocketShapes(t *testing.T) {
 	read, _ := api.Fields("Sprocket")
 	create, _ := api.Fields("SprocketCreateParams")
 	for name, pair := range map[string][2]GoField{
-		"read id":       {read["id"], {Name: "Id", Shape: "uuid"}},
-		"create parent": {create["parent_id"], {Name: "ParentId", Shape: "uuid"}},
+		"read id":        {read["id"], {Name: "Id", Shape: "uuid"}},
+		"create parent":  {create["parent_id"], {Name: "ParentId", Shape: "uuid"}},
+		"read headers":   {read["headers"], {Name: "Headers", Shape: "nullable_string_map"}},
+		"create headers": {create["headers"], {Name: "Headers", Shape: "nullable_string_map"}},
 	} {
 		if !reflect.DeepEqual(pair[0], pair[1]) {
 			t.Errorf("%s = %+v, want %+v", name, pair[0], pair[1])

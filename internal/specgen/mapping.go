@@ -211,6 +211,8 @@ func createLine(a Attribute, gf GoField, v, dst, at, prefix string) (string, err
 		}
 	case "map_pointer":
 		return fmt.Sprintf("%s.%s = %sToMap(%s, types.ObjectNull(%sAttrTypes()), %s, diags)", dst, gf.Name, prefix, v, prefix, at), nil
+	case "nullable_string_map":
+		return fmt.Sprintf("createStringMap(&%s.%s, %s)", dst, gf.Name, v), nil
 	case "nullable":
 		if h, ok := map[string]string{"string": "createString", "int": "createInt", "bool": "createBool"}[gf.Elem]; ok {
 			return fmt.Sprintf("%s.%s = %s(%s)", dst, gf.Name, h, v), nil
@@ -263,6 +265,8 @@ func updateLine(a Attribute, gf GoField, plan, state, at, prefix string) (string
 		if h, ok := map[string]string{"string": "updateString", "int": "updateInt", "bool": "updateBool"}[gf.Elem]; ok {
 			return fmt.Sprintf("p.%s = %s(%s, %s)", gf.Name, h, plan, state), nil
 		}
+	case "nullable_string_map":
+		return fmt.Sprintf("updateStringMap(&p.%s, %s, %s)", gf.Name, plan, state), nil
 	case "nullable_struct":
 		return fmt.Sprintf("p.%s = updateNullableObject(%s, %s, %sToAPI(%s, %s, diags))", gf.Name, plan, state, prefix, plan, at), nil
 	case "nullable_slice":
@@ -354,6 +358,8 @@ func readExpr(a Attribute, gf GoField, recv, prefix string) (string, error) {
 		return fmt.Sprintf("%sFromAPI(nullablePtr(%s))", prefix, x), nil
 	case "map":
 		return fmt.Sprintf("%sFromMap(%s, m.%s)", prefix, x, upperCamel(a.Name)), nil
+	case "nullable_string_map":
+		return fmt.Sprintf("stringMapValue(%s)", x), nil
 	case "slice":
 		if gf.Elem == "struct" {
 			return fmt.Sprintf("objectList(%s, %sFromAPI, %sAttrTypes())", x, prefix, prefix), nil
@@ -539,6 +545,8 @@ func nullOf(a Attribute) string {
 		return "types.ListNull(" + kinds[a.ElemKind].elemType + ")"
 	case "set":
 		return "types.SetNull(" + kinds[a.ElemKind].elemType + ")"
+	case "map":
+		return "types.MapNull(" + kinds[a.ElemKind].elemType + ")"
 	}
 	return map[string]string{"string": "types.StringNull()", "bool": "types.BoolNull()",
 		"int64": "types.Int64Null()", "float64": "types.Float64Null()"}[a.Kind]

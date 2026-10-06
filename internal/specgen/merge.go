@@ -236,7 +236,7 @@ func mergeWith(doc *openapi3.T, name string, rc ResourceConfig, createObj *Objec
 		if err := setKind(&a, src); err != nil {
 			return fail("%s: %v", f, err)
 		}
-		a.Sensitive = secret || listed
+		a.Sensitive = a.Sensitive || secret || listed
 		if secret && listed {
 			warnings = append(warnings, fmt.Sprintf("resource %s: sensitive on %s is redundant: the spec marks it format: password; remove it from resources.yaml", name, f))
 		}
@@ -323,7 +323,12 @@ func setKind(a *Attribute, f Field) error {
 	}
 	if f.Type == "object" {
 		if f.Properties == nil {
-			return fmt.Errorf("objects without properties aren't supported; omit it or extend specgen")
+			if f.Values == nil || f.Values.Type != "string" {
+				return fmt.Errorf("objects without properties are supported only when their values are strings; omit it or extend specgen")
+			}
+			a.Kind, a.ElemKind = "map", "string"
+			a.Sensitive = a.Sensitive || f.Values.Secret
+			return emptyDefault(a)
 		}
 		children, err := nestedAttributes(*f.Properties, a.Computed && !a.Optional)
 		if err != nil {
@@ -342,6 +347,9 @@ func emptyDefault(a *Attribute) error {
 		return nil
 	}
 	if d, ok := a.Default.([]any); ok && len(d) == 0 {
+		return nil
+	}
+	if d, ok := a.Default.(map[string]any); ok && len(d) == 0 {
 		return nil
 	}
 	return fmt.Errorf("a non-empty default on a list or set isn't supported yet")

@@ -3,6 +3,7 @@ package provider
 import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/oapi-codegen/nullable"
 )
 
 // Objects that api-go carries as map[string]any (integration config) are
@@ -65,4 +66,45 @@ func mapStrings(m map[string]any, key string, set bool) attr.Value {
 		return types.SetValueMust(types.StringType, vals)
 	}
 	return types.ListValueMust(types.StringType, vals)
+}
+
+// String maps (apiv3 Nullable[map[string]string]) are sent whole, by the
+// phase 4b collection rules: the map on create when set; on update only a
+// change, with null for a map removed from config.
+
+func createStringMap(dst *nullable.Nullable[map[string]string], v types.Map) {
+	if v.IsNull() || v.IsUnknown() {
+		return
+	}
+	*dst = nullable.NewNullableWithValue(stringMap(v))
+}
+
+func updateStringMap(dst *nullable.Nullable[map[string]string], plan, state types.Map) {
+	switch {
+	case plan.IsUnknown(), plan.Equal(state):
+	case plan.IsNull():
+		*dst = nullable.NewNullNullable[map[string]string]()
+	default:
+		*dst = nullable.NewNullableWithValue(stringMap(plan))
+	}
+}
+
+func stringMap(v types.Map) map[string]string {
+	out := map[string]string{}
+	for k, e := range v.Elements() {
+		out[k] = e.(types.String).ValueString()
+	}
+	return out
+}
+
+func stringMapValue(n nullable.Nullable[map[string]string]) types.Map {
+	v, err := n.Get()
+	if err != nil {
+		return types.MapNull(types.StringType)
+	}
+	elems := make(map[string]attr.Value, len(v))
+	for k, s := range v {
+		elems[k] = types.StringValue(s)
+	}
+	return types.MapValueMust(types.StringType, elems)
 }

@@ -42,6 +42,7 @@ type Field struct {
 	MaxItems         *int64
 	Items            *Field
 	Properties       *Object // an object's own properties
+	Values           *Field  // an object's additionalProperties schema
 	Const            any     // OpenAPI 3.1 const
 }
 
@@ -200,6 +201,13 @@ func FieldFacts(name string, ref *openapi3.SchemaRef) (Field, error) {
 			return Field{}, fmt.Errorf("items: %w", err)
 		}
 		f.Items = &item
+	}
+	if ap := s.AdditionalProperties.Schema; ap != nil {
+		v, err := FieldFacts(name, ap)
+		if err != nil {
+			return Field{}, fmt.Errorf("additionalProperties: %w", err)
+		}
+		f.Values = &v
 	}
 	if f.Type == "object" && len(s.Properties) > 0 {
 		obj, err := ObjectFacts(name, &openapi3.SchemaRef{Value: s})

@@ -1,6 +1,7 @@
 package specgen
 
 import (
+	"bytes"
 	"flag"
 	"os"
 	"os/exec"
@@ -340,5 +341,36 @@ func TestRenderScalarUUIDValidator(t *testing.T) {
 	}
 	if n := strings.Count(string(got), `"must be a lowercase UUID"`); n != 1 {
 		t.Errorf("lowercase-UUID validators = %d, want 1 (parent_id only)\n%s", n, got)
+	}
+}
+
+func TestRenderStringMap(t *testing.T) {
+	_, r := mapSprocket(t)
+	got, err := Render(r, nil)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	for _, want := range []string{
+		`"headers": schema\.MapAttribute\{`,
+		`ElementType:\s+types\.StringType`,
+		`Default:\s+mapdefault\.StaticValue\(types\.MapValueMust\(types\.StringType, map\[string\]attr\.Value\{\}\)\)`,
+		"Headers\\s+types\\.Map\\s+`tfsdk:\"headers\"`",
+	} {
+		if !regexp.MustCompile(want).Match(got) {
+			t.Errorf("rendered code doesn't match %s", want)
+		}
+	}
+}
+
+// A map whose values aren't secrets renders without Sensitive.
+func TestRenderPlainStringMap(t *testing.T) {
+	var b bytes.Buffer
+	imports := map[string]bool{}
+	a := Attribute{Name: "labels", Kind: "map", ElemKind: "string", Optional: true}
+	if err := renderAttribute(&b, a, imports, "x"); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(b.String(), "Sensitive") || !strings.Contains(b.String(), "schema.MapAttribute{") {
+		t.Errorf("rendered = %s", b.String())
 	}
 }
