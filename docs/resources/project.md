@@ -3,12 +3,12 @@
 page_title: "honeybadger_project Resource - honeybadger"
 subcategory: ""
 description: |-
-  
+  A Honeybadger project
 ---
 
 # honeybadger_project (Resource)
 
-
+A Honeybadger project
 
 ## Example Usage
 

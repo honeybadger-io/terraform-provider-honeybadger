@@ -3,12 +3,12 @@
 page_title: "honeybadger_check_in Resource - honeybadger"
 subcategory: ""
 description: |-
-  
+  A scheduled task check-in monitor
 ---
 
 # honeybadger_check_in (Resource)
 
-
+A scheduled task check-in monitor
 
 ## Example Usage
 

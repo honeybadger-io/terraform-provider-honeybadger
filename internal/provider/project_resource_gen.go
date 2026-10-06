@@ -19,6 +19,7 @@ import (
 
 func projectResourceSchema() schema.Schema {
 	return schema.Schema{
+		MarkdownDescription: "A Honeybadger project",
 		Attributes: map[string]schema.Attribute{
 			"account_id": schema.StringAttribute{
 				MarkdownDescription: "ID of the account this project belongs to",

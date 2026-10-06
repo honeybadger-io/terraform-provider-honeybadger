@@ -19,6 +19,7 @@ var kinds = map[string]struct {
 	"bool":    {"BoolAttribute", "types.Bool", "bool", "types.BoolType"},
 	"list":    {"ListAttribute", "types.List", "list", ""},
 	"set":     {"SetAttribute", "types.Set", "set", ""},
+	"object":  {"SingleNestedAttribute", "types.Object", "object", ""},
 }
 
 // customTypeCode is the Go for each custom type: its type and its value.
@@ -37,100 +38,9 @@ func Render(r Resource, m *Mapping) ([]byte, error) {
 
 	var attrs bytes.Buffer
 	for _, a := range r.Attributes {
-		k, ok := kinds[a.Kind]
-		if !ok {
-			return nil, fmt.Errorf("resource %s: %s has unknown kind %q", r.Name, a.Name, a.Kind)
+		if err := renderAttribute(&attrs, a, imports); err != nil {
+			return nil, fmt.Errorf("resource %s: %w", r.Name, err)
 		}
-		fmt.Fprintf(&attrs, "%q: schema.%s{\n", a.Name, k.schema)
-		if a.Kind == "list" || a.Kind == "set" {
-			fmt.Fprintf(&attrs, "ElementType: %s,\n", kinds[a.ElemKind].elemType)
-		}
-		if a.Description != "" {
-			fmt.Fprintf(&attrs, "MarkdownDescription: %q,\n", a.Description)
-		}
-		for _, flag := range []struct {
-			on   bool
-			name string
-		}{{a.Required, "Required"}, {a.Optional, "Optional"}, {a.Computed, "Computed"}, {a.Sensitive, "Sensitive"}} {
-			if flag.on {
-				fmt.Fprintf(&attrs, "%s: true,\n", flag.name)
-			}
-		}
-		if a.CustomType != "" {
-			fmt.Fprintf(&attrs, "CustomType: %s,\n", customTypeCode[a.CustomType][0])
-			imports["github.com/honeybadger-io/terraform-provider-honeybadger/internal/provider/customtypes"] = true
-		}
-		if a.Default != nil {
-			lit, err := literal(a.Kind, a.Default)
-			if err != nil {
-				return nil, fmt.Errorf("resource %s: %s default: %w", r.Name, a.Name, err)
-			}
-			fmt.Fprintf(&attrs, "Default: %sdefault.Static%s(%s),\n", k.pkg, staticName(a.Kind), lit)
-			imports["github.com/hashicorp/terraform-plugin-framework/resource/schema/"+k.pkg+"default"] = true
-		}
-		var validators []string
-		vpkg := k.pkg + "validator"
-		if a.MinLength > 0 && a.MaxLength != nil {
-			validators = append(validators, fmt.Sprintf("stringvalidator.LengthBetween(%d, %d)", a.MinLength, *a.MaxLength))
-		} else if a.MinLength > 0 {
-			validators = append(validators, fmt.Sprintf("stringvalidator.LengthAtLeast(%d)", a.MinLength))
-		} else if a.MaxLength != nil {
-			validators = append(validators, fmt.Sprintf("stringvalidator.LengthAtMost(%d)", *a.MaxLength))
-		}
-		if a.Minimum != nil || a.Maximum != nil {
-			if a.Kind != "int64" && a.Kind != "float64" {
-				return nil, fmt.Errorf("resource %s: %s has numeric bounds but kind %s", r.Name, a.Name, a.Kind)
-			}
-			num := func(f float64) string {
-				if a.Kind == "int64" {
-					return strconv.FormatInt(int64(f), 10)
-				}
-				return strconv.FormatFloat(f, 'g', -1, 64)
-			}
-			switch {
-			case a.Minimum != nil && a.Maximum != nil:
-				validators = append(validators, fmt.Sprintf("%s.Between(%s, %s)", vpkg, num(*a.Minimum), num(*a.Maximum)))
-			case a.Minimum != nil:
-				validators = append(validators, fmt.Sprintf("%s.AtLeast(%s)", vpkg, num(*a.Minimum)))
-			default:
-				validators = append(validators, fmt.Sprintf("%s.AtMost(%s)", vpkg, num(*a.Maximum)))
-			}
-			imports["github.com/hashicorp/terraform-plugin-framework-validators/"+vpkg] = true
-		}
-		if len(validators) > 0 && a.Kind == "string" {
-			imports["github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"] = true
-		}
-		if len(a.Enum) > 0 {
-			quoted := make([]string, len(a.Enum))
-			for i, e := range a.Enum {
-				quoted[i] = strconv.Quote(e)
-			}
-			validators = append(validators, "stringvalidator.OneOf("+strings.Join(quoted, ", ")+")")
-			imports["github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"] = true
-		}
-		if a.Pattern != "" {
-			validators = append(validators, fmt.Sprintf("stringvalidator.RegexMatches(regexp.MustCompile(%q), %q)",
-				a.Pattern, patternMessage(a)))
-			imports["github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"] = true
-			imports["regexp"] = true
-		}
-		if len(validators) > 0 {
-			fmt.Fprintf(&attrs, "Validators: []validator.%s{%s},\n", typeName(a.Kind), strings.Join(validators, ", "))
-			imports["github.com/hashicorp/terraform-plugin-framework/schema/validator"] = true
-		}
-		var modifiers []string
-		if a.RequiresReplace {
-			modifiers = append(modifiers, k.pkg+"planmodifier.RequiresReplace()")
-		}
-		if a.UseStateForUnknown {
-			modifiers = append(modifiers, k.pkg+"planmodifier.UseStateForUnknown()")
-		}
-		if len(modifiers) > 0 {
-			fmt.Fprintf(&attrs, "PlanModifiers: []planmodifier.%s{%s},\n", typeName(a.Kind), strings.Join(modifiers, ", "))
-			imports["github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"] = true
-			imports["github.com/hashicorp/terraform-plugin-framework/resource/schema/"+k.pkg+"planmodifier"] = true
-		}
-		attrs.WriteString("},\n")
 	}
 
 	var model bytes.Buffer
@@ -152,6 +62,10 @@ func Render(r Resource, m *Mapping) ([]byte, error) {
 				imports[p] = true
 			}
 		}
+	}
+
+	if hasObject(r.Attributes) {
+		imports["github.com/hashicorp/terraform-plugin-framework/attr"] = true
 	}
 
 	// Standard library first, then everything else, as goimports groups them.
@@ -178,9 +92,14 @@ func Render(r Resource, m *Mapping) ([]byte, error) {
 		fmt.Fprintf(&out, "%q\n", p)
 	}
 	out.WriteString(")\n\n")
-	fmt.Fprintf(&out, "func %sResourceSchema() schema.Schema {\nreturn schema.Schema{\nAttributes: map[string]schema.Attribute{\n%s},\n}\n}\n\n",
-		camel, attrs.String())
+	desc := ""
+	if r.Description != "" {
+		desc = fmt.Sprintf("MarkdownDescription: %q,\n", r.Description)
+	}
+	fmt.Fprintf(&out, "func %sResourceSchema() schema.Schema {\nreturn schema.Schema{\n%sAttributes: map[string]schema.Attribute{\n%s},\n}\n}\n\n",
+		camel, desc, attrs.String())
 	fmt.Fprintf(&out, "type %sResourceModel struct {\n%s}\n", camel, model.String())
+	renderNestedModels(&out, camel, r.Attributes)
 	if r.Import != "" {
 		fmt.Fprintf(&out, "\n// %sImportFormat is the ID terraform import takes.\nconst %sImportFormat = %q\n", camel, camel, r.Import)
 	}
@@ -201,6 +120,129 @@ func Render(r Resource, m *Mapping) ([]byte, error) {
 		return nil, fmt.Errorf("resource %s: formatting generated code: %w\n%s", r.Name, err, out.String())
 	}
 	return src, nil
+}
+
+// renderAttribute writes one schema attribute; an object writes its own
+// attributes inside it.
+func renderAttribute(b *bytes.Buffer, a Attribute, imports map[string]bool) error {
+	k, ok := kinds[a.Kind]
+	if !ok {
+		return fmt.Errorf("%s has unknown kind %q", a.Name, a.Kind)
+	}
+	fmt.Fprintf(b, "%q: schema.%s{\n", a.Name, k.schema)
+	if a.Kind == "list" || a.Kind == "set" {
+		fmt.Fprintf(b, "ElementType: %s,\n", kinds[a.ElemKind].elemType)
+	}
+	if a.Kind == "object" {
+		b.WriteString("Attributes: map[string]schema.Attribute{\n")
+		for _, c := range a.Attributes {
+			if err := renderAttribute(b, c, imports); err != nil {
+				return fmt.Errorf("%s: %w", a.Name, err)
+			}
+		}
+		b.WriteString("},\n")
+	}
+	if a.Description != "" {
+		fmt.Fprintf(b, "MarkdownDescription: %q,\n", a.Description)
+	}
+	for _, flag := range []struct {
+		on   bool
+		name string
+	}{{a.Required, "Required"}, {a.Optional, "Optional"}, {a.Computed, "Computed"}, {a.Sensitive, "Sensitive"}} {
+		if flag.on {
+			fmt.Fprintf(b, "%s: true,\n", flag.name)
+		}
+	}
+	if a.CustomType != "" {
+		fmt.Fprintf(b, "CustomType: %s,\n", customTypeCode[a.CustomType][0])
+		imports["github.com/honeybadger-io/terraform-provider-honeybadger/internal/provider/customtypes"] = true
+	}
+	if a.Default != nil {
+		lit, err := literal(a.Kind, a.Default)
+		if err != nil {
+			return fmt.Errorf("%s default: %w", a.Name, err)
+		}
+		fmt.Fprintf(b, "Default: %sdefault.Static%s(%s),\n", k.pkg, staticName(a.Kind), lit)
+		imports["github.com/hashicorp/terraform-plugin-framework/resource/schema/"+k.pkg+"default"] = true
+	}
+	var validators []string
+	vpkg := k.pkg + "validator"
+	if a.MinLength > 0 && a.MaxLength != nil {
+		validators = append(validators, fmt.Sprintf("stringvalidator.LengthBetween(%d, %d)", a.MinLength, *a.MaxLength))
+	} else if a.MinLength > 0 {
+		validators = append(validators, fmt.Sprintf("stringvalidator.LengthAtLeast(%d)", a.MinLength))
+	} else if a.MaxLength != nil {
+		validators = append(validators, fmt.Sprintf("stringvalidator.LengthAtMost(%d)", *a.MaxLength))
+	}
+	if a.Minimum != nil || a.Maximum != nil {
+		if a.Kind != "int64" && a.Kind != "float64" {
+			return fmt.Errorf("%s has numeric bounds but kind %s", a.Name, a.Kind)
+		}
+		num := func(f float64) string {
+			if a.Kind == "int64" {
+				return strconv.FormatInt(int64(f), 10)
+			}
+			return strconv.FormatFloat(f, 'g', -1, 64)
+		}
+		switch {
+		case a.Minimum != nil && a.Maximum != nil:
+			validators = append(validators, fmt.Sprintf("%s.Between(%s, %s)", vpkg, num(*a.Minimum), num(*a.Maximum)))
+		case a.Minimum != nil:
+			validators = append(validators, fmt.Sprintf("%s.AtLeast(%s)", vpkg, num(*a.Minimum)))
+		default:
+			validators = append(validators, fmt.Sprintf("%s.AtMost(%s)", vpkg, num(*a.Maximum)))
+		}
+		imports["github.com/hashicorp/terraform-plugin-framework-validators/"+vpkg] = true
+	}
+	if len(validators) > 0 && a.Kind == "string" {
+		imports["github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"] = true
+	}
+	if len(a.Enum) > 0 {
+		quoted := make([]string, len(a.Enum))
+		for i, e := range a.Enum {
+			quoted[i] = strconv.Quote(e)
+		}
+		validators = append(validators, "stringvalidator.OneOf("+strings.Join(quoted, ", ")+")")
+		imports["github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"] = true
+	}
+	if a.Pattern != "" {
+		validators = append(validators, fmt.Sprintf("stringvalidator.RegexMatches(regexp.MustCompile(%q), %q)",
+			a.Pattern, patternMessage(a)))
+		imports["github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"] = true
+		imports["regexp"] = true
+	}
+	if a.Kind == "list" || a.Kind == "set" {
+		cpkg := a.Kind + "validator"
+		switch {
+		case a.MinItems > 0 && a.MaxItems != nil:
+			validators = append(validators, fmt.Sprintf("%s.SizeBetween(%d, %d)", cpkg, a.MinItems, *a.MaxItems))
+		case a.MinItems > 0:
+			validators = append(validators, fmt.Sprintf("%s.SizeAtLeast(%d)", cpkg, a.MinItems))
+		case a.MaxItems != nil:
+			validators = append(validators, fmt.Sprintf("%s.SizeAtMost(%d)", cpkg, *a.MaxItems))
+		}
+		if a.MinItems > 0 || a.MaxItems != nil {
+			imports["github.com/hashicorp/terraform-plugin-framework-validators/"+cpkg] = true
+		}
+	}
+	if len(validators) > 0 {
+		fmt.Fprintf(b, "Validators: []validator.%s{%s},\n", typeName(a.Kind), strings.Join(validators, ", "))
+		imports["github.com/hashicorp/terraform-plugin-framework/schema/validator"] = true
+	}
+	var modifiers []string
+	if a.RequiresReplace {
+		modifiers = append(modifiers, k.pkg+"planmodifier.RequiresReplace()")
+	}
+	if a.UseStateForUnknown {
+		modifiers = append(modifiers, k.pkg+"planmodifier.UseStateForUnknown()")
+	}
+	if len(modifiers) > 0 {
+		fmt.Fprintf(b, "PlanModifiers: []planmodifier.%s{%s},\n", typeName(a.Kind), strings.Join(modifiers, ", "))
+		imports["github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"] = true
+		imports["github.com/hashicorp/terraform-plugin-framework/resource/schema/"+k.pkg+"planmodifier"] = true
+	}
+	b.WriteString("},\n")
+	return nil
 }
 
 // customTypeMessages describe each custom type's format for validation errors.
@@ -250,7 +292,7 @@ func staticName(kind string) string {
 
 func typeName(kind string) string {
 	return map[string]string{"string": "String", "int64": "Int64", "float64": "Float64", "bool": "Bool",
-		"list": "List", "set": "Set"}[kind]
+		"list": "List", "set": "Set", "object": "Object"}[kind]
 }
 
 // initialisms are rendered in capitals, as Go names them.
@@ -285,4 +327,52 @@ func RenderRegistry(names []string) ([]byte, error) {
 	}
 	b.WriteString("\t}\n}\n")
 	return format.Source(b.Bytes())
+}
+
+// nestedPrefix names an object attribute's model, attribute types and
+// converters: alarm's trigger_config is alarmTriggerConfig, and its config
+// is alarmTriggerConfigConfig.
+func nestedPrefix(parent, name string) string { return parent + upperCamel(name) }
+
+func hasObject(attrs []Attribute) bool {
+	for _, a := range attrs {
+		if a.Kind == "object" {
+			return true
+		}
+	}
+	return false
+}
+
+// renderNestedModels writes each object attribute's model struct and
+// attribute types, depth first.
+func renderNestedModels(b *bytes.Buffer, prefix string, attrs []Attribute) {
+	for _, a := range attrs {
+		if a.Kind != "object" {
+			continue
+		}
+		p := nestedPrefix(prefix, a.Name)
+		fmt.Fprintf(b, "\ntype %sModel struct {\n", p)
+		for _, c := range a.Attributes {
+			fmt.Fprintf(b, "%s %s `tfsdk:%q`\n", upperCamel(c.Name), kinds[c.Kind].model, c.Name)
+		}
+		b.WriteString("}\n")
+		fmt.Fprintf(b, "\nfunc %sAttrTypes() map[string]attr.Type {\nreturn map[string]attr.Type{\n", p)
+		for _, c := range a.Attributes {
+			fmt.Fprintf(b, "%q: %s,\n", c.Name, attrTypeExpr(c, p))
+		}
+		b.WriteString("}\n}\n")
+		renderNestedModels(b, p, a.Attributes)
+	}
+}
+
+func attrTypeExpr(a Attribute, prefix string) string {
+	switch a.Kind {
+	case "list":
+		return "types.ListType{ElemType: " + kinds[a.ElemKind].elemType + "}"
+	case "set":
+		return "types.SetType{ElemType: " + kinds[a.ElemKind].elemType + "}"
+	case "object":
+		return "types.ObjectType{AttrTypes: " + nestedPrefix(prefix, a.Name) + "AttrTypes()}"
+	}
+	return kinds[a.Kind].elemType
 }

@@ -22,6 +22,7 @@ import (
 
 func checkInResourceSchema() schema.Schema {
 	return schema.Schema{
+		MarkdownDescription: "A scheduled task check-in monitor",
 		Attributes: map[string]schema.Attribute{
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "When the check-in was created",

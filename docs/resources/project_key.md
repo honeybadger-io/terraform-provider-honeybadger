@@ -3,12 +3,12 @@
 page_title: "honeybadger_project_key Resource - honeybadger"
 subcategory: ""
 description: |-
-  
+  A project's ingestion key, the API key a notifier sends error reports with
 ---
 
 # honeybadger_project_key (Resource)
 
-
+A project's ingestion key, the API key a notifier sends error reports with
 
 ## Example Usage
 

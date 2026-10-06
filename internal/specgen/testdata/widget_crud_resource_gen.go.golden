@@ -24,6 +24,7 @@ import (
 
 func widgetResourceSchema() schema.Schema {
 	return schema.Schema{
+		MarkdownDescription: "A widget in a project.",
 		Attributes: map[string]schema.Attribute{
 			"color": schema.StringAttribute{
 				MarkdownDescription: "The widget's color, as a hex code.",

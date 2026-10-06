@@ -17,6 +17,7 @@ import (
 
 func projectKeyResourceSchema() schema.Schema {
 	return schema.Schema{
+		MarkdownDescription: "A project's ingestion key, the API key a notifier sends error reports with",
 		Attributes: map[string]schema.Attribute{
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "When the key was created",

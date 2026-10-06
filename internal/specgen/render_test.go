@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -171,5 +172,32 @@ func TestCRUDGoldenCompiles(t *testing.T) {
 	out, err := exec.Command("go", "vet", "./testdata/crudcheck").CombinedOutput()
 	if err != nil {
 		t.Errorf("go vet ./testdata/crudcheck: %v\n%s", err, out)
+	}
+}
+
+func TestRenderNestedAndCollections(t *testing.T) {
+	res, err := Merge(loadFixture(t), "widget", fixtureConfig(t))
+	if err != nil {
+		t.Fatalf("Merge: %v", err)
+	}
+	got, err := Render(res, nil)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	// gofmt aligns keys and struct fields, so spacing is matched loosely.
+	for _, want := range []string{
+		`MarkdownDescription:\s+"A widget in a project\."`,
+		`"gear": schema\.SingleNestedAttribute\{`,
+		`"mesh": schema\.SingleNestedAttribute\{`,
+		`setvalidator\.SizeBetween\(1, 10\)`,
+		"Gear\\s+types\\.Object\\s+`tfsdk:\"gear\"`",
+		`type widgetGearModel struct`,
+		`type widgetGearMeshModel struct`,
+		`"mesh":\s+types\.ObjectType\{AttrTypes: widgetGearMeshAttrTypes\(\)\}`,
+		`"parts": schema\.SetAttribute\{`,
+	} {
+		if !regexp.MustCompile(want).Match(got) {
+			t.Errorf("rendered code doesn't match %s", want)
+		}
 	}
 }

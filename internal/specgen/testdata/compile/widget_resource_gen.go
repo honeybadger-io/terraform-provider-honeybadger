@@ -6,10 +6,13 @@ import (
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -19,6 +22,7 @@ import (
 
 func widgetResourceSchema() schema.Schema {
 	return schema.Schema{
+		MarkdownDescription: "A widget in a project.",
 		Attributes: map[string]schema.Attribute{
 			"badges": schema.SetAttribute{
 				ElementType:         types.StringType,
@@ -35,6 +39,31 @@ func widgetResourceSchema() schema.Schema {
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
+			"gear": schema.SingleNestedAttribute{
+				Attributes: map[string]schema.Attribute{
+					"kind": schema.StringAttribute{
+						MarkdownDescription: "Tooth profile.",
+						Required:            true,
+						Validators:          []validator.String{stringvalidator.OneOf("spur", "helical")},
+					},
+					"mesh": schema.SingleNestedAttribute{
+						Attributes: map[string]schema.Attribute{
+							"pitch": schema.Float64Attribute{
+								MarkdownDescription: "Tooth spacing in millimetres.",
+								Required:            true,
+							},
+							"teeth": schema.Int64Attribute{
+								MarkdownDescription: "Number of teeth.",
+								Required:            true,
+								Validators:          []validator.Int64{int64validator.AtLeast(1)},
+							},
+						},
+						Required: true,
+					},
+				},
+				MarkdownDescription: "The widget's drive gear. Replaced whole on update.",
+				Required:            true,
+			},
 			"id": schema.StringAttribute{
 				MarkdownDescription: "Unique identifier",
 				Computed:            true,
@@ -43,6 +72,14 @@ func widgetResourceSchema() schema.Schema {
 			"name": schema.StringAttribute{
 				MarkdownDescription: "Widget name.",
 				Required:            true,
+			},
+			"parts": schema.SetAttribute{
+				ElementType:         types.StringType,
+				MarkdownDescription: "Part numbers fitted. Left out on create, every stocked part.",
+				Optional:            true,
+				Computed:            true,
+				Validators:          []validator.Set{setvalidator.SizeBetween(1, 10)},
+				PlanModifiers:       []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
 			},
 			"period": schema.StringAttribute{
 				MarkdownDescription: "How often it spins, such as `5 minutes`.",
@@ -97,8 +134,10 @@ type widgetResourceModel struct {
 	Badges    types.Set               `tfsdk:"badges"`
 	Color     types.String            `tfsdk:"color"`
 	CreatedAt types.String            `tfsdk:"created_at"`
+	Gear      types.Object            `tfsdk:"gear"`
 	ID        types.String            `tfsdk:"id"`
 	Name      types.String            `tfsdk:"name"`
+	Parts     types.Set               `tfsdk:"parts"`
 	Period    customtypes.PeriodValue `tfsdk:"period"`
 	ProjectID types.String            `tfsdk:"project_id"`
 	Secret    types.String            `tfsdk:"secret"`
@@ -107,6 +146,30 @@ type widgetResourceModel struct {
 	Size      types.Int64             `tfsdk:"size"`
 	Tags      types.Set               `tfsdk:"tags"`
 	Token     types.String            `tfsdk:"token"`
+}
+
+type widgetGearModel struct {
+	Kind types.String `tfsdk:"kind"`
+	Mesh types.Object `tfsdk:"mesh"`
+}
+
+func widgetGearAttrTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"kind": types.StringType,
+		"mesh": types.ObjectType{AttrTypes: widgetGearMeshAttrTypes()},
+	}
+}
+
+type widgetGearMeshModel struct {
+	Pitch types.Float64 `tfsdk:"pitch"`
+	Teeth types.Int64   `tfsdk:"teeth"`
+}
+
+func widgetGearMeshAttrTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"pitch": types.Float64Type,
+		"teeth": types.Int64Type,
+	}
 }
 
 // widgetImportFormat is the ID terraform import takes.
