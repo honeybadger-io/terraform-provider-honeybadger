@@ -100,8 +100,37 @@ components:
       - square
       default: round
       description: Referenced description that a property-level one overrides.
+    Gear:
+      type: object
+      description: The widget's drive gear. Replaced whole on update.
+      required:
+      - kind
+      - mesh
+      properties:
+        kind:
+          type: string
+          enum:
+          - spur
+          - helical
+          description: Tooth profile.
+        mesh:
+          "$ref": "#/components/schemas/Mesh"
+    Mesh:
+      type: object
+      required:
+      - teeth
+      - pitch
+      properties:
+        teeth:
+          type: integer
+          minimum: 1
+          description: Number of teeth.
+        pitch:
+          type: number
+          description: Tooth spacing in millimetres.
     Widget:
       type: object
+      description: A widget in a project.
       required:
       - id
       - project_id
@@ -152,6 +181,19 @@ components:
             - spun
             - stopped
           description: Events to notify on
+        gear:
+          description: The widget's drive gear.
+          anyOf:
+          - "$ref": "#/components/schemas/Gear"
+          - type: 'null'
+        parts:
+          type:
+          - array
+          - 'null'
+          uniqueItems: true
+          items:
+            type: string
+          description: Part numbers fitted
         archived:
           type: boolean
           description: Whether the widget is archived
@@ -221,6 +263,17 @@ components:
             - spun
             - stopped
           description: Events to notify on.
+        gear:
+          "$ref": "#/components/schemas/Gear"
+        parts:
+          type:
+          - array
+          - 'null'
+          minItems: 1
+          maxItems: 10
+          items:
+            type: string
+          description: Part numbers fitted. Left out on create, every stocked part.
         period:
           type:
           - string
@@ -247,6 +300,7 @@ components:
       - type: object
         required:
         - name
+        - gear
         properties:
           serial:
             type: string

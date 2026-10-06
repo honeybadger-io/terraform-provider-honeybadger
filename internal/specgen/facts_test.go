@@ -117,3 +117,60 @@ func TestRealBundleFacts(t *testing.T) {
 func hasPrefix(s, prefix string) bool { return len(s) >= len(prefix) && s[:len(prefix)] == prefix }
 
 func ptr[T any](v T) *T { return &v }
+
+// An object property keeps its own properties, recursively, with their
+// required lists.
+func TestFieldFactsNestedObject(t *testing.T) {
+	gear := schemaFacts(t, loadFixture(t), "WidgetInput").Fields["gear"]
+	if gear.Type != "object" || gear.Properties == nil {
+		t.Fatalf("gear = %+v, want an object with properties", gear)
+	}
+	if !gear.Properties.Required["kind"] || !gear.Properties.Required["mesh"] {
+		t.Errorf("gear required = %v, want kind and mesh", gear.Properties.Required)
+	}
+	if gear.Description != "The widget's drive gear. Replaced whole on update." {
+		t.Errorf("gear description = %q", gear.Description)
+	}
+	mesh := gear.Properties.Fields["mesh"]
+	if mesh.Properties == nil || !mesh.Properties.Required["teeth"] || !mesh.Properties.Required["pitch"] {
+		t.Fatalf("mesh = %+v, want an object requiring teeth and pitch", mesh)
+	}
+	if pitch := mesh.Properties.Fields["pitch"]; pitch.Type != "number" {
+		t.Errorf("pitch = %+v, want a number", pitch)
+	}
+}
+
+// A nullable anyOf of an object keeps the object's properties.
+func TestFieldFactsNullableObject(t *testing.T) {
+	gear := schemaFacts(t, loadFixture(t), "Widget").Fields["gear"]
+	if !gear.Nullable || gear.Type != "object" || gear.Properties == nil || gear.Description != "The widget's drive gear." {
+		t.Errorf("gear = %+v, want a nullable object with properties and its own description", gear)
+	}
+}
+
+func TestFieldFactsItemCounts(t *testing.T) {
+	parts := schemaFacts(t, loadFixture(t), "WidgetInput").Fields["parts"]
+	if parts.MinItems != 1 || parts.MaxItems == nil || *parts.MaxItems != 10 || parts.Items == nil || parts.Items.Type != "string" {
+		t.Errorf("parts = %+v, want 1 to 10 strings", parts)
+	}
+}
+
+// Exclusive bounds are read, in both OpenAPI forms, so Merge can refuse them.
+func TestFieldFactsExclusiveBounds(t *testing.T) {
+	zero, yes := 0.0, true
+	for name, s := range map[string]*openapi3.Schema{
+		"3.1 number":  {Type: &openapi3.Types{"number"}, ExclusiveMin: openapi3.ExclusiveBound{Value: &zero}},
+		"3.0 boolean": {Type: &openapi3.Types{"number"}, Min: &zero, ExclusiveMin: openapi3.ExclusiveBound{Bool: &yes}},
+	} {
+		f, err := FieldFacts("ratio", &openapi3.SchemaRef{Value: s})
+		if err != nil || f.ExclusiveMinimum == nil || *f.ExclusiveMinimum != 0 || f.Minimum != nil {
+			t.Errorf("%s: f = %+v, err = %v; want exclusiveMinimum 0 and no minimum", name, f, err)
+		}
+	}
+}
+
+func TestObjectFactsDescription(t *testing.T) {
+	if d := schemaFacts(t, loadFixture(t), "Widget").Description; d != "A widget in a project." {
+		t.Errorf("Widget description = %q", d)
+	}
+}

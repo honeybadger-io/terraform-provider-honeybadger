@@ -20,31 +20,36 @@ func Load(path string) (*openapi3.T, error) {
 
 // Field is what the spec says about one property.
 type Field struct {
-	Name        string
-	Type        string // string, integer, number, boolean, array or object
-	Format      string
-	Description string
-	Pattern     string
-	Nullable    bool
-	ReadOnly    bool
-	WriteOnly   bool
-	UniqueItems bool
-	ItemBounds  bool // minItems or maxItems, which specgen doesn't render yet
-	Secret      bool // format: password
-	Enum        []string
-	Default     any // nil when the spec gives none
-	MinLength   int64
-	MaxLength   *int64
-	Minimum     *float64
-	Maximum     *float64
-	Items       *Field
+	Name             string
+	Type             string // string, integer, number, boolean, array or object
+	Format           string
+	Description      string
+	Pattern          string
+	Nullable         bool
+	ReadOnly         bool
+	WriteOnly        bool
+	UniqueItems      bool
+	Secret           bool // format: password
+	Enum             []string
+	Default          any // nil when the spec gives none
+	MinLength        int64
+	MaxLength        *int64
+	Minimum          *float64
+	Maximum          *float64
+	ExclusiveMinimum *float64 // read so Merge can refuse it; specgen doesn't render it
+	ExclusiveMaximum *float64
+	MinItems         int64 // 0 when the spec gives none
+	MaxItems         *int64
+	Items            *Field
+	Properties       *Object // an object's own properties
 }
 
 // Object is a schema's properties, with allOf flattened.
 type Object struct {
-	Name     string
-	Required map[string]bool
-	Fields   map[string]Field
+	Name        string
+	Description string
+	Required    map[string]bool
+	Fields      map[string]Field
 }
 
 // ObjectFacts flattens an object schema's allOf and reads each property.
@@ -52,12 +57,15 @@ func ObjectFacts(name string, ref *openapi3.SchemaRef) (Object, error) {
 	if ref == nil || ref.Value == nil {
 		return Object{}, fmt.Errorf("schema %s not found", name)
 	}
-	obj := Object{Name: name, Required: map[string]bool{}, Fields: map[string]Field{}}
+	obj := Object{Name: name, Description: ref.Value.Description, Required: map[string]bool{}, Fields: map[string]Field{}}
 	s := ref.Value
 	for _, part := range s.AllOf {
 		sub, err := ObjectFacts(name, part)
 		if err != nil {
 			return Object{}, err
+		}
+		if obj.Description == "" {
+			obj.Description = sub.Description
 		}
 		for k, v := range sub.Fields {
 			obj.Fields[k] = v
@@ -148,7 +156,6 @@ func FieldFacts(name string, ref *openapi3.SchemaRef) (Field, error) {
 	f.ReadOnly = f.ReadOnly || s.ReadOnly
 	f.WriteOnly = f.WriteOnly || s.WriteOnly
 	f.UniqueItems = f.UniqueItems || s.UniqueItems
-	f.ItemBounds = f.ItemBounds || s.MinItems > 0 || s.MaxItems != nil
 	f.Secret = f.Format == "password"
 	if s.MinLength > 0 {
 		f.MinLength = int64(s.MinLength)
@@ -163,12 +170,39 @@ func FieldFacts(name string, ref *openapi3.SchemaRef) (Field, error) {
 	if s.Max != nil {
 		f.Maximum = s.Max
 	}
+	if s.ExclusiveMin.Value != nil {
+		f.ExclusiveMinimum = s.ExclusiveMin.Value
+	}
+	if s.ExclusiveMax.Value != nil {
+		f.ExclusiveMaximum = s.ExclusiveMax.Value
+	}
+	// OpenAPI 3.0's boolean form makes minimum or maximum exclusive.
+	if b := s.ExclusiveMin.Bool; b != nil && *b && f.Minimum != nil {
+		f.ExclusiveMinimum, f.Minimum = f.Minimum, nil
+	}
+	if b := s.ExclusiveMax.Bool; b != nil && *b && f.Maximum != nil {
+		f.ExclusiveMaximum, f.Maximum = f.Maximum, nil
+	}
+	if s.MinItems > 0 {
+		f.MinItems = int64(s.MinItems)
+	}
+	if s.MaxItems != nil {
+		n := int64(*s.MaxItems)
+		f.MaxItems = &n
+	}
 	if f.Type == "array" && s.Items != nil {
 		item, err := FieldFacts(name, s.Items)
 		if err != nil {
 			return Field{}, fmt.Errorf("items: %w", err)
 		}
 		f.Items = &item
+	}
+	if f.Type == "object" && len(s.Properties) > 0 {
+		obj, err := ObjectFacts(name, &openapi3.SchemaRef{Value: s})
+		if err != nil {
+			return Field{}, err
+		}
+		f.Properties = &obj
 	}
 	return f, nil
 }

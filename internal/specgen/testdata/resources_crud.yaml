@@ -17,6 +17,8 @@ resources:
       quiet: create-only flag, not stored and not a secret
       events: item enums aren't supported yet
       archived: update-only; create can't set it
+      gear: nested objects aren't supported yet
+      parts: item counts aren't supported yet
       tags: arrays aren't mapped yet
       badges: arrays aren't mapped yet
     server_filled:

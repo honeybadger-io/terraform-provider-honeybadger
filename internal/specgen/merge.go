@@ -201,7 +201,7 @@ func Merge(doc *openapi3.T, name string, rc ResourceConfig) (Resource, error) {
 			a.Pattern = src.Pattern
 			a.MinLength, a.MaxLength = src.MinLength, src.MaxLength
 			a.Minimum, a.Maximum = src.Minimum, src.Maximum
-			if src.ItemBounds {
+			if src.MinItems > 0 || src.MaxItems != nil {
 				return fail("%s: minItems and maxItems aren't supported yet; extend specgen", f)
 			}
 		}
