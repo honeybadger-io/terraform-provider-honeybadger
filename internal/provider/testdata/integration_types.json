@@ -1,0 +1,360 @@
+[
+  {
+    "resource": "alert_ops",
+    "config": {
+      "url": "https://example.com/hook"
+    },
+    "update": {
+      "key": "label",
+      "value": "tf-acc"
+    }
+  },
+  {
+    "resource": "asana",
+    "config": {
+      "asana_project_id": "1"
+    },
+    "update": {
+      "key": "active",
+      "value": false
+    }
+  },
+  {
+    "resource": "backlog",
+    "config": {
+      "space_url": "https://example.backlog.com",
+      "api_key": "x",
+      "backlog_project_id": "1",
+      "issue_type_id": "1",
+      "priority_id": "1",
+      "resolve_status_id": "1",
+      "reopen_status_id": "1",
+      "enable_webhook": false
+    },
+    "update": {
+      "key": "label",
+      "value": "tf-acc"
+    }
+  },
+  {
+    "resource": "bitbucket",
+    "config": {
+      "repo": "acme/app"
+    },
+    "update": {
+      "key": "active",
+      "value": false
+    }
+  },
+  {
+    "resource": "campfire_v3",
+    "config": {
+      "chatbot_url": "https://3.basecamp.com/1/integrations/abc/buckets/1/chats/1/lines"
+    },
+    "update": {
+      "key": "active",
+      "value": false
+    }
+  },
+  {
+    "resource": "click_up",
+    "config": {
+      "workspace_id": "1",
+      "teamspace_id": "1",
+      "list_id": "1",
+      "initial_status_id": "a",
+      "resolve_status_id": "b",
+      "reopen_status_id": "c"
+    },
+    "update": {
+      "key": "active",
+      "value": false
+    }
+  },
+  {
+    "resource": "click_up_chat",
+    "config": {
+      "workspace_id": "1",
+      "channel_id": "1"
+    },
+    "update": {
+      "key": "active",
+      "value": false
+    }
+  },
+  {
+    "resource": "datadog",
+    "config": {
+      "api_key": "x"
+    },
+    "update": {
+      "key": "label",
+      "value": "tf-acc"
+    }
+  },
+  {
+    "resource": "discord_webhook",
+    "config": {
+      "url": "https://example.com/hook"
+    },
+    "update": {
+      "key": "label",
+      "value": "tf-acc"
+    }
+  },
+  {
+    "resource": "email",
+    "config": {
+      "email": "dev@example.com"
+    },
+    "update": {
+      "key": "active",
+      "value": false
+    }
+  },
+  {
+    "resource": "github",
+    "config": {
+      "repo": "acme/app"
+    },
+    "update": {
+      "key": "title_format",
+      "value": "[tf-acc] {{ error.class }}"
+    },
+    "active": false
+  },
+  {
+    "resource": "gitlab",
+    "config": {
+      "repo": "group/app"
+    },
+    "update": {
+      "key": "active",
+      "value": false
+    }
+  },
+  {
+    "resource": "google_hangouts_chat",
+    "config": {
+      "url": "https://chat.googleapis.com/v1/spaces/AAA"
+    },
+    "update": {
+      "key": "label",
+      "value": "tf-acc"
+    }
+  },
+  {
+    "resource": "ilert",
+    "config": {
+      "url": "https://example.com/hook"
+    },
+    "update": {
+      "key": "label",
+      "value": "tf-acc"
+    }
+  },
+  {
+    "resource": "instatus",
+    "config": {
+      "url": "https://example.com/hook"
+    },
+    "update": {
+      "key": "label",
+      "value": "tf-acc"
+    }
+  },
+  {
+    "resource": "intercom",
+    "config": {
+      "context_field": "user_id"
+    },
+    "update": {
+      "key": "active",
+      "value": false
+    }
+  },
+  {
+    "resource": "jira",
+    "config": {
+      "username": "u",
+      "password": "p",
+      "server_url": "https://jira.example.com",
+      "project_key": "DEMO"
+    },
+    "update": {
+      "key": "active",
+      "value": false
+    }
+  },
+  {
+    "resource": "jira_cloud",
+    "config": {
+      "project_key": "DEMO"
+    },
+    "update": {
+      "key": "active",
+      "value": false
+    }
+  },
+  {
+    "resource": "linear",
+    "config": {
+      "team_id": "t1"
+    },
+    "update": {
+      "key": "label",
+      "value": "tf-acc"
+    }
+  },
+  {
+    "resource": "mattermost",
+    "config": {
+      "url": "https://example.com/hook"
+    },
+    "update": {
+      "key": "label",
+      "value": "tf-acc"
+    }
+  },
+  {
+    "resource": "microsoft_teams_v2",
+    "config": {
+      "url": "https://example.com/hook"
+    },
+    "update": {
+      "key": "label",
+      "value": "tf-acc"
+    }
+  },
+  {
+    "resource": "ops_genie_v2",
+    "config": {
+      "api_key": "abc-123"
+    },
+    "update": {
+      "key": "label",
+      "value": "tf-acc"
+    }
+  },
+  {
+    "resource": "pager_duty_v2",
+    "config": {
+      "integration_key": "x"
+    },
+    "update": {
+      "key": "label",
+      "value": "tf-acc"
+    }
+  },
+  {
+    "resource": "pager_tree",
+    "config": {
+      "url": "https://example.com/hook"
+    },
+    "update": {
+      "key": "active",
+      "value": false
+    }
+  },
+  {
+    "resource": "redmine",
+    "config": {
+      "server_url": "https://redmine.example.com/projects/demo",
+      "api_key": "x"
+    },
+    "update": {
+      "key": "active",
+      "value": false
+    }
+  },
+  {
+    "resource": "rootly",
+    "config": {
+      "webhook_authorization_token": "x"
+    },
+    "update": {
+      "key": "label",
+      "value": "tf-acc"
+    }
+  },
+  {
+    "resource": "shortcut_v2",
+    "config": {
+      "organization_name": "acme",
+      "api_key": "x",
+      "team": "1",
+      "initial_state": "1",
+      "resolve_transition": "2",
+      "reopen_transition": "3"
+    },
+    "update": {
+      "key": "active",
+      "value": false
+    }
+  },
+  {
+    "resource": "slack",
+    "config": {},
+    "update": {
+      "key": "label",
+      "value": "tf-acc"
+    }
+  },
+  {
+    "resource": "sprintly",
+    "config": {
+      "account_email": "a@example.com",
+      "api_key": "x",
+      "product_id": "1"
+    },
+    "update": {
+      "key": "active",
+      "value": false
+    }
+  },
+  {
+    "resource": "trello",
+    "config": {
+      "board_id": "b1",
+      "list_id": "l1"
+    },
+    "update": {
+      "key": "active",
+      "value": false
+    }
+  },
+  {
+    "resource": "victor_ops",
+    "config": {
+      "api_key": "x"
+    },
+    "update": {
+      "key": "label",
+      "value": "tf-acc"
+    }
+  },
+  {
+    "resource": "web_hook",
+    "config": {
+      "url": "https://93.184.216.34/hook"
+    },
+    "update": {
+      "key": "label",
+      "value": "tf-acc"
+    }
+  },
+  {
+    "resource": "zulip",
+    "config": {
+      "bot_email": "bot@example.com",
+      "api_key": "x",
+      "zulip_domain": "example",
+      "channel": "general",
+      "topic": "alerts"
+    },
+    "update": {
+      "key": "active",
+      "value": false
+    }
+  }
+]
