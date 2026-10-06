@@ -489,8 +489,9 @@ Known API gaps the phase specs must handle:
   start inactive until someone connects them in the web UI.
 - **Alarms:** an invalid `trigger_config` on update answers 200 and keeps the
   old trigger (Opticon), until Opticon's `observer-26-field-threshold` branch
-  lands. `state` lags its history, so it's Computed and never compared.
-  `lookback_lag` is always sent.
+  lands. `state` lags its history; phase 4a omits it as live data.
+  `lookback_lag` is Required, so it's sent on create and on any update that
+  changes it (phase 4a spec).
 - **Environments:** notices create them automatically, so a create often hits an
   existing name (422). Phase 5 documents adopting with import.
 

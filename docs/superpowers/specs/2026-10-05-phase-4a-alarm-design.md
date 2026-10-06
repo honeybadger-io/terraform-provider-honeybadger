@@ -33,9 +33,16 @@ local stack, Opticon included.
 
 A property whose schema is an object (inline, or a `$ref` to one, or a
 nullable `anyOf` of one) becomes a `SingleNestedAttribute`. Its attributes
-come from the object's own properties by the same rules as top-level ones:
-Required, Optional, Computed, defaults, enums, patterns, bounds and
-descriptions. Nesting recurses (`trigger_config.config`).
+come from the object's own properties by the same rules as top-level ones
+for Required, defaults, enums, patterns, bounds and descriptions. Nesting
+recurses (`trigger_config.config`).
+
+One rule differs: an optional child without a declared default is plain
+Optional. It's never Computed, `UseStateForUnknown` or server-filled, and
+`server_filled` can't name it. Because the object is replaced whole, a child
+kept from state would be resent after the user removed it: switching
+`trigger_config.type` back from `alert_field_threshold` would resend
+`field`. A removed child is simply absent from the object sent.
 
 Generated per nested object:
 
@@ -50,10 +57,17 @@ Generated per nested object:
 Writes treat a nested object as one value, because the API replaces it
 whole:
 
-- **create:** the whole object when known;
+- **create:** the whole object;
 - **update:** the whole object when the planned object differs from state,
   and nothing when it doesn't. Changing one key inside sends every key;
 - **read:** a null object reads as null; otherwise every key is read back.
+
+`toAPI` requires the object and every value inside it to be known. A
+`types.Object` can be known while a child is unknown, and reading an unknown
+number gives 0, so an unchecked conversion could send a threshold of 0.
+With the rule above, no child is Computed, so at apply time every child is
+known. If one isn't, `toAPI` returns an error diagnostic naming the
+attribute instead of sending a zero value.
 
 A nested object's api-go field may be a value struct, a pointer, or
 `nullable.Nullable[Struct]`. Value on create needs a Required attribute, as
@@ -74,6 +88,10 @@ Go shapes, extending the 2b shape table:
 | --- | --- | --- |
 | `[]T` | create, Required only | list or set of `T` |
 | `*[]T` | create: pointer when known; update: pointer when changed | list or set, null when nil |
+
+As for scalar pointers in 2b, a `*[]T` update field can't send null, so it's
+a generation error for an attribute the user can remove, unless the
+attribute is server-filled (removal keeps the stored value).
 | `nullable.Nullable[[]T]` | create: set when known; update: set when changed, null when removed | list or set, null when unset or null |
 | `[]E`, `*[]E`, `Nullable[[]E]` with `E ~string` (enum items) | as above, converted element by element | as above |
 
@@ -138,6 +156,12 @@ The resulting schema:
 | `stream_ids` | Optional + Computed set, at least one element | server-filled |
 | `id`, `created_at` | Computed | read model |
 
+`created_at` needs honeybadger to list it as required on the `Alarm` read
+schema. Today it's optional there, so api-go generates `*time.Time`, which
+the generator doesn't map. honeybadger has the request (section 6). The
+provider doesn't add a pointer-time shape for a field that's always
+present.
+
 ### 4.1 `stream_ids`
 
 An alarm always has an explicit list of streams. Leaving `stream_ids` out of
@@ -160,9 +184,15 @@ apply, with `stream_ids` left out, can today get a 422 (no streams yet) or
 silently store only `default`. honeybadger is changing the alarm create to
 answer 429 with `Retry-After` and its own code until both streams exist,
 storing nothing. api-go already retries a POST on 429 and the provider
-already treats 429 as nothing stored, so the provider needs no change. If
-provisioning outlasts the client's retry budget (about a minute), the apply
-fails with that error and succeeds on rerun.
+already treats 429 as nothing stored, so the provider needs no change.
+
+The retry budget is about three times `Retry-After`: the provider's policy
+(`MaxAttempts: 4`) waits three times, each for exactly `Retry-After`
+(honeybadger sends 2 seconds), so about 6 seconds. `MaxWait` caps one wait,
+not the total. That covers normal provisioning (about a second). Under a
+Sidekiq backlog, the apply fails with honeybadger's `streams_provisioning`
+message (shown through `addAPIError`'s default branch) and succeeds on
+rerun. The policy stays as it is.
 
 ### 4.2 Trigger rules
 
@@ -187,6 +217,14 @@ Documented in the resource docs, not worked around (umbrella 10):
   alarm. The unknown-outcome error's `find_hint` sends the user to the
   project's alarms.
 - **A retried delete can fail** if Opticon already deleted its observer.
+- **An alarm stored with no trigger** (`trigger_config` is nullable on read)
+  reads as null into a Required attribute, so its next plan adds one. That's
+  the intended way it surfaces. honeybadger is asked whether v3 alarms can
+  have no trigger at all (section 6); if not, the read schema becomes
+  non-null and the case disappears.
+- **New defaulted trigger keys after an upgrade** (Opticon's hysteresis
+  keys, for example) plan one harmless update on existing alarms the first
+  time, as the default fills in.
 - **Opticon unavailable answers 503.** On create that's an unknown outcome
   (umbrella 6.4); on read, update and delete it's an error.
 
@@ -205,10 +243,19 @@ case in section 3:
 - a list of enum strings;
 - a resource-level description.
 
-Golden output is compiled, as in 2a and 2b. Error cases, each naming the
-resource and field: an array of objects, a nested object whose api-go field
-has an unsupported shape, and a value-shaped nested field on create whose
-attribute isn't Required.
+Golden output is compiled, as in 2a and 2b, and the fixture includes the
+read shapes explicitly (`Nullable[Struct]`, `Nullable[[]string]`). Error
+cases, each naming the resource and field: an array of objects, a nested
+object whose api-go field has an unsupported shape, a value-shaped nested
+field on create whose attribute isn't Required, a `*[]T` update field on a
+removable attribute that isn't server-filled, and `server_filled` naming a
+nested child.
+
+Compiling doesn't prove runtime behaviour, so the rendered fixture also runs
+in a `resource.UnitTest` against a fake: a nested default fills in at plan
+time, item validators and the size validator reject bad values, a list and a
+set round-trip without a diff, and removing an optional nested child leaves
+it out of the next body.
 
 ### 5.2 Unit tests
 
@@ -222,23 +269,34 @@ attribute isn't Required.
   - removing `description` sends `"description": null`;
   - removing `stream_ids` from config plans no change and sends nothing.
 - `stream_ids = []` fails at plan time.
-- An alarm create answered with 429 and the provisioning code
+- An alarm create answered with 429 and the `streams_provisioning` code
   (`Retry-After: 0`), then 201: the body is resent once and the apply
   succeeds.
+- A create with `stream_ids` listed sends exactly that list.
+- `toAPI` on a known `trigger_config` holding an unknown `value` returns the
+  error diagnostic and sends nothing.
+- A 422 with field `trigger_config.config.value` maps to that attribute.
+- An update answered 200 with the old trigger (the Opticon bug in 4.3)
+  fails with "inconsistent result after apply".
 
 ### 5.3 Acceptance tests (`TF_ACC`, local stack with Opticon and Sidekiq)
 
 `TestAccAlarm`, about 50 requests:
 
-1. Create a project and an alarm in one apply, `stream_ids` left out. Assert
-   the alarm's `stream_ids` has two elements (catches a partial snapshot).
+1. Create an alarm with `stream_ids` left out.
 2. Update every mutable attribute: name, query, description, both
    durations, the trigger's operator and value.
 3. Narrow `stream_ids` to one stream. A second alarm in the same config
    takes it from the first, since there's no data source:
    `stream_ids = [sort(tolist(honeybadger_alarm.a.stream_ids))[0]]`.
 4. Remove `description` (plans null) and `stream_ids` (plans no change).
-5. Import with `ImportStateVerify`, then destroy.
+5. Move the alarm to another project: the plan is a replace.
+6. Import with `ImportStateVerify`, then destroy.
+
+`TestAccAlarmWithNewProject`: a project and an alarm in one apply, with
+`stream_ids` left out. It asserts the alarm's `stream_ids` has two elements,
+which catches a partial snapshot and exercises the `streams_provisioning`
+retry.
 
 `TestAccAlarmDeletedOutsideTerraform`: the alarm is deleted through the
 client between steps; the next plan re-creates it.
@@ -249,11 +307,17 @@ running locally.
 
 ## 6. Dependencies
 
-- **honeybadger:** the 429 for alarm create while streams are provisioning
-  (section 4.1). Until it lands, step 1 of `TestAccAlarm` can fail or catch a
-  partial snapshot; that's the bug the step exists to show.
-- **Bundle:** 4a starts by copying honeybadger's latest bundle (`c9e6a7dc`
-  or later, which has `minItems: 1` and a nullable update `stream_ids`).
+- **honeybadger, done:** the `streams_provisioning` 429 (da5ec7d0aa, bundle
+  `189edafa`), `minItems: 1` and a nullable update `stream_ids`.
+- **honeybadger, requested from the spec review:**
+  - list `created_at` and `updated_at` as required on `Alarm`;
+  - a duration `pattern` on both inputs, matching what each field accepts
+    (the update pattern allows `w`, which `evaluation_period` refuses);
+  - whether a v3 alarm can have no trigger; if not, a non-null
+    `trigger_config` on read;
+  - a description for `AlarmCreateInput.name`.
+- **Bundle:** 4a starts by copying honeybadger's latest bundle, `189edafa`
+  or later with the requested fixes.
 - **api-go:** regenerated from the same bundle by mcp-v3, so
   `make check-spec` matches. The generator accepts either update shape for
   `stream_ids` (`*[]string` or `Nullable[[]string]`).
