@@ -373,6 +373,8 @@ func readExpr(a Attribute, gf GoField, recv, prefix string) (string, error) {
 		return fmt.Sprintf("%sFromMap(%s, m.%s)", prefix, x, upperCamel(a.Name)), nil
 	case "nullable_string_map":
 		return fmt.Sprintf("stringMapValue(%s)", x), nil
+	case "string_map":
+		return fmt.Sprintf("stringMapOf(%s)", x), nil
 	case "int_enum":
 		return fmt.Sprintf("types.Int64Value(int64(%s))", x), nil
 	case "nullable_int_enum":

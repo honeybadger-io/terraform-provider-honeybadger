@@ -275,3 +275,11 @@ func TestMapSprocket(t *testing.T) {
 		}
 	}
 }
+
+// A plain string map is read (a non-null read model); writes stay nullable.
+func TestReadPlainStringMap(t *testing.T) {
+	got, err := readExpr(Attribute{Name: "headers", Kind: "map", ElemKind: "string"}, GoField{Name: "Headers", Shape: "string_map"}, "c", "x")
+	if err != nil || got != "stringMapOf(c.Headers)" {
+		t.Errorf("readExpr = %q, %v", got, err)
+	}
+}

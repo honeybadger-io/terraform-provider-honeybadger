@@ -104,3 +104,18 @@ resources:
     find_hint: "the project's environments in Honeybadger"
     replace: [name]
     use_state_for_unknown: [created_at]
+
+  site:
+    create: createSite
+    read: getSite
+    update: updateSite
+    delete: deleteSite
+    import: "<project_id>/<id>"
+    service: Sites
+    api: {model: Site, create_params: SiteCreateParams, update_params: SiteUpdateParams}
+    find_hint: "the project's uptime sites in Honeybadger"
+    omit:
+      state: live data
+      last_checked_at: live data
+    server_filled: [name]
+    use_state_for_unknown: [created_at, links]

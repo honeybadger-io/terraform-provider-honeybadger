@@ -1,0 +1,25 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+{{ if .HasExample -}}
+## Example Usage
+
+{{ tffile .ExampleFile }}
+{{- end }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Notes
+
+- **`active`:** Honeybadger turns monitoring off after 740 consecutive failed checks. The next apply turns it back on, as the config says.
+- **Plan limits:** a `frequency` more frequent than the account's plan allows, or a `timeout` on an account without custom timeouts, is refused with a 403.
+- **`request_headers`** is sensitive: plans hide every value, including ones that aren't secrets.
+- **`name`** defaults to the URL.

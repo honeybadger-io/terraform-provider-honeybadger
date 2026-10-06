@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"go/format"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -57,8 +58,12 @@ func Render(r Resource, m *Mapping) ([]byte, error) {
 		imports[m.PkgPath] = true
 		imports["github.com/hashicorp/terraform-plugin-framework/diag"] = true
 		if len(m.Nested) > 0 || len(m.Maps) > 0 {
-			imports["github.com/hashicorp/terraform-plugin-framework/path"] = true
 			imports["github.com/hashicorp/terraform-plugin-framework/attr"] = true
+		}
+		// Only converters for a request take a path: a read-only object
+		// (links) has a FromAPI alone.
+		if len(m.Maps) > 0 || slices.ContainsFunc(m.Nested, func(n NestedObject) bool { return n.GoType != "" }) {
+			imports["github.com/hashicorp/terraform-plugin-framework/path"] = true
 		}
 		if m.Period {
 			imports["github.com/honeybadger-io/terraform-provider-honeybadger/internal/provider/customtypes"] = true

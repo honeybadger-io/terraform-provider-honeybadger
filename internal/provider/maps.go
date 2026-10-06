@@ -102,6 +102,12 @@ func stringMapValue(n nullable.Nullable[map[string]string]) types.Map {
 	if err != nil {
 		return types.MapNull(types.StringType)
 	}
+	return stringMapOf(v)
+}
+
+// stringMapOf reads a map the API always returns (a non-null read model):
+// none is an empty map, never null.
+func stringMapOf(v map[string]string) types.Map {
 	elems := make(map[string]attr.Value, len(v))
 	for k, s := range v {
 		elems[k] = types.StringValue(s)

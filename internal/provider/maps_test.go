@@ -93,3 +93,12 @@ func TestStringMapHelpers(t *testing.T) {
 		t.Errorf("read {} = %v, want an empty, non-null map", got)
 	}
 }
+
+func TestStringMapOf(t *testing.T) {
+	if got := stringMapOf(map[string]string{"A": "1"}); got.IsNull() || got.Elements()["A"].(types.String).ValueString() != "1" {
+		t.Errorf("stringMapOf = %v", got)
+	}
+	if got := stringMapOf(nil); got.IsNull() || len(got.Elements()) != 0 {
+		t.Errorf("stringMapOf(nil) = %v, want an empty, non-null map", got)
+	}
+}
