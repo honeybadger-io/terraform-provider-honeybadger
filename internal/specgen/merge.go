@@ -19,6 +19,8 @@ type Attribute struct {
 	Description        string
 	Pattern            string
 	CustomType         string
+	JSONType           string   // a json_subset field's top-level JSON type
+	JSONRequired       []string // keys each element of a json_subset array must set
 	Required           bool
 	Optional           bool
 	Computed           bool
@@ -53,7 +55,7 @@ type Resource struct {
 }
 
 // customTypes are the custom types resources.yaml may name.
-var customTypes = map[string]bool{"period": true}
+var customTypes = map[string]bool{"period": true, "json_subset": true}
 
 // Merge applies spec section 5.2's merge rule and table, then the config's
 // overrides, to one resource's operations.
@@ -125,7 +127,7 @@ func mergeWith(doc *openapi3.T, name string, rc ResourceConfig, createObj *Objec
 	overrides := map[string][]string{
 		"omit": keys(rc.Omit), "sensitive": rc.Sensitive, "replace": rc.Replace,
 		"server_filled": rc.ServerFilled, "use_state_for_unknown": rc.UseStateForUnknown,
-		"custom_types": keys(rc.CustomTypes),
+		"custom_types": keys(rc.CustomTypes), "json_required_keys": keys(rc.JSONRequiredKeys),
 	}
 	for kind, fields := range overrides {
 		for _, f := range fields {
@@ -137,6 +139,11 @@ func mergeWith(doc *openapi3.T, name string, rc ResourceConfig, createObj *Objec
 	for f, ct := range rc.CustomTypes {
 		if !customTypes[ct] {
 			return fail("custom type %q for %s isn't one specgen knows", ct, f)
+		}
+	}
+	for f := range rc.JSONRequiredKeys {
+		if rc.CustomTypes[f] != "json_subset" {
+			return fail("json_required_keys names %s, which isn't a json_subset field", f)
 		}
 	}
 
@@ -233,7 +240,11 @@ func mergeWith(doc *openapi3.T, name string, rc ResourceConfig, createObj *Objec
 		if inR && rf.UniqueItems {
 			src.UniqueItems = true
 		}
-		if err := setKind(&a, src); err != nil {
+		if rc.CustomTypes[f] == "json_subset" {
+			// A JSON document: a string whatever its JSON type, never typed
+			// field by field (phase 6 spec, 3.2).
+			a.Kind, a.JSONType, a.JSONRequired = "string", src.Type, rc.JSONRequiredKeys[f]
+		} else if err := setKind(&a, src); err != nil {
 			return fail("%s: %v", f, err)
 		}
 		a.Sensitive = a.Sensitive || secret || listed

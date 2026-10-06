@@ -20,7 +20,8 @@ type Mapping struct {
 	Parents                          []string
 	CreateBody, UpdateBody, ReadBody []string
 	Wrapper                          bool           // generate the CRUD wrapper
-	Period                           bool           // the model uses customtypes
+	Period                           bool           // the model uses customtypes (period or json_subset)
+	JSON                             bool           // a json_subset field is decoded on write
 	Nested                           []NestedObject // converters for object attributes, parents first
 	Maps                             []MapObject    // converters for map-backed object attributes
 	Variant                          *VariantInfo   // the discriminator a variant resource sends and checks
@@ -91,6 +92,30 @@ func Map(api *API, r Resource, rc ResourceConfig) (*Mapping, error) {
 		if a.CustomType != "" {
 			suffix = ".StringValue"
 			m.Period = true
+		}
+
+		if a.CustomType == "json_subset" {
+			m.JSON = true
+			if writable && !parent {
+				cf, ok := create[a.Name]
+				if !ok {
+					return fail("%s has no field in %s.%s", a.Name, api.Name, rc.API.CreateParams)
+				}
+				m.CreateBody = append(m.CreateBody, fmt.Sprintf("decodeJSON(&p.%s, m.%s.StringValue, %s, diags)", cf.Name, field, at))
+				if !a.RequiresReplace && rc.API.UpdateParams != "" {
+					uf, ok := update[a.Name]
+					if !ok {
+						return fail("%s has no field in %s.%s", a.Name, api.Name, rc.API.UpdateParams)
+					}
+					m.UpdateBody = append(m.UpdateBody, fmt.Sprintf("updateJSON(&p.%s, m.%s.StringValue, state.%s.StringValue, %s, diags)", uf.Name, field, field, at))
+				}
+			}
+			rf, ok := read[a.Name]
+			if !ok {
+				return fail("%s has no field in %s.%s", a.Name, api.Name, rc.API.Model)
+			}
+			m.ReadBody = append(m.ReadBody, fmt.Sprintf("m.%s = jsonSubsetOf(c.%s)", field, rf.Name))
+			continue
 		}
 
 		if writable && !parent {

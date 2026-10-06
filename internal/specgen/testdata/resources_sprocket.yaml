@@ -12,3 +12,5 @@ resources:
       create_params: SprocketCreateParams
       update_params: SprocketUpdateParams
     find_hint: the account's sprockets
+    custom_types: {gizmos: json_subset}
+    json_required_keys: {gizmos: [id]}

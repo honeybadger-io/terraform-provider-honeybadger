@@ -654,6 +654,7 @@ components:
       - speed
       - mode
       - trim
+      - gizmos
       properties:
         id:
           type: string
@@ -686,6 +687,10 @@ components:
           description: When it was last checked; null for one never checked.
         trim:
           "$ref": "#/components/schemas/SprocketTrim"
+        gizmos:
+          type: array
+          items:
+            "$ref": "#/components/schemas/SprocketGizmo"
     SprocketInput:
       type: object
       properties:
@@ -718,6 +723,12 @@ components:
           anyOf:
           - "$ref": "#/components/schemas/SprocketTrim"
           - type: 'null'
+        gizmos:
+          type: array
+          default: []
+          description: Attachments, as JSON.
+          items:
+            "$ref": "#/components/schemas/SprocketGizmo"
     SprocketCreateInput:
       allOf:
       - "$ref": "#/components/schemas/SprocketInput"
@@ -752,3 +763,15 @@ components:
           - string
           - 'null'
           description: Paint color.
+    SprocketGizmo:
+      type: object
+      required:
+      - kind
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+        opts:
+          type: object
+          additionalProperties: true

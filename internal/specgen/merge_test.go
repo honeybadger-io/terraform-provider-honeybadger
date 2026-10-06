@@ -523,3 +523,23 @@ func TestEmptyObjectDefaultRefusals(t *testing.T) {
 		}
 	}
 }
+
+func TestMergeJSONSubset(t *testing.T) {
+	r, err := Merge(loadFixture(t), "sprocket", sprocketConfig(t))
+	if err != nil {
+		t.Fatalf("Merge: %v", err)
+	}
+	g := attrNamed(t, r, "gizmos")
+	if g.Kind != "string" || g.CustomType != "json_subset" || g.JSONType != "array" ||
+		!reflect.DeepEqual(g.JSONRequired, []string{"id"}) || !g.Optional || !g.Computed {
+		t.Errorf("gizmos = %+v; want an optional, computed json_subset string over an array requiring id", g)
+	}
+}
+
+func TestMergeRefusesRequiredKeysOffJSON(t *testing.T) {
+	rc := sprocketConfig(t)
+	rc.JSONRequiredKeys = map[string][]string{"name": {"id"}}
+	if _, err := Merge(loadFixture(t), "sprocket", rc); err == nil || !strings.Contains(err.Error(), "json_subset") {
+		t.Errorf("err = %v, want a refusal: name isn't a json_subset field", err)
+	}
+}

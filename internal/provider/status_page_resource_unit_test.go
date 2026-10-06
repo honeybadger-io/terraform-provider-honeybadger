@@ -31,7 +31,7 @@ func TestStatusPageWrites(t *testing.T) {
 						"name": "Status", "username": "u", "password": "s1",
 						"hide_branding": false, "password_protected": false, "message_enabled": false,
 						"search_engine_indexing_disabled": false,
-						"features": map[string]any{}, "sites": []any{}, "check_ins": []any{},
+						"features":                        map[string]any{}, "sites": []any{}, "check_ins": []any{},
 					}),
 					// Never returned, the password stays in state from the plan.
 					tfresource.TestCheckResourceAttr(statusPageAddr, "password", "s1"),

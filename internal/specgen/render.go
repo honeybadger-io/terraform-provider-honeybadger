@@ -2,6 +2,7 @@ package specgen
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"go/format"
 	"slices"
@@ -26,7 +27,8 @@ var kinds = map[string]struct {
 
 // customTypeCode is the Go for each custom type: its type and its value.
 var customTypeCode = map[string][2]string{
-	"period": {"customtypes.PeriodType{}", "customtypes.PeriodValue"},
+	"period":      {"customtypes.PeriodType{}", "customtypes.PeriodValue"},
+	"json_subset": {"customtypes.JSONSubsetType{}", "customtypes.JSONSubsetValue"},
 }
 
 // Render writes a resource's schema function and model struct, and, given a
@@ -62,7 +64,7 @@ func Render(r Resource, m *Mapping) ([]byte, error) {
 		}
 		// Only converters for a request take a path: a read-only object
 		// (links) has a FromAPI alone.
-		if len(m.Maps) > 0 || slices.ContainsFunc(m.Nested, func(n NestedObject) bool { return n.GoType != "" }) {
+		if m.JSON || len(m.Maps) > 0 || slices.ContainsFunc(m.Nested, func(n NestedObject) bool { return n.GoType != "" }) {
 			imports["github.com/hashicorp/terraform-plugin-framework/path"] = true
 		}
 		if m.Period {
@@ -204,6 +206,14 @@ func renderAttribute(b *bytes.Buffer, a Attribute, imports map[string]bool, pare
 		fmt.Fprintf(b, "Default: objectdefault.StaticValue(types.ObjectValueMust(%sAttrTypes(), map[string]attr.Value{\n%s})),\n", p, nulls.String())
 		imports["github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"] = true
 		imports["github.com/hashicorp/terraform-plugin-framework/attr"] = true
+	} else if a.Default != nil && a.CustomType == "json_subset" {
+		// JSON-encoded: fmt.Sprint would print {} as map[].
+		j, err := json.Marshal(a.Default)
+		if err != nil {
+			return fmt.Errorf("%s default: %w", a.Name, err)
+		}
+		fmt.Fprintf(b, "Default: stringdefault.StaticString(%q),\n", string(j))
+		imports["github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"] = true
 	} else if a.Default != nil {
 		lit, err := literal(a.Kind, a.Default)
 		if err != nil {
@@ -268,6 +278,17 @@ func renderAttribute(b *bytes.Buffer, a Attribute, imports map[string]bool, pare
 			a.Pattern, patternMessage(a)))
 		imports["github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"] = true
 		imports["regexp"] = true
+	}
+	if a.CustomType == "json_subset" {
+		req := "nil"
+		if len(a.JSONRequired) > 0 {
+			q := make([]string, len(a.JSONRequired))
+			for i, k := range a.JSONRequired {
+				q[i] = strconv.Quote(k)
+			}
+			req = "[]string{" + strings.Join(q, ", ") + "}"
+		}
+		validators = append(validators, fmt.Sprintf("customtypes.JSONValidator{Type: %q, Required: %s}", a.JSONType, req))
 	}
 	if a.Format == "uuid" && (a.Required || a.Optional) {
 		validators = append(validators, lowercaseUUID)

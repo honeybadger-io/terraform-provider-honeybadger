@@ -248,6 +248,12 @@ func (s *GadgetsService) Update(ctx context.Context, projectID, gadgetID string,
 }
 func (s *GadgetsService) Delete(ctx context.Context, projectID, gadgetID string) error { return nil }
 
+type SprocketGizmo struct {
+	Id   *string                 `json:"id,omitempty"`
+	Kind string                  `json:"kind"`
+	Opts *map[string]interface{} `json:"opts,omitempty"`
+}
+
 type SprocketSpeed int
 
 type SprocketMode string
@@ -266,6 +272,7 @@ type Sprocket struct {
 	Mode      SprocketMode                         `json:"mode"`
 	CheckedAt nullable.Nullable[time.Time]         `json:"checked_at"`
 	Trim      SprocketTrim                         `json:"trim"`
+	Gizmos    []SprocketGizmo                      `json:"gizmos"`
 }
 
 type SprocketCreateParams struct {
@@ -275,6 +282,7 @@ type SprocketCreateParams struct {
 	Speed    nullable.Nullable[SprocketSpeed]     `json:"speed,omitempty"`
 	Mode     nullable.Nullable[SprocketMode]      `json:"mode,omitempty"`
 	Trim     nullable.Nullable[SprocketTrim]      `json:"trim,omitempty"`
+	Gizmos   *[]SprocketGizmo                     `json:"gizmos,omitempty"`
 }
 
 type SprocketUpdateParams struct {
@@ -283,6 +291,7 @@ type SprocketUpdateParams struct {
 	Speed   nullable.Nullable[SprocketSpeed]     `json:"speed,omitempty"`
 	Mode    nullable.Nullable[SprocketMode]      `json:"mode,omitempty"`
 	Trim    nullable.Nullable[SprocketTrim]      `json:"trim,omitempty"`
+	Gizmos  *[]SprocketGizmo                     `json:"gizmos,omitempty"`
 }
 
 type SprocketsService struct{}

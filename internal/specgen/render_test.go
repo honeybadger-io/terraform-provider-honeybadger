@@ -189,7 +189,7 @@ func TestCRUDGoldenCompiles(t *testing.T) {
 	copyFile("testdata/widget_crud_resource_gen.go.golden", "widget_resource_gen.go")
 	copyFile("testdata/gadget_alpha_resource_gen.go.golden", "gadget_alpha_resource_gen.go")
 	copyFile("testdata/sprocket_resource_gen.go.golden", "sprocket_resource_gen.go")
-	for _, f := range []string{"convert.go", "nullable.go", "diagnostics.go", "import.go", "collections.go", "objects.go", "maps.go"} {
+	for _, f := range []string{"convert.go", "nullable.go", "diagnostics.go", "import.go", "collections.go", "objects.go", "maps.go", "json.go"} {
 		copyFile(filepath.Join("..", "provider", f), f)
 	}
 	// The registry normally holds the variant names.
@@ -405,5 +405,36 @@ func TestRenderEmptyObjectDefault(t *testing.T) {
 	want := `Default:\s+objectdefault\.StaticValue\(types\.ObjectValueMust\(sprocketTrimAttrTypes\(\), map\[string\]attr\.Value\{\s*"color":\s+types\.StringNull\(\),\s*\}\)\)`
 	if !regexp.MustCompile(want).Match(got) {
 		t.Errorf("rendered code doesn't match %s\n%s", want, got)
+	}
+}
+
+func TestRenderJSONSubset(t *testing.T) {
+	_, r := mapSprocket(t)
+	got, err := Render(r, nil)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	for _, want := range []string{
+		`"gizmos": schema\.StringAttribute\{`,
+		`CustomType:\s+customtypes\.JSONSubsetType\{\}`,
+		`Default:\s+stringdefault\.StaticString\("\[\]"\)`,
+		`customtypes\.JSONValidator\{Type: "array", Required: \[\]string\{"id"\}\}`,
+		"Gizmos\\s+customtypes\\.JSONSubsetValue\\s+`tfsdk:\"gizmos\"`",
+	} {
+		if !regexp.MustCompile(want).Match(got) {
+			t.Errorf("rendered code doesn't match %s", want)
+		}
+	}
+}
+
+// A {} default renders as JSON, not Go's map[] (phase 6 spec, 3.2).
+func TestRenderJSONObjectDefault(t *testing.T) {
+	var b bytes.Buffer
+	a := Attribute{Name: "o", Kind: "string", CustomType: "json_subset", JSONType: "object", Optional: true, Computed: true, Default: map[string]any{}}
+	if err := renderAttribute(&b, a, map[string]bool{}, "x"); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(b.String(), `stringdefault.StaticString("{}")`) {
+		t.Errorf("rendered = %s", b.String())
 	}
 }
