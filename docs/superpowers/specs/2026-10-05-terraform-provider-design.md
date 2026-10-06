@@ -476,7 +476,7 @@ leaves behind (section 8.1).
 | 4. Contract-dependent | `honeybadger_alarm`, `honeybadger_integration` | the integration and alarm contract in api-go's vendored spec |
 | 5. New api-go services | environments, sites, teams (including project membership), status pages | api-go services written; the sites spec branch for sites |
 | 6. Dashboards | `honeybadger_dashboard` | phase 4 conventions settled |
-| 7. Release | Production smoke test, GPG signing, registry publishing, docs; `go.mod` bumped to a tagged api-go; `make check-spec-release` passes | api-go tagged; open decisions D3 and D4 |
+| 7. Release | GPG signing, registry publishing, docs; `go.mod` bumped to a tagged api-go; `make check-spec-release` passes | api-go tagged; open decision D4 |
 
 Each phase starts with its own short spec (schemas, deviations from section 5,
 tests), then an implementation plan.
@@ -505,8 +505,10 @@ Known API gaps the phase specs must handle:
   (or, for an object with a non-default value in a defaulted attribute, only
   the documented reset; section 5.2), destroy. Plus a check that a resource deleted outside Terraform is removed
   from state.
-- They run locally against a Honeybadger stack. Production is a pre-release
-  smoke test only (phase 7).
+- They run locally against a Honeybadger stack, which is the gate: local and
+  production are close enough that there's no production smoke test (Kevin,
+  2026-10-06). Gaps the local stack can't cover are closed locally, not
+  deferred to production.
 - They use a dedicated `terraform-acc` account, never a personal dev account,
   on a plan with every feature on and high limits.
 - Tokens come from a development-only honeybadger rake task (proposed by
@@ -571,7 +573,7 @@ CI-hosted stack exists; that is out of scope here.
 | # | Decision | Recommendation |
 | --- | --- | --- |
 | D2 | Local stack setup: which services, start commands, rate-limit override | Kevin or v3-terraform-readiness supplies them; recorded in `CONTRIBUTING.md` in phase 1. |
-| D3 | Production test account for the pre-release smoke test | Choose before phase 7. |
+| D3 | Production test account for the pre-release smoke test | Dropped (2026-10-06): no production smoke test; the local acceptance suite is the gate. |
 | D4 | Registry namespace and GPG signing key | `honeybadger-io`; key owner chosen before phase 7. |
 | D5 | Data sources | Deferred from phase 2b: nothing needs one yet. When added, live data omitted from resources (counts, timestamps, `environments`) belongs there. `honeybadger_streams` is decided in the phase 4 spec. |
 | D6 | Integration shape: one resource per type, or one resource with a typed block per type | Decided in the phase 4 spec. |
