@@ -151,10 +151,15 @@ The provider generates schema data from the spec, not resource code.
   objects, for now). This is HashiCorp's `tfplugingen-framework` idea with
   this design's merge rules; that tool (a tech preview, last released in 2024)
   isn't used.
-- **Hand-written per resource:** the entry in `resources.yaml`, and the
-  resource's CRUD code: mapping the generated model to `apiv3` requests and
-  responses, plan modification for side effects (section 5.3), and the
-  unknown-outcome errors (section 6.4).
+- **Generated CRUD:** the generator also writes each resource's mapping
+  between its model and `apiv3`'s params and response types, which it reads
+  with `go/types`, and its CRUD wrapper (create, read, update, delete,
+  import, including the unknown-outcome errors of section 6.4), plus the
+  provider's resource list. Details: `2026-10-05-phase-2b-resources-design.md`.
+- **Hand-written per resource:** the entry in `resources.yaml`, and behaviour
+  the spec can't express, such as config validators for side effects
+  (section 5.3). A resource with unusual CRUD can opt out with
+  `crud: manual`.
 - **Descriptions:** a configurable attribute takes its input field's
   description, where constraints live (`cron_timezone`'s input says Rails zone
   names are required); a computed-only attribute takes its read field's. The
@@ -567,7 +572,7 @@ CI-hosted stack exists; that is out of scope here.
 | D2 | Local stack setup: which services, start commands, rate-limit override | Kevin or v3-terraform-readiness supplies them; recorded in `CONTRIBUTING.md` in phase 1. |
 | D3 | Production test account for the pre-release smoke test | Choose before phase 7. |
 | D4 | Registry namespace and GPG signing key | `honeybadger-io`; key owner chosen before phase 7. |
-| D5 | Data sources | Only where users reference objects they don't manage: `honeybadger_project` (by name) and `honeybadger_streams` (for alarms). Decided in the phase 2 and phase 4 specs. |
+| D5 | Data sources | Deferred from phase 2b: nothing needs one yet. When added, live data omitted from resources (counts, timestamps, `environments`) belongs there. `honeybadger_streams` is decided in the phase 4 spec. |
 | D6 | Integration shape: one resource per type, or one resource with a typed block per type | Decided in the phase 4 spec. |
 
 ## 10. API issues the provider runs into
