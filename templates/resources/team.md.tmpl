@@ -1,0 +1,23 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+{{ if .HasExample -}}
+## Example Usage
+
+{{ tffile .ExampleFile }}
+{{- end }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Notes
+
+- **Needs a user API Token:** creating, changing or deleting a team needs the `team:write` scope, which only a user API Token can hold. An account API Token never can, by design, so with one the API refuses team changes with a 403 naming the missing scope.
+- **`project_ids`** is the team's whole project list: projects left out lose the team's access.
