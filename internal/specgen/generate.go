@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
+	"strings"
 )
 
 // Generate writes <name>_resource_gen.go for every resource in configPath and
@@ -28,6 +30,7 @@ func Generate(specPath, configPath, outDir, apiPath string) error {
 	sort.Strings(names)
 
 	written := map[string]bool{}
+	outputs := map[string][]byte{} // written only after the rename guard passes
 	var wrappers []string
 	variants := map[string]map[string]string{}
 	var api *API
@@ -70,13 +73,36 @@ func Generate(specPath, configPath, outDir, apiPath string) error {
 				return err
 			}
 			file := filepath.Join(outDir, res.Name+"_resource_gen.go")
-			if err := os.WriteFile(file, src, 0o644); err != nil {
-				return err
-			}
+			outputs[file] = src
 			written[file] = true
 		}
 	}
 
+	// A committed generated resource can't disappear unless it's retired
+	// (phase 4b spec, 3.6). Check before writing anything, so a refused run
+	// leaves the tree unchanged.
+	existing, err := filepath.Glob(filepath.Join(outDir, "*_resource_gen.go"))
+	if err != nil {
+		return err
+	}
+	var retired []string
+	for _, file := range existing {
+		if written[file] {
+			continue
+		}
+		name := strings.TrimSuffix(filepath.Base(file), "_resource_gen.go")
+		if !slices.Contains(cfg.Retired, name) {
+			return fmt.Errorf("generation would remove resource %s (%s); if that's intended, list %s under retired in %s",
+				name, filepath.Base(file), name, configPath)
+		}
+		retired = append(retired, file)
+	}
+
+	for file, src := range outputs {
+		if err := os.WriteFile(file, src, 0o644); err != nil {
+			return err
+		}
+	}
 	// Always written, even empty, so the provider's call to it compiles.
 	registry, err := RenderRegistry(wrappers, variants)
 	if err != nil {
@@ -85,16 +111,9 @@ func Generate(specPath, configPath, outDir, apiPath string) error {
 	if err := os.WriteFile(filepath.Join(outDir, "resources_gen.go"), registry, 0o644); err != nil {
 		return err
 	}
-
-	existing, err := filepath.Glob(filepath.Join(outDir, "*_resource_gen.go"))
-	if err != nil {
-		return err
-	}
-	for _, file := range existing {
-		if !written[file] {
-			if err := os.Remove(file); err != nil {
-				return fmt.Errorf("removing stale %s: %w", file, err)
-			}
+	for _, file := range retired {
+		if err := os.Remove(file); err != nil {
+			return fmt.Errorf("removing retired %s: %w", file, err)
 		}
 	}
 	return nil

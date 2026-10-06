@@ -12,6 +12,7 @@ import (
 // Config is resources.yaml: per resource, the operations it uses and the
 // overrides for facts the spec doesn't state (spec section 5.2).
 type Config struct {
+	Retired   []string                  `yaml:"retired"`  // generated resources deliberately removed
 	Provider  string                    `yaml:"provider"` // the provider's type-name prefix, e.g. honeybadger
 	Resources map[string]ResourceConfig `yaml:"resources"`
 }
