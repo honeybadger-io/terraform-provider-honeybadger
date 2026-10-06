@@ -7,9 +7,11 @@ import (
 	"sort"
 )
 
-// Generate writes <name>_resource_gen.go for every resource in configPath, and
-// removes generated files for resources no longer configured.
-func Generate(specPath, configPath, outDir string) error {
+// Generate writes <name>_resource_gen.go for every resource in configPath and
+// resources_gen.go listing the generated wrappers, and removes generated files
+// for resources no longer configured. apiPath is the client package the
+// mapping is checked against (apiv3).
+func Generate(specPath, configPath, outDir, apiPath string) error {
 	doc, err := Load(specPath)
 	if err != nil {
 		return err
@@ -26,15 +28,35 @@ func Generate(specPath, configPath, outDir string) error {
 	sort.Strings(names)
 
 	written := map[string]bool{}
+	var wrappers []string
+	var api *API
 	for _, name := range names {
-		res, err := Merge(doc, name, cfg.Resources[name])
+		rc := cfg.Resources[name]
+		res, err := Merge(doc, name, rc)
 		if err != nil {
 			return err
 		}
 		for _, w := range res.Warnings {
 			fmt.Fprintln(os.Stderr, "specgen: warning:", w)
 		}
-		src, err := Render(res)
+		var m *Mapping
+		if rc.API.Model != "" {
+			if api == nil {
+				if apiPath == "" {
+					return fmt.Errorf("resource %s: needs the client package's import path (-api)", name)
+				}
+				if api, err = LoadAPI(outDir, apiPath); err != nil {
+					return err
+				}
+			}
+			if m, err = Map(api, res, rc); err != nil {
+				return err
+			}
+			if m.Wrapper {
+				wrappers = append(wrappers, name)
+			}
+		}
+		src, err := Render(res, m)
 		if err != nil {
 			return err
 		}
@@ -43,6 +65,15 @@ func Generate(specPath, configPath, outDir string) error {
 			return err
 		}
 		written[file] = true
+	}
+
+	// Always written, even empty, so the provider's call to it compiles.
+	registry, err := RenderRegistry(wrappers)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(outDir, "resources_gen.go"), registry, 0o644); err != nil {
+		return err
 	}
 
 	existing, err := filepath.Glob(filepath.Join(outDir, "*_resource_gen.go"))

@@ -22,7 +22,7 @@ func TestRenderMatchesGolden(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Merge: %v", err)
 	}
-	got, err := Render(res)
+	got, err := Render(res, nil)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
@@ -59,7 +59,7 @@ func TestGenerateRemovesStaleFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := Generate("testdata/openapi.yaml", "testdata/resources.yaml", dir); err != nil {
+	if err := Generate("testdata/openapi.yaml", "testdata/resources.yaml", dir, ""); err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
 	if _, err := os.Stat(stale); !os.IsNotExist(err) {
@@ -95,7 +95,7 @@ func TestPatternMessages(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			src, err := Render(Resource{Name: "widget", Attributes: []Attribute{tt.attr}})
+			src, err := Render(Resource{Name: "widget", Attributes: []Attribute{tt.attr}}, nil)
 			if err != nil {
 				t.Fatalf("Render: %v", err)
 			}
@@ -103,5 +103,73 @@ func TestPatternMessages(t *testing.T) {
 				t.Errorf("rendered code doesn't contain %s:\n%s", tt.want, src)
 			}
 		})
+	}
+}
+
+func TestRenderCRUDMatchesGolden(t *testing.T) {
+	m, err := mapWidget(t, nil)
+	if err != nil {
+		t.Fatalf("Map: %v", err)
+	}
+	rc := crudConfig(t)
+	res, err := Merge(loadFixture(t), "widget", rc)
+	if err != nil {
+		t.Fatalf("Merge: %v", err)
+	}
+	got, err := Render(res, m)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	golden := "testdata/widget_crud_resource_gen.go.golden"
+	if *update {
+		if err := os.WriteFile(golden, got, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want, err := os.ReadFile(golden)
+	if err != nil {
+		t.Fatalf("reading golden (run with -update): %v", err)
+	}
+	if string(got) != string(want) {
+		t.Errorf("rendered CRUD differs from %s; rerun with -update and review", golden)
+	}
+}
+
+func TestRenderRegistry(t *testing.T) {
+	got, err := RenderRegistry([]string{"project", "check_in"})
+	if err != nil {
+		t.Fatalf("RenderRegistry: %v", err)
+	}
+	for _, want := range []string{"func generatedResources() []func() resource.Resource", "newProjectResource,", "newCheckInResource,"} {
+		if !strings.Contains(string(got), want) {
+			t.Errorf("registry lacks %q:\n%s", want, got)
+		}
+	}
+}
+
+// The generated wrapper must be real Go: compile it with the provider's real
+// helpers (spec 2b, section 5.1).
+func TestCRUDGoldenCompiles(t *testing.T) {
+	dir := filepath.Join("testdata", "crudcheck")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+	copyFile := func(src, dst string) {
+		b, err := os.ReadFile(src)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, dst), b, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	copyFile("testdata/widget_crud_resource_gen.go.golden", "widget_resource_gen.go")
+	for _, f := range []string{"convert.go", "nullable.go", "diagnostics.go", "import.go"} {
+		copyFile(filepath.Join("..", "provider", f), f)
+	}
+	out, err := exec.Command("go", "vet", "./testdata/crudcheck").CombinedOutput()
+	if err != nil {
+		t.Errorf("go vet ./testdata/crudcheck: %v\n%s", err, out)
 	}
 }

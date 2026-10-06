@@ -144,7 +144,7 @@ func logRequestID(ctx context.Context, status int, requestID string) {
 }
 
 func (p *honeybadgerProvider) Resources(_ context.Context) []func() resource.Resource {
-	return nil
+	return generatedResources()
 }
 
 func (p *honeybadgerProvider) DataSources(_ context.Context) []func() datasource.DataSource {
