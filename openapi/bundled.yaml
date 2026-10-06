@@ -6252,7 +6252,10 @@ components:
           example: Slack
         active:
           type: boolean
-          description: Whether the channel is active
+          description: 'Whether to use the integration. An OAuth integration that
+            isn''t `connected` sends nothing until it is.
+
+            '
         events:
           uniqueItems: true
           type: array
@@ -6334,19 +6337,20 @@ components:
           type: boolean
           description: 'Present only on OAuth integrations (Slack, GitHub, GitLab,
             Bitbucket, Jira Cloud, Asana, Intercom and the like): whether the integration
-            has its credentials. One created through the API starts inactive and unconnected,
-            and is connected in the web UI at `links.web`. GitHub works through the
-            GitHub App instead: the app is installed on the repo from `links.web`,
-            and activating the integration attaches the installation, so it reports
-            `connected: false` until then. The exception is a creator who signed in
-            to Honeybadger with GitHub, whose token is attached on create.
+            is authenticated, which someone does in the web UI at `links.web`. Separate
+            from `active`: an active integration that isn''t connected sends nothing
+            until it is, and connecting doesn''t change `active`. GitHub authenticates
+            through the GitHub App: the app is installed on the repo, and the installation
+            is attached when someone with access to it saves the integration. A creator
+            who signed in to Honeybadger with GitHub is connected on create.
 
             '
         config:
           type: object
           additionalProperties: true
           description: 'The type''s settings, one IntegrationConfig<Type> per `type`.
-            Unset settings are null. Secrets are never returned.
+            Unset settings are null. Write-only secrets are never returned; everything
+            else, webhook URLs included, comes back as stored.
 
             '
         error:
@@ -7224,6 +7228,7 @@ components:
           items:
             type: string
             format: uuid
+          default: []
         check_in_ids:
           type:
           - array
@@ -7237,6 +7242,7 @@ components:
             '
           items:
             type: string
+          default: []
         alarm_alert_ids:
           type:
           - array
@@ -7245,6 +7251,7 @@ components:
             Send null or [] to clear. A set; order is ignored and duplicates are dropped.
           items:
             type: string
+          default: []
         alarm_ok_ids:
           type:
           - array
@@ -7253,6 +7260,7 @@ components:
             Send null or [] to clear. A set; order is ignored and duplicates are dropped.
           items:
             type: string
+          default: []
         excluded_environments:
           type:
           - array
@@ -7267,6 +7275,7 @@ components:
             '
           items:
             type: string
+          default: []
         included_environments:
           type:
           - array
@@ -7281,6 +7290,7 @@ components:
             '
           items:
             type: string
+          default: []
         filters:
           type:
           - array
@@ -7293,6 +7303,7 @@ components:
             '
           items:
             "$ref": "#/components/schemas/IntegrationFilter"
+          default: []
         type:
           type: string
           enum:
@@ -7461,8 +7472,8 @@ components:
           - type
         then:
           title: GitHub
-          description: Create a GitHub integration. It starts inactive, is connected
-            in the web UI at `links.web`, and can be activated once connected.
+          description: Create a GitHub integration. It sends nothing until someone
+            connects it in the web UI at `links.web`.
           required:
           - config
           properties:
@@ -7480,9 +7491,7 @@ components:
               description: 'Left out or null: `occurred`, less any the plan doesn''t
                 include.'
             active:
-              const: false
-              description: False or left out on create. The integration can be activated
-                once it's connected.
+              default: true
       - if:
           properties:
             type:
@@ -7491,8 +7500,8 @@ components:
           - type
         then:
           title: GitLab
-          description: Create a GitLab integration. It starts inactive, is connected
-            in the web UI at `links.web`, and can be activated once connected.
+          description: Create a GitLab integration. It sends nothing until someone
+            connects it in the web UI at `links.web`.
           required:
           - config
           properties:
@@ -7510,9 +7519,7 @@ components:
               description: 'Left out or null: `occurred`, less any the plan doesn''t
                 include.'
             active:
-              const: false
-              description: False or left out on create. The integration can be activated
-                once it's connected.
+              default: true
       - if:
           properties:
             type:
@@ -7521,8 +7528,8 @@ components:
           - type
         then:
           title: Bitbucket
-          description: Create a Bitbucket integration. It starts inactive, is connected
-            in the web UI at `links.web`, and can be activated once connected.
+          description: Create a Bitbucket integration. It sends nothing until someone
+            connects it in the web UI at `links.web`.
           required:
           - config
           properties:
@@ -7540,9 +7547,7 @@ components:
               description: 'Left out or null: `occurred`, less any the plan doesn''t
                 include.'
             active:
-              const: false
-              description: False or left out on create. The integration can be activated
-                once it's connected.
+              default: true
       - if:
           properties:
             type:
@@ -7551,8 +7556,8 @@ components:
           - type
         then:
           title: Asana
-          description: Create an Asana integration. It starts inactive, is connected
-            in the web UI at `links.web`, and can be activated once connected.
+          description: Create an Asana integration. It sends nothing until someone
+            connects it in the web UI at `links.web`.
           required:
           - config
           properties:
@@ -7570,9 +7575,7 @@ components:
               description: 'Left out or null: `occurred`, less any the plan doesn''t
                 include.'
             active:
-              const: false
-              description: False or left out on create. The integration can be activated
-                once it's connected.
+              default: true
       - if:
           properties:
             type:
@@ -7611,8 +7614,8 @@ components:
           - type
         then:
           title: Jira Cloud
-          description: Create a Jira Cloud integration. It starts inactive, is connected
-            in the web UI at `links.web`, and can be activated once connected.
+          description: Create a Jira Cloud integration. It sends nothing until someone
+            connects it in the web UI at `links.web`.
           required:
           - config
           properties:
@@ -7630,9 +7633,7 @@ components:
               description: 'Left out or null: `occurred`, less any the plan doesn''t
                 include.'
             active:
-              const: false
-              description: False or left out on create. The integration can be activated
-                once it's connected.
+              default: true
       - if:
           properties:
             type:
@@ -7773,8 +7774,8 @@ components:
           - type
         then:
           title: Trello
-          description: Create a Trello integration. It starts inactive, is connected
-            in the web UI at `links.web`, and can be activated once connected.
+          description: Create a Trello integration. It sends nothing until someone
+            connects it in the web UI at `links.web`.
           required:
           - config
           properties:
@@ -7793,9 +7794,7 @@ components:
               description: 'Left out or null: `occurred`, less any the plan doesn''t
                 include.'
             active:
-              const: false
-              description: False or left out on create. The integration can be activated
-                once it's connected.
+              default: true
       - if:
           properties:
             type:
@@ -7804,8 +7803,8 @@ components:
           - type
         then:
           title: Linear
-          description: Create a Linear integration. It starts inactive, is connected
-            in the web UI at `links.web`, and can be activated once connected.
+          description: Create a Linear integration. It sends nothing until someone
+            connects it in the web UI at `links.web`.
           required:
           - config
           properties:
@@ -7823,9 +7822,7 @@ components:
               description: 'Left out or null: `occurred`, less any the plan doesn''t
                 include.'
             active:
-              const: false
-              description: False or left out on create. The integration can be activated
-                once it's connected.
+              default: true
       - if:
           properties:
             type:
@@ -7834,8 +7831,8 @@ components:
           - type
         then:
           title: Slack
-          description: Create a Slack integration. It starts inactive, is connected
-            in the web UI at `links.web`, and can be activated once connected.
+          description: Create a Slack integration. It sends nothing until someone
+            connects it in the web UI at `links.web`.
           properties:
             config:
               "$ref": "#/components/schemas/IntegrationConfigSlack"
@@ -7862,9 +7859,7 @@ components:
                 `cert_will_expire`, `check_in_missing`, and `check_in_reporting`,
                 less any the plan doesn''t include.'
             active:
-              const: false
-              description: False or left out on create. The integration can be activated
-                once it's connected.
+              default: true
       - if:
           properties:
             type:
@@ -8067,8 +8062,8 @@ components:
           - type
         then:
           title: Intercom
-          description: Create an Intercom integration. It starts inactive, is connected
-            in the web UI at `links.web`, and can be activated once connected.
+          description: Create an Intercom integration. It sends nothing until someone
+            connects it in the web UI at `links.web`.
           required:
           - config
           properties:
@@ -8077,13 +8072,10 @@ components:
               required:
               - context_field
             events:
-              items:
-                enum: []
-              description: 'Left out or null: none, less any the plan doesn''t include.'
+              maxItems: 0
+              description: This type takes no events.
             active:
-              const: false
-              description: False or left out on create. The integration can be activated
-                once it's connected.
+              default: true
       - if:
           properties:
             type:
@@ -8266,8 +8258,8 @@ components:
           - type
         then:
           title: ClickUp
-          description: Create a ClickUp integration. It starts inactive, is connected
-            in the web UI at `links.web`, and can be activated once connected.
+          description: Create a ClickUp integration. It sends nothing until someone
+            connects it in the web UI at `links.web`.
           required:
           - config
           properties:
@@ -8290,9 +8282,7 @@ components:
               description: 'Left out or null: `occurred`, less any the plan doesn''t
                 include.'
             active:
-              const: false
-              description: False or left out on create. The integration can be activated
-                once it's connected.
+              default: true
       - if:
           properties:
             type:
@@ -8301,8 +8291,8 @@ components:
           - type
         then:
           title: ClickUp Chat
-          description: Create a ClickUp Chat integration. It starts inactive, is connected
-            in the web UI at `links.web`, and can be activated once connected.
+          description: Create a ClickUp Chat integration. It sends nothing until someone
+            connects it in the web UI at `links.web`.
           required:
           - config
           properties:
@@ -8334,9 +8324,7 @@ components:
                 `cert_will_expire`, `check_in_missing`, and `check_in_reporting`,
                 less any the plan doesn''t include.'
             active:
-              const: false
-              description: False or left out on create. The integration can be activated
-                once it's connected.
+              default: true
       - if:
           properties:
             type:
@@ -9442,8 +9430,12 @@ components:
             email:
               type: string
               description: Email of the assignee
-        deploy:
-          description: Deploy associated with this fault
+        last_notice_deploy:
+          description: 'The deploy that was live when the error last occurred: the
+            newest deploy in the fault''s environment before `last_notice_at`. A guess
+            from timing, not the deploy that introduced or resolved the error.
+
+            '
           oneOf:
           - "$ref": "#/components/schemas/Deploy"
           - type: 'null'
@@ -10816,8 +10808,6 @@ components:
             - site_id
             - display_name
             - description
-            - state
-            - last_checked_at
             properties:
               site_id:
                 type: string
@@ -10833,21 +10823,6 @@ components:
                 - string
                 - 'null'
                 description: Description shown on the status page
-              state:
-                type: string
-                readOnly: true
-                enum:
-                - pending
-                - up
-                - down
-                description: Current state of the site
-              last_checked_at:
-                type:
-                - string
-                - 'null'
-                readOnly: true
-                format: date-time
-                description: When the site was last checked
         check_ins:
           type: array
           description: Check-ins displayed on the status page. An ordered list; the
@@ -10858,8 +10833,6 @@ components:
             - check_in_id
             - display_name
             - description
-            - state
-            - reported_at
             properties:
               check_in_id:
                 type: string
@@ -10874,22 +10847,6 @@ components:
                 - string
                 - 'null'
                 description: Description shown on the status page
-              state:
-                type: string
-                readOnly: true
-                enum:
-                - pending
-                - reporting
-                - missing
-                - paused
-                description: Current state of the check-in
-              reported_at:
-                type:
-                - string
-                - 'null'
-                readOnly: true
-                format: date-time
-                description: When the check-in last reported
         links:
           "$ref": "#/components/schemas/WebLinks"
     StatusPageIncident:
@@ -11707,6 +11664,7 @@ components:
           - EU1
           - AP1
           -
+          default: US1
           title: Endpoint
         label:
           type:
@@ -11818,6 +11776,7 @@ components:
           type:
           - string
           - 'null'
+          default: https://gitlab.com
           title: Server URL
           description: You only need to change this if you are using a self-hosted
             installation of GitLab.
@@ -11906,6 +11865,11 @@ components:
           type:
           - string
           - 'null'
+          default: |-
+            ## Backtrace
+            [backtrace]
+
+            View full backtrace and more info at [url]
           title: Description format
           description: Customize the Pivotal Tracker description. Please see [our
             documentation](https://docs.honeybadger.io/guides/integrations/#custom-formatters)
@@ -11957,6 +11921,7 @@ components:
           type:
           - string
           - 'null'
+          default: https://api.hipchat.com
           title: Server URL
           example: https://api.hipchat.com
         auth_token:
@@ -11986,6 +11951,7 @@ components:
           - gray
           - random
           -
+          default: yellow
           title: Color
         alert:
           type:
@@ -12030,6 +11996,7 @@ components:
           type:
           - string
           - 'null'
+          default: '5'
           title: Resolve transition
           description: The ID of the transition to be performed when resolved.
           example: "<Resolve transition>"
@@ -12037,6 +12004,7 @@ components:
           type:
           - string
           - 'null'
+          default: '3'
           title: Reopen transition
           description: The ID of the transition to be performed when unresolved.
           example: "<Reopen transition>"
@@ -12060,6 +12028,7 @@ components:
           type:
           - string
           - 'null'
+          default: Bug
           title: Issue type
           example: Bug
         summary_format:
@@ -12095,6 +12064,7 @@ components:
           type:
           - string
           - 'null'
+          default: '5'
           title: Resolve transition
           description: The ID of the transition to be performed when resolved.
           example: "<Resolve transition>"
@@ -12102,6 +12072,7 @@ components:
           type:
           - string
           - 'null'
+          default: '3'
           title: Reopen transition
           description: The ID of the transition to be performed when unresolved.
           example: "<Reopen transition>"
@@ -12126,6 +12097,7 @@ components:
           type:
           - string
           - 'null'
+          default: Bug
           title: Issue type
           example: Bug
         summary_format:
@@ -12170,6 +12142,7 @@ components:
           - EU
           - Sandbox
           -
+          default: US
           title: Endpoint
         label:
           type:
@@ -12203,6 +12176,7 @@ components:
           - EU
           - Sandbox
           -
+          default: US
           title: Endpoint
         label:
           type:
@@ -12237,6 +12211,7 @@ components:
           type:
           - string
           - 'null'
+          default: '3'
           title: Resolve transition
           description: The ID of the status for resolved issues.
           example: "<Resolve transition>"
@@ -12244,6 +12219,7 @@ components:
           type:
           - string
           - 'null'
+          default: '4'
           title: Reopen transition
           description: The ID of the status for unresolved issues.
           example: "<Reopen transition>"
@@ -12297,6 +12273,7 @@ components:
           - warning
           - info
           -
+          default: error
           title: Severity
           description: The perceived severity of the events generated by this integration.
         label:
@@ -12429,12 +12406,21 @@ components:
           type:
           - string
           - 'null'
+          default: "[[project]] Occurred: [class] ([fault_id])"
           title: Title format
           example: "[[project]] Occurred: [class] ([fault_id])"
         description_format:
           type:
           - string
           - 'null'
+          default: |
+            [class]: [message]
+
+            Backtrace:
+
+            [backtrace]
+
+            View full backtrace and more info at honeybadger.io: [url]
           title: Description format
           example: |
             [class]: [message]
@@ -12574,6 +12560,7 @@ components:
           - v2
           - v3
           -
+          default: v2
           title: Payload version
     IntegrationConfigEmail:
       type: object
@@ -12700,12 +12687,21 @@ components:
           type:
           - string
           - 'null'
+          default: "[[project]] Occurred: [class] ([fault_id])"
           title: Story Title
           example: "[[project]] Occurred: [class] ([fault_id])"
         description_format:
           type:
           - string
           - 'null'
+          default: |
+            [class]: [message]
+
+            Backtrace:
+
+            [backtrace]
+
+            View full backtrace and more info at honeybadger.io: [url]
           title: Story Description
           example: |
             [class]: [message]
@@ -12765,12 +12761,21 @@ components:
           type:
           - string
           - 'null'
+          default: "[[project]] Occurred: [class] ([fault_id])"
           title: Story Title
           example: "[[project]] Occurred: [class] ([fault_id])"
         description_format:
           type:
           - string
           - 'null'
+          default: |
+            [class]: [message]
+
+            Backtrace:
+
+            [backtrace]
+
+            View full backtrace and more info at honeybadger.io: [url]
           title: Story Description
           example: |
             [class]: [message]
@@ -12928,6 +12933,7 @@ components:
           type:
           - string
           - 'null'
+          default: "[[project]] Occurred: [class] ([fault_id])"
           title: Title format
           description: You can customize the ClickUp task name, or you can leave this
             blank for the default name. Please see [our documentation](https://docs.honeybadger.io/guides/integrations/#custom-formatters)
@@ -12937,6 +12943,14 @@ components:
           type:
           - string
           - 'null'
+          default: |
+            [class]: [message]
+
+            Backtrace:
+
+            [backtrace]
+
+            View full backtrace and more info at honeybadger.io: [url]
           title: Description format
           example: |
             [class]: [message]
@@ -13176,6 +13190,7 @@ components:
           type:
           - boolean
           - 'null'
+          default: true
           title: Sync status from Backlog
           description: When enabled Honeybadger will create a webhook in Backlog to
             sync issue status changes back to Honeybadger.
