@@ -79,7 +79,9 @@ slice, with matching create, update and read conversions.
 - A `map` kind renders `schema.MapAttribute{ElementType: types.StringType}`,
   Sensitive when the values are `format: password`. A declared `default: {}`
   becomes an empty map default.
-- A string-map Go shape (plain and `Nullable`), distinct from the existing
+- A string-map Go shape: `Nullable[map[string]string]` is mapped; a plain
+  `map[string]string` is classified but refused until a schema needs it
+  (only build what the bundle uses). Both are distinct from the existing
   `map[string]any` shape that backs nested objects.
 - Writes follow the phase 4b collection rules: the whole map on create and on
   any update that changes it; a map set in state and null in the plan is sent
@@ -136,7 +138,9 @@ both surface the API's 403.
 ```yaml
 site:
   service: Sites
-  omit: [state, last_checked_at]
+  omit:
+    state: live data
+    last_checked_at: live data
   server_filled: [name]
   use_state_for_unknown: [created_at, links]
 ```
@@ -150,7 +154,8 @@ omitted.
 ```yaml
 team:
   service: Teams
-  omit: [member_count]
+  omit:
+    member_count: live data
   use_state_for_unknown: [account_id, created_at, links]
 ```
 
@@ -175,7 +180,8 @@ API's 403 surfaces.
 ```yaml
 status_page:
   service: StatusPages
-  omit: [domain_verified_at]
+  omit:
+    domain_verified_at: live data
   server_filled: [incidents_enabled]
   use_state_for_unknown: [account_id, created_at, url, links]
 ```
