@@ -33,7 +33,7 @@ func siteResourceSchema() schema.Schema {
 		MarkdownDescription: "A URL Honeybadger checks for uptime from several locations on a schedule, alerting when it goes down and when it recovers.",
 		Attributes: map[string]schema.Attribute{
 			"active": schema.BoolAttribute{
-				MarkdownDescription: "Null resets it to true.",
+				MarkdownDescription: "Whether monitoring is active. After 740 consecutive failed checks the server sets it to false. Null resets it to true.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(true),

@@ -54,7 +54,7 @@ func checkInResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Null clears it; an unnamed check-in shows its ID.",
+				MarkdownDescription: "Display name. Null clears it; an unnamed check-in shows its ID.",
 				Optional:            true,
 			},
 			"project_id": schema.StringAttribute{

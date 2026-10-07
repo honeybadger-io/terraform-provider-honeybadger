@@ -8827,7 +8827,8 @@ components:
           type:
           - string
           - 'null'
-          description: Null clears it; an unnamed check-in shows its ID.
+          description: Display name. Null clears it; an unnamed check-in shows its
+            ID.
           example: Nightly billing job
         slug:
           type:
@@ -10702,7 +10703,10 @@ components:
           - boolean
           - 'null'
           default: true
-          description: Null resets it to true.
+          description: 'Whether monitoring is active. After 740 consecutive failed
+            checks the server sets it to false. Null resets it to true.
+
+            '
         timeout:
           type:
           - integer
