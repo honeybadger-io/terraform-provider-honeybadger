@@ -3,7 +3,7 @@ module github.com/honeybadger-io/terraform-provider-honeybadger
 go 1.27.1
 
 require (
-	github.com/getkin/kin-openapi v0.142.0
+	github.com/getkin/kin-openapi v0.144.0
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/terraform-plugin-framework v1.19.0
 	github.com/hashicorp/terraform-plugin-framework-validators v0.18.0
