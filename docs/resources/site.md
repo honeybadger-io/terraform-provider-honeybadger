@@ -46,7 +46,7 @@ variable "health_check_token" {
 ### Optional
 
 - `active` (Boolean) Whether monitoring is active. After 740 consecutive failed checks the server sets it to false. Null resets it to true. Defaults to `true`.
-- `frequency` (Number) Minutes between checks. Defaults to 5; plans set the most frequent allowed, and a value under it is 403 `feature_unavailable`. Null resets it to 5. Valid values: `1`, `2`, `5`, `15`. Defaults to `5`.
+- `frequency` (Number) Minutes between checks. Plans set the most frequent allowed, and a value under it is 403 `feature_unavailable`. Null resets it to 5. Valid values: `1`, `2`, `5`, `15`. Defaults to `5`.
 - `locations` (Set of String) A set of location names to check from. Null or empty means every location. An unknown name is 422. A set; order is ignored and duplicates are dropped. Valid values: `Virginia`, `Frankfurt`, `Singapore`, `London`, `Oregon`. Defaults to empty.
 - `match` (String) What `match_type` compares against (see SiteMatchType). Required unless `match_type` is `success`, and must be left out with `success`. Null clears it.
 - `match_type` (String) How a check decides the site is up (see SiteMatchType). Null resets it to success. Valid values: `success`, `exact`, `include`, `exclude`, `jmespath`. Defaults to `success`.

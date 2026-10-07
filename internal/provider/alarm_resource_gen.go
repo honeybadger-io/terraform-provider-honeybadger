@@ -25,7 +25,7 @@ import (
 
 func alarmResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "An Insights alarm. Read from Honeybadger's copy of the alarm, written after each change; an edit made directly in the alarm service doesn't show here. Required scopes: `alarms:read`, `alarms:write`.",
+		MarkdownDescription: "An Insights alarm: a BadgerQL query run on a schedule over a project's streams, which notifies its integrations when the result crosses the trigger. Required scopes: `alarms:read`, `alarms:write`.",
 		Attributes: map[string]schema.Attribute{
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "When the alarm was created",
@@ -42,7 +42,7 @@ func alarmResourceSchema() schema.Schema {
 				Validators:          []validator.String{stringvalidator.RegexMatches(regexp.MustCompile("^\\d+[smhd]$"), "must match ^\\d+[smhd]$")},
 			},
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Alarm identifier (opticon observer root ID)",
+				MarkdownDescription: "The alarm's ID",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},

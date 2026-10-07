@@ -96,7 +96,7 @@ info:
 
     The other three — outages, uptime checks and check-in events — are paged on a
     timestamp window instead, with `created_after` and `created_before`, and
-    return no cursor fields. Uptime checks have no primary key to tie-break on;
+    return no cursor fields. Uptime checks can't be paged by cursor, and
     outages keep the v2 API's window parameters so a client can move between
     versions unchanged. Treat the cursors as an optimisation, not the contract.
 
@@ -279,15 +279,14 @@ paths:
                         - faults:write
                       account_id:
                         type: string
-                        description: public_id of the account the credential is bound
-                          to.
+                        description: ID of the account the credential is bound to.
                       project_ids:
                         type: array
                         items:
                           type: string
-                        description: 'public_ids of the projects the credential can
-                          reach. Empty for a credential bound to an account with no
-                          visible projects; every project in the account when unrestricted.
+                        description: 'IDs of the projects the credential can reach.
+                          Empty for a credential bound to an account with no visible
+                          projects; every project in the account when unrestricted.
 
                           '
                       expires_at:
@@ -2900,7 +2899,7 @@ paths:
       description: |
         Returns a check-in's events, newest first. A report payload over 50 KB is stored truncated: it's replaced by `_truncated: true`, a `_message` and the `_original_size` in bytes.
 
-        Paging is one-directional: page one is always the newest events, so walk backwards with `links.older` and there is nothing to walk forward to. `has_newer` is therefore always false and `links.newer` always null. Events are stored in DynamoDB and paged on a raw timestamp rather than an opaque cursor, so `oldest_cursor` and `newest_cursor` are not returned.
+        Paging is one-directional: page one is always the newest events, so walk backwards with `links.older` and there is nothing to walk forward to. `has_newer` is therefore always false and `links.newer` always null. Events are paged on a timestamp rather than an opaque cursor, so `oldest_cursor` and `newest_cursor` are not returned.
       tags:
       - Check-ins
       parameters:
@@ -5900,9 +5899,8 @@ components:
           "$ref": "#/components/schemas/AccountRole"
     Alarm:
       type: object
-      description: 'An Insights alarm. Read from Honeybadger''s copy of the alarm,
-        written after each change; an edit made directly in the alarm service doesn''t
-        show here.
+      description: 'An Insights alarm: a BadgerQL query run on a schedule over a project''s
+        streams, which notifies its integrations when the result crosses the trigger.
 
         '
       required:
@@ -5926,8 +5924,8 @@ components:
         id:
           readOnly: true
           type: string
-          description: Alarm identifier (opticon observer root ID)
-          example: obs_abc123
+          description: The alarm's ID
+          example: Qx7LmP2vRt9K
         project_id:
           readOnly: true
           type: string
@@ -5954,9 +5952,8 @@ components:
           type:
           - string
           - 'null'
-          description: 'BadgerQL evaluated on each check. A string, the same shape
-            AlarmCreateInput accepts — the presenter renders the observer''s stored
-            query text, not a structured object.
+          description: 'BadgerQL run on each check, as the text a create or update
+            sent.
 
             '
           example: filter event_type::str == "notice" | stats count() as count
@@ -6030,7 +6027,7 @@ components:
           "$ref": "#/components/schemas/WebLinks"
     AlarmCreateInput:
       type: object
-      description: An alarm and the observer that evaluates it
+      description: A new alarm
       required:
       - name
       - query
@@ -6161,7 +6158,7 @@ components:
         observer_root_id:
           type: string
           description: The alarm's ID
-          example: obs_abc123
+          example: Qx7LmP2vRt9K
         observer_id:
           type: string
           description: 'The version of the alarm that was evaluated. Editing an alarm
@@ -8883,10 +8880,10 @@ components:
           - string
           - 'null'
           default: UTC
-          description: 'Timezone the cron schedule is evaluated in. A Rails/ActiveSupport
-            zone NAME, not an IANA identifier — `Central Time (US & Canada)`, not
-            `America/Chicago`, which is rejected. Required when `schedule_type` is
-            `cron`. Null resets it to `UTC`.
+          description: 'Timezone the cron schedule is evaluated in. A Rails time zone
+            name, not an IANA identifier — `Central Time (US & Canada)`, not `America/Chicago`,
+            which is rejected. Required when `schedule_type` is `cron`. Null resets
+            it to `UTC`.
 
             '
           example: Central Time (US & Canada)
@@ -9661,7 +9658,7 @@ components:
         resolve_on_deploy:
           type: boolean
           description: |
-            Resolve this fault the next time a deploy is recorded. Not a column on the fault — it is stored as a pending resolution — so it is applied after the update succeeds and is echoed back on the fault as `resolve_on_deploy`.
+            Resolve this fault the next time a deploy is recorded. Reads back on the fault as `resolve_on_deploy` until that deploy.
 
             Setting it on a fault that is already resolved or ignored does nothing, since those states clear any pending resolution. Sending false removes a pending resolution.
     IncidentUpdate:
@@ -10668,9 +10665,8 @@ components:
             Authorization: Bearer abc123
         frequency:
           default: 5
-          description: 'Minutes between checks. Defaults to 5; plans set the most
-            frequent allowed, and a value under it is 403 `feature_unavailable`. Null
-            resets it to 5.
+          description: 'Minutes between checks. Plans set the most frequent allowed,
+            and a value under it is 403 `feature_unavailable`. Null resets it to 5.
 
             '
           anyOf:
@@ -14060,7 +14056,7 @@ components:
       description: |
         Window to report over. Both ends of the window are inclusive, so each period returns one more bucket than its name suggests: `hour` gives 61 one-minute buckets, `day` 25 hourly, `week` 8 daily, `month` 31 daily.
 
-        Defaults to `hour` when omitted, and `meta.period` reports what was used. An unrecognised value is refused with 400 `invalid_parameter` rather than silently reinterpreted.
+        `meta.period` reports the period used. An unrecognised value is refused with 400 `invalid_parameter` rather than silently reinterpreted.
       schema:
         type: string
         enum:
@@ -14194,8 +14190,7 @@ components:
             meta:
               request_id: abc123
     AlarmServiceUnavailable:
-      description: The alarm service could not be reached or failed to handle the
-        request.
+      description: Alarms are temporarily unavailable. Retry later.
       content:
         application/json:
           schema:

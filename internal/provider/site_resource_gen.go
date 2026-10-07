@@ -44,7 +44,7 @@ func siteResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"frequency": schema.Int64Attribute{
-				MarkdownDescription: "Minutes between checks. Defaults to 5; plans set the most frequent allowed, and a value under it is 403 `feature_unavailable`. Null resets it to 5. Valid values: `1`, `2`, `5`, `15`. Defaults to `5`.",
+				MarkdownDescription: "Minutes between checks. Plans set the most frequent allowed, and a value under it is 403 `feature_unavailable`. Null resets it to 5. Valid values: `1`, `2`, `5`, `15`. Defaults to `5`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             int64default.StaticInt64(5),

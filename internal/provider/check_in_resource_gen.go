@@ -35,7 +35,7 @@ func checkInResourceSchema() schema.Schema {
 				Optional:            true,
 			},
 			"cron_timezone": schema.StringAttribute{
-				MarkdownDescription: "Timezone the cron schedule is evaluated in. A Rails/ActiveSupport zone NAME, not an IANA identifier — `Central Time (US & Canada)`, not `America/Chicago`, which is rejected. Required when `schedule_type` is `cron`. Null resets it to `UTC`. Defaults to `UTC`.",
+				MarkdownDescription: "Timezone the cron schedule is evaluated in. A Rails time zone name, not an IANA identifier — `Central Time (US & Canada)`, not `America/Chicago`, which is rejected. Required when `schedule_type` is `cron`. Null resets it to `UTC`. Defaults to `UTC`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString("UTC"),

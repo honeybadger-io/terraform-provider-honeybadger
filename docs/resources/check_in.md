@@ -37,7 +37,7 @@ output "nightly_check_in_url" {
 ### Optional
 
 - `cron_schedule` (String) Cron expression, required when `schedule_type` is `cron`.
-- `cron_timezone` (String) Timezone the cron schedule is evaluated in. A Rails/ActiveSupport zone NAME, not an IANA identifier — `Central Time (US & Canada)`, not `America/Chicago`, which is rejected. Required when `schedule_type` is `cron`. Null resets it to `UTC`. Defaults to `UTC`.
+- `cron_timezone` (String) Timezone the cron schedule is evaluated in. A Rails time zone name, not an IANA identifier — `Central Time (US & Canada)`, not `America/Chicago`, which is rejected. Required when `schedule_type` is `cron`. Null resets it to `UTC`. Defaults to `UTC`.
 - `grace_period` (String) How long after the expected time before the check-in is considered missing. Same format as `report_period`; zero is `00:00:00`. Null resets it to zero. Defaults to `00:00:00`.
 - `name` (String) Display name. Null clears it; an unnamed check-in shows its ID.
 - `report_period` (String) How often a report is expected, for `simple` schedules. Required unless `schedule_type` is `cron`, and may not be zero. A duration such as `5 minutes`, `1 hour 30 minutes` or `01:30:00`. Reads return the canonical long form (`1 week` reads `7 days`); every form a read returns can be written back. Compare periods by duration, not text.

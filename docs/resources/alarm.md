@@ -3,12 +3,12 @@
 page_title: "honeybadger_alarm Resource - honeybadger"
 subcategory: ""
 description: |-
-  An Insights alarm. Read from Honeybadger's copy of the alarm, written after each change; an edit made directly in the alarm service doesn't show here. Required scopes: alarms:read, alarms:write.
+  An Insights alarm: a BadgerQL query run on a schedule over a project's streams, which notifies its integrations when the result crosses the trigger. Required scopes: alarms:read, alarms:write.
 ---
 
 # honeybadger_alarm (Resource)
 
-An Insights alarm. Read from Honeybadger's copy of the alarm, written after each change; an edit made directly in the alarm service doesn't show here. Required scopes: `alarms:read`, `alarms:write`.
+An Insights alarm: a BadgerQL query run on a schedule over a project's streams, which notifies its integrations when the result crosses the trigger. Required scopes: `alarms:read`, `alarms:write`.
 
 ## Example Usage
 
@@ -50,7 +50,7 @@ resource "honeybadger_alarm" "errors" {
 ### Read-Only
 
 - `created_at` (String) When the alarm was created
-- `id` (String) Alarm identifier (opticon observer root ID)
+- `id` (String) The alarm's ID
 
 <a id="nestedatt--trigger_config"></a>
 ### Nested Schema for `trigger_config`
