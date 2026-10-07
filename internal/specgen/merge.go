@@ -1,10 +1,12 @@
 package specgen
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -185,6 +187,7 @@ func mergeWith(doc *openapi3.T, name string, rc ResourceConfig, createObj *Objec
 		}
 
 		a := Attribute{Name: f, NotRead: !inR}
+		keepsCurrent := false // server-filled: removing it keeps the stored value
 		var src Field
 		switch {
 		case inC:
@@ -217,7 +220,7 @@ func mergeWith(doc *openapi3.T, name string, rc ResourceConfig, createObj *Objec
 				a.Optional, a.Computed, a.UseStateForUnknown = true, true, true
 				// UseStateForUnknown keeps the stored value when the attribute
 				// is removed, so the docs say so.
-				a.Description = strings.TrimSpace(a.Description + " Removing it from config keeps the current value.")
+				keepsCurrent = true
 			case inU && !uf.Nullable && uf.Type != "array":
 				// A scalar that can't be sent as null: removing it from config
 				// can't clear it. Arrays clear with [] instead.
@@ -271,6 +274,12 @@ func mergeWith(doc *openapi3.T, name string, rc ResourceConfig, createObj *Objec
 				return fail("%s: custom type %q needs a string", f, ct)
 			}
 			a.CustomType = ct
+		}
+		// The spec's text, then its facts, then the server-filled note
+		// (phase 7a spec, 3.2).
+		a.Description = joinSentence(a.Description, factSentences(a))
+		if keepsCurrent {
+			a.Description = joinSentence(a.Description, "Removing it from config keeps the current value.")
 		}
 		attrs = append(attrs, a)
 	}
@@ -429,11 +438,11 @@ func nestedAttributes(obj Object, computed bool) ([]Attribute, error) {
 		if err := setKind(&a, f); err != nil {
 			return nil, fmt.Errorf("%s: %w", n, err)
 		}
+		a.Description = joinSentence(a.Description, factSentences(a))
 		out = append(out, a)
 	}
 	return out, nil
 }
-
 
 func keys[V any](m map[string]V) []string {
 	out := make([]string, 0, len(m))
@@ -585,4 +594,64 @@ func snake(camel string) string {
 		b.WriteRune(unicode.ToLower(r))
 	}
 	return b.String()
+}
+
+// joinSentence appends a sentence, ending the text first with a full stop
+// when it has no terminal punctuation (phase 7a spec, 3.6).
+func joinSentence(text, sentence string) string {
+	text, sentence = strings.TrimSpace(text), strings.TrimSpace(sentence)
+	switch {
+	case sentence == "":
+		return text
+	case text == "":
+		return sentence
+	}
+	if !strings.ContainsAny(text[len(text)-1:], ".?!") {
+		text += "."
+	}
+	return text + " " + sentence
+}
+
+// factSentences states a configurable attribute's valid values and default
+// from the spec (phase 7a spec, 3.2).
+func factSentences(a Attribute) string {
+	if !a.Required && !a.Optional {
+		return ""
+	}
+	var out string
+	values := a.Enum
+	if len(values) == 0 {
+		values = a.ElemEnum
+	}
+	if len(values) > 0 {
+		quoted := make([]string, len(values))
+		for i, v := range values {
+			quoted[i] = "`" + v + "`"
+		}
+		out = joinSentence(out, "Valid values: "+strings.Join(quoted, ", ")+".")
+	}
+	if a.Default != nil {
+		out = joinSentence(out, defaultSentence(a))
+	}
+	return out
+}
+
+func defaultSentence(a Attribute) string {
+	if a.CustomType == "json_subset" {
+		b, _ := json.Marshal(a.Default)
+		return "Defaults to `" + string(b) + "`."
+	}
+	switch d := a.Default.(type) {
+	case []any:
+		if len(d) == 0 {
+			return "Defaults to empty."
+		}
+	case map[string]any:
+		if len(d) == 0 {
+			return "Defaults to empty."
+		}
+	case float64:
+		return "Defaults to `" + strconv.FormatFloat(d, 'f', -1, 64) + "`."
+	}
+	return fmt.Sprintf("Defaults to `%v`.", a.Default)
 }

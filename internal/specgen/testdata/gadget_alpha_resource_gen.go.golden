@@ -31,7 +31,7 @@ func gadgetAlphaResourceSchema() schema.Schema {
 		MarkdownDescription: "An alpha gadget, which posts to a URL.",
 		Attributes: map[string]schema.Attribute{
 			"active": schema.BoolAttribute{
-				MarkdownDescription: "Whether the gadget runs.",
+				MarkdownDescription: "Whether the gadget runs. Defaults to `true`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(true),
@@ -52,7 +52,7 @@ func gadgetAlphaResourceSchema() schema.Schema {
 			},
 			"events": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "Removing it from config keeps the current value.",
+				MarkdownDescription: "Valid values: `spun`, `stopped`. Removing it from config keeps the current value.",
 				Optional:            true,
 				Computed:            true,
 				Validators:          []validator.Set{setvalidator.ValueStringsAre(stringvalidator.OneOf("spun", "stopped"))},
@@ -62,8 +62,9 @@ func gadgetAlphaResourceSchema() schema.Schema {
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"event": schema.StringAttribute{
-							Required:   true,
-							Validators: []validator.String{stringvalidator.OneOf("spun", "all")},
+							MarkdownDescription: "Valid values: `spun`, `all`.",
+							Required:            true,
+							Validators:          []validator.String{stringvalidator.OneOf("spun", "all")},
 						},
 						"query": schema.StringAttribute{
 							Required:   true,
@@ -71,9 +72,10 @@ func gadgetAlphaResourceSchema() schema.Schema {
 						},
 					},
 				},
-				Optional: true,
-				Computed: true,
-				Default:  listdefault.StaticValue(types.ListValueMust(types.ObjectType{AttrTypes: gadgetAlphaFiltersAttrTypes()}, []attr.Value{})),
+				MarkdownDescription: "Defaults to empty.",
+				Optional:            true,
+				Computed:            true,
+				Default:             listdefault.StaticValue(types.ListValueMust(types.ObjectType{AttrTypes: gadgetAlphaFiltersAttrTypes()}, []attr.Value{})),
 			},
 			"id": schema.StringAttribute{
 				Computed:      true,
@@ -94,11 +96,12 @@ func gadgetAlphaResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"spot_ids": schema.SetAttribute{
-				ElementType: types.StringType,
-				Optional:    true,
-				Computed:    true,
-				Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
-				Validators:  []validator.Set{setvalidator.ValueStringsAre(stringvalidator.RegexMatches(regexp.MustCompile("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"), "must be a lowercase UUID"))},
+				ElementType:         types.StringType,
+				MarkdownDescription: "Defaults to empty.",
+				Optional:            true,
+				Computed:            true,
+				Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
+				Validators:          []validator.Set{setvalidator.ValueStringsAre(stringvalidator.RegexMatches(regexp.MustCompile("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"), "must be a lowercase UUID"))},
 			},
 		},
 	}

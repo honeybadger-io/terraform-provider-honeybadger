@@ -35,13 +35,13 @@ func checkInResourceSchema() schema.Schema {
 				Optional:            true,
 			},
 			"cron_timezone": schema.StringAttribute{
-				MarkdownDescription: "Timezone the cron schedule is evaluated in. A Rails/ActiveSupport zone NAME, not an IANA identifier — `Central Time (US & Canada)`, not `America/Chicago`, which is rejected. Required when `schedule_type` is `cron`. Null resets it to `UTC`.",
+				MarkdownDescription: "Timezone the cron schedule is evaluated in. A Rails/ActiveSupport zone NAME, not an IANA identifier — `Central Time (US & Canada)`, not `America/Chicago`, which is rejected. Required when `schedule_type` is `cron`. Null resets it to `UTC`. Defaults to `UTC`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString("UTC"),
 			},
 			"grace_period": schema.StringAttribute{
-				MarkdownDescription: "How long after the expected time before the check-in is considered missing. Same format as `report_period`; zero is `00:00:00`. Null resets it to zero.",
+				MarkdownDescription: "How long after the expected time before the check-in is considered missing. Same format as `report_period`; zero is `00:00:00`. Null resets it to zero. Defaults to `00:00:00`.",
 				Optional:            true,
 				Computed:            true,
 				CustomType:          customtypes.PeriodType{},
@@ -74,7 +74,7 @@ func checkInResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"schedule_type": schema.StringAttribute{
-				MarkdownDescription: "Switching to `simple` clears `cron_schedule` and resets `cron_timezone` to `UTC`; switching to `cron` clears `report_period`.",
+				MarkdownDescription: "Switching to `simple` clears `cron_schedule` and resets `cron_timezone` to `UTC`; switching to `cron` clears `report_period`. Valid values: `simple`, `cron`. Defaults to `simple`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString("simple"),

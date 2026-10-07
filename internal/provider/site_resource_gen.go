@@ -33,7 +33,7 @@ func siteResourceSchema() schema.Schema {
 		MarkdownDescription: "A URL Honeybadger checks for uptime from several locations on a schedule, alerting when it goes down and when it recovers.",
 		Attributes: map[string]schema.Attribute{
 			"active": schema.BoolAttribute{
-				MarkdownDescription: "Whether monitoring is active. After 740 consecutive failed checks the server sets it to false. Null resets it to true.",
+				MarkdownDescription: "Whether monitoring is active. After 740 consecutive failed checks the server sets it to false. Null resets it to true. Defaults to `true`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(true),
@@ -44,7 +44,7 @@ func siteResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"frequency": schema.Int64Attribute{
-				MarkdownDescription: "Minutes between checks. Defaults to 5; plans set the most frequent allowed, and a value under it is 403 `feature_unavailable`. Null resets it to 5.",
+				MarkdownDescription: "Minutes between checks. Defaults to 5; plans set the most frequent allowed, and a value under it is 403 `feature_unavailable`. Null resets it to 5. Valid values: `1`, `2`, `5`, `15`. Defaults to `5`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             int64default.StaticInt64(5),
@@ -68,7 +68,7 @@ func siteResourceSchema() schema.Schema {
 			},
 			"locations": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "A set of location names to check from. Null or empty means every location. An unknown name is 422. A set; order is ignored and duplicates are dropped.",
+				MarkdownDescription: "A set of location names to check from. Null or empty means every location. An unknown name is 422. A set; order is ignored and duplicates are dropped. Valid values: `Virginia`, `Frankfurt`, `Singapore`, `London`, `Oregon`. Defaults to empty.",
 				Optional:            true,
 				Computed:            true,
 				Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
@@ -80,7 +80,7 @@ func siteResourceSchema() schema.Schema {
 				Validators:          []validator.String{stringvalidator.LengthAtMost(255)},
 			},
 			"match_type": schema.StringAttribute{
-				MarkdownDescription: "How a check decides the site is up (see SiteMatchType). Null resets it to success.",
+				MarkdownDescription: "How a check decides the site is up (see SiteMatchType). Null resets it to success. Valid values: `success`, `exact`, `include`, `exclude`, `jmespath`. Defaults to `success`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString("success"),
@@ -109,14 +109,14 @@ func siteResourceSchema() schema.Schema {
 			},
 			"request_headers": schema.MapAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "Headers to send with the request, as header name to value. Replaces the stored headers; null or `{}` clears them.",
+				MarkdownDescription: "Headers to send with the request, as header name to value. Replaces the stored headers; null or `{}` clears them. Defaults to empty.",
 				Optional:            true,
 				Computed:            true,
 				Sensitive:           true,
 				Default:             mapdefault.StaticValue(types.MapValueMust(types.StringType, map[string]attr.Value{})),
 			},
 			"request_method": schema.StringAttribute{
-				MarkdownDescription: "HTTP method each check sends. Null resets it to GET.",
+				MarkdownDescription: "HTTP method each check sends. Null resets it to GET. Valid values: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`. Defaults to `GET`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString("GET"),
@@ -132,7 +132,7 @@ func siteResourceSchema() schema.Schema {
 				Validators:          []validator.String{stringvalidator.RegexMatches(regexp.MustCompile("^https?://\\S"), "must match ^https?://\\S")},
 			},
 			"validate_ssl": schema.BoolAttribute{
-				MarkdownDescription: "Fail the check when the TLS certificate does not validate. Null resets it to true.",
+				MarkdownDescription: "Fail the check when the TLS certificate does not validate. Null resets it to true. Defaults to `true`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(true),

@@ -29,7 +29,7 @@ resource "honeybadger_environment" "staging" {
 
 ### Optional
 
-- `notifications` (Boolean) Whether errors in this environment notify. Null means the default.
+- `notifications` (Boolean) Whether errors in this environment notify. Null means the default. Defaults to `true`.
 
 ### Read-Only
 

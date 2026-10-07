@@ -32,7 +32,7 @@ func TestMergeFollowsTheMergeRule(t *testing.T) {
 		{Name: "gear", Kind: "object", Required: true,
 			Description: "The widget's drive gear. Replaced whole on update.",
 			Attributes: []Attribute{
-				{Name: "kind", Kind: "string", Required: true, Enum: []string{"spur", "helical"}, Description: "Tooth profile."},
+				{Name: "kind", Kind: "string", Required: true, Enum: []string{"spur", "helical"}, Description: "Tooth profile. Valid values: `spur`, `helical`."},
 				{Name: "mesh", Kind: "object", Required: true, Attributes: []Attribute{
 					{Name: "pitch", Kind: "float64", Required: true, Description: "Tooth spacing in millimetres."},
 					{Name: "teeth", Kind: "int64", Required: true, Minimum: ptr(1.0), Description: "Number of teeth."},
@@ -53,7 +53,7 @@ func TestMergeFollowsTheMergeRule(t *testing.T) {
 		{Name: "serial", Kind: "string", Optional: true, RequiresReplace: true, MaxLength: ptr(int64(32)),
 			Description: "Factory serial number, set once."},
 		{Name: "shape", Kind: "string", Optional: true, Computed: true, Default: "round",
-			Enum: []string{"round", "square"}, Description: "How the widget looks. Null resets it to `round`."},
+			Enum: []string{"round", "square"}, Description: "How the widget looks. Null resets it to `round`. Valid values: `round`, `square`. Defaults to `round`."},
 		{Name: "size", Kind: "int64", Optional: true, Computed: true, UseStateForUnknown: true,
 			Minimum: ptr(1.0), Maximum: ptr(500.0), Description: "Size in centimetres. Null clears it. Removing it from config keeps the current value."},
 		{Name: "tags", Kind: "set", ElemKind: "string", Optional: true, Description: "Labels on the widget."},
@@ -121,7 +121,6 @@ func TestMergeErrors(t *testing.T) {
 	}
 }
 
-
 func TestLoadConfigReadsCRUDKeys(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "r.yaml")
 	src := "resources:\n  w:\n    service: Widgets\n    api:\n      model: Widget\n      create_params: WidgetCreateParams\n      update_params: WidgetUpdateParams\n    find_hint: the widgets\n    config_validators: widgetValidators\n    crud: manual\n"
@@ -178,7 +177,7 @@ func TestMergeNestedAndCollections(t *testing.T) {
 	wantGear := Attribute{Name: "gear", Kind: "object", Required: true,
 		Description: "The widget's drive gear. Replaced whole on update.",
 		Attributes: []Attribute{
-			{Name: "kind", Kind: "string", Required: true, Enum: []string{"spur", "helical"}, Description: "Tooth profile."},
+			{Name: "kind", Kind: "string", Required: true, Enum: []string{"spur", "helical"}, Description: "Tooth profile. Valid values: `spur`, `helical`."},
 			{Name: "mesh", Kind: "object", Required: true, Attributes: []Attribute{
 				{Name: "pitch", Kind: "float64", Required: true, Description: "Tooth spacing in millimetres."},
 				{Name: "teeth", Kind: "int64", Required: true, Minimum: ptr(1.0), Description: "Number of teeth."},
@@ -233,7 +232,7 @@ func TestNestedAttributesOptionalDefaultedWriteOnly(t *testing.T) {
 		t.Fatalf("nestedAttributes: %v", err)
 	}
 	want := []Attribute{
-		{Name: "mode", Kind: "string", Optional: true, Computed: true, Default: "fast"},
+		{Name: "mode", Kind: "string", Optional: true, Computed: true, Default: "fast", Description: "Defaults to `fast`."},
 		{Name: "note", Kind: "string", Optional: true},
 		{Name: "token", Kind: "string", Optional: true, Sensitive: true, NotRead: true},
 		{Name: "url", Kind: "string", Required: true},
@@ -386,7 +385,7 @@ func TestMergeFallsBackToReadDescription(t *testing.T) {
 		t.Fatalf("MergeAll: %v", err)
 	}
 	for _, a := range rs[0].Attributes {
-		if a.Name == "active" && a.Description != "Whether the gadget runs." {
+		if a.Name == "active" && a.Description != "Whether the gadget runs. Defaults to `true`." {
 			t.Errorf("active description = %q", a.Description)
 		}
 	}
@@ -527,5 +526,50 @@ func TestMergeRefusesRequiredKeysOffJSON(t *testing.T) {
 	rc.JSONRequiredKeys = map[string][]string{"name": {"id"}}
 	if _, err := Merge(loadFixture(t), "sprocket", rc); err == nil || !strings.Contains(err.Error(), "json_subset") {
 		t.Errorf("err = %v, want a refusal: name isn't a json_subset field", err)
+	}
+}
+
+func TestJoinSentence(t *testing.T) {
+	for _, c := range []struct{ text, s, want string }{
+		{"Display name for the site", "Removing it keeps it.", "Display name for the site. Removing it keeps it."},
+		{"Done.", "Next.", "Done. Next."},
+		{"Is it?", "Yes.", "Is it? Yes."},
+		{"Ends in `code`", "Next.", "Ends in `code`. Next."},
+		{"", "Only.", "Only."},
+		{"Text.", "", "Text."},
+	} {
+		if got := joinSentence(c.text, c.s); got != c.want {
+			t.Errorf("joinSentence(%q, %q) = %q, want %q", c.text, c.s, got, c.want)
+		}
+	}
+}
+
+func TestFactSentences(t *testing.T) {
+	for name, c := range map[string]struct {
+		a    Attribute
+		want string
+	}{
+		"enum and default": {Attribute{Kind: "string", Optional: true, Enum: []string{"GET", "POST"}, Default: "GET"}, "Valid values: `GET`, `POST`. Defaults to `GET`."},
+		"set of enum":      {Attribute{Kind: "set", Optional: true, ElemKind: "string", ElemEnum: []string{"London", "Virginia"}, Default: []any{}}, "Valid values: `London`, `Virginia`. Defaults to empty."},
+		"int default":      {Attribute{Kind: "int64", Optional: true, Default: float64(5)}, "Defaults to `5`."},
+		"bool default":     {Attribute{Kind: "bool", Optional: true, Default: true}, "Defaults to `true`."},
+		"empty map":        {Attribute{Kind: "map", Optional: true, Default: map[string]any{}}, "Defaults to empty."},
+		"json default":     {Attribute{Kind: "string", CustomType: "json_subset", Optional: true, Default: []any{}}, "Defaults to `[]`."},
+		"read-only":        {Attribute{Kind: "string", Computed: true, Enum: []string{"a"}}, ""},
+	} {
+		if got := factSentences(c.a); got != c.want {
+			t.Errorf("%s: %q, want %q", name, got, c.want)
+		}
+	}
+}
+
+// Review Focus 2: the server-filled note joins cleanly after the facts.
+func TestMergeDescribesValuesAndDefaults(t *testing.T) {
+	r, err := Merge(loadFixture(t), "sprocket", sprocketConfig(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := attrNamed(t, r, "mode").Description; got != "How it turns. Null resets it to slow. Valid values: `slow`, `fast`. Defaults to `slow`." {
+		t.Errorf("mode = %q", got)
 	}
 }

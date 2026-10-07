@@ -34,21 +34,21 @@ func integrationCampfireV3ResourceSchema() schema.Schema {
 		MarkdownDescription: "Get alerts via Campfire group chat.",
 		Attributes: map[string]schema.Attribute{
 			"active": schema.BoolAttribute{
-				MarkdownDescription: "Whether to use the integration. An OAuth integration that's active sends nothing until someone connects it in the web UI at `links.web`.",
+				MarkdownDescription: "Whether to use the integration. An OAuth integration that's active sends nothing until someone connects it in the web UI at `links.web`. Defaults to `true`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(true),
 			},
 			"alarm_alert_ids": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "IDs of alarms whose alert events this integration receives. Null or empty clears it. A set; order is ignored and duplicates are dropped.",
+				MarkdownDescription: "IDs of alarms whose alert events this integration receives. Null or empty clears it. A set; order is ignored and duplicates are dropped. Defaults to empty.",
 				Optional:            true,
 				Computed:            true,
 				Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 			},
 			"alarm_ok_ids": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "IDs of alarms whose recovery events this integration receives. Null or empty clears it. A set; order is ignored and duplicates are dropped.",
+				MarkdownDescription: "IDs of alarms whose recovery events this integration receives. Null or empty clears it. A set; order is ignored and duplicates are dropped. Defaults to empty.",
 				Optional:            true,
 				Computed:            true,
 				Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
@@ -75,7 +75,7 @@ func integrationCampfireV3ResourceSchema() schema.Schema {
 			},
 			"events": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "Defaults to `occurred`, `assigned`, `up`, `down`, `cert_will_expire`, `check_in_missing`, and `check_in_reporting`, less any the plan doesn't include. Removing it from config keeps the current value.",
+				MarkdownDescription: "Defaults to `occurred`, `assigned`, `up`, `down`, `cert_will_expire`, `check_in_missing`, and `check_in_reporting`, less any the plan doesn't include. Valid values: `occurred`, `rate_exceeded`, `assigned`, `resolved`, `unresolved`, `commented`, `deployed`, `up`, `down`, `cert_will_expire`, `flooded`, `check_in_missing`, `check_in_reporting`, `alarm_alert`, `alarm_ok`, `volume_spike`. Removing it from config keeps the current value.",
 				Optional:            true,
 				Computed:            true,
 				Validators:          []validator.Set{setvalidator.ValueStringsAre(stringvalidator.OneOf("occurred", "rate_exceeded", "assigned", "resolved", "unresolved", "commented", "deployed", "up", "down", "cert_will_expire", "flooded", "check_in_missing", "check_in_reporting", "alarm_alert", "alarm_ok", "volume_spike"))},
@@ -83,7 +83,7 @@ func integrationCampfireV3ResourceSchema() schema.Schema {
 			},
 			"excluded_environments": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "Errors from these environments never notify through this integration. Takes precedence over included_environments. Names are stored as given, so an environment can be excluded before it first reports. Null or empty clears it. Applies only on plans with environment settings; changing it on other plans is 403 feature_unavailable. Reads return what's stored. A set; order is ignored and duplicates are dropped.",
+				MarkdownDescription: "Errors from these environments never notify through this integration. Takes precedence over included_environments. Names are stored as given, so an environment can be excluded before it first reports. Null or empty clears it. Applies only on plans with environment settings; changing it on other plans is 403 feature_unavailable. Reads return what's stored. A set; order is ignored and duplicates are dropped. Defaults to empty.",
 				Optional:            true,
 				Computed:            true,
 				Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
@@ -92,7 +92,7 @@ func integrationCampfireV3ResourceSchema() schema.Schema {
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"event": schema.StringAttribute{
-							MarkdownDescription: "An event name, or `all` for every event.",
+							MarkdownDescription: "An event name, or `all` for every event. Valid values: `occurred`, `rate_exceeded`, `assigned`, `resolved`, `unresolved`, `commented`, `deployed`, `up`, `down`, `cert_will_expire`, `flooded`, `check_in_missing`, `check_in_reporting`, `alarm_alert`, `alarm_ok`, `volume_spike`, `all`.",
 							Required:            true,
 							Validators:          []validator.String{stringvalidator.OneOf("occurred", "rate_exceeded", "assigned", "resolved", "unresolved", "commented", "deployed", "up", "down", "cert_will_expire", "flooded", "check_in_missing", "check_in_reporting", "alarm_alert", "alarm_ok", "volume_spike", "all")},
 						},
@@ -103,7 +103,7 @@ func integrationCampfireV3ResourceSchema() schema.Schema {
 						},
 					},
 				},
-				MarkdownDescription: "An ordered list. Each event that has a filter notifies only for errors matching its query. Replaces the stored filters; null or empty clears them. Applies only on plans with integration filters; changing it on other plans is 403 feature_unavailable. Reads return what's stored.",
+				MarkdownDescription: "An ordered list. Each event that has a filter notifies only for errors matching its query. Replaces the stored filters; null or empty clears them. Applies only on plans with integration filters; changing it on other plans is 403 feature_unavailable. Reads return what's stored. Defaults to empty.",
 				Optional:            true,
 				Computed:            true,
 				Default:             listdefault.StaticValue(types.ListValueMust(types.ObjectType{AttrTypes: integrationCampfireV3FiltersAttrTypes()}, []attr.Value{})),
@@ -115,7 +115,7 @@ func integrationCampfireV3ResourceSchema() schema.Schema {
 			},
 			"included_environments": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "When non-empty, only errors from these environments notify through this integration, including environments that haven't reported yet. Empty means every environment not excluded. Null or empty clears it. Applies only on plans with environment settings; changing it on other plans is 403 feature_unavailable. Reads return what's stored. A set; order is ignored and duplicates are dropped.",
+				MarkdownDescription: "When non-empty, only errors from these environments notify through this integration, including environments that haven't reported yet. Empty means every environment not excluded. Null or empty clears it. Applies only on plans with environment settings; changing it on other plans is 403 feature_unavailable. Reads return what's stored. A set; order is ignored and duplicates are dropped. Defaults to empty.",
 				Optional:            true,
 				Computed:            true,
 				Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
@@ -141,7 +141,7 @@ func integrationCampfireV3ResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"rate": schema.StringAttribute{
-				MarkdownDescription: "Period the rate_exceeded threshold counts over. Null resets it to wday.",
+				MarkdownDescription: "Period the rate_exceeded threshold counts over. Null resets it to wday. Valid values: `min`, `hour`, `wday`, `week`. Defaults to `wday`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString("wday"),
@@ -154,7 +154,7 @@ func integrationCampfireV3ResourceSchema() schema.Schema {
 				Validators:          []validator.Set{setvalidator.ValueStringsAre(stringvalidator.RegexMatches(regexp.MustCompile("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"), "must be a lowercase UUID"))},
 			},
 			"threshold": schema.Int64Attribute{
-				MarkdownDescription: "Number of occurrences before rate_exceeded fires. Null resets it to 100.",
+				MarkdownDescription: "Number of occurrences before rate_exceeded fires. Null resets it to 100. Defaults to `100`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             int64default.StaticInt64(100),

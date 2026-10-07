@@ -27,7 +27,7 @@ resource "honeybadger_team" "backend" {
 
 ### Optional
 
-- `project_ids` (Set of String) IDs of projects this team can access: the whole membership. An ID that isn't a project the caller can see fails the request with 422. A project's create-time `team_id` only attaches it to one team. A set; order is ignored and duplicates are dropped.
+- `project_ids` (Set of String) IDs of projects this team can access: the whole membership. An ID that isn't a project the caller can see fails the request with 422. A project's create-time `team_id` only attaches it to one team. A set; order is ignored and duplicates are dropped. Defaults to empty.
 
 ### Read-Only
 

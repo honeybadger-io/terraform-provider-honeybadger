@@ -42,7 +42,7 @@ func widgetResourceSchema() schema.Schema {
 			"gear": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"kind": schema.StringAttribute{
-						MarkdownDescription: "Tooth profile.",
+						MarkdownDescription: "Tooth profile. Valid values: `spur`, `helical`.",
 						Required:            true,
 						Validators:          []validator.String{stringvalidator.OneOf("spur", "helical")},
 					},
@@ -103,7 +103,7 @@ func widgetResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"shape": schema.StringAttribute{
-				MarkdownDescription: "How the widget looks. Null resets it to `round`.",
+				MarkdownDescription: "How the widget looks. Null resets it to `round`. Valid values: `round`, `square`. Defaults to `round`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString("round"),

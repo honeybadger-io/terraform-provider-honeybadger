@@ -77,7 +77,7 @@ func alarmResourceSchema() schema.Schema {
 					"config": schema.SingleNestedAttribute{
 						Attributes: map[string]schema.Attribute{
 							"operator": schema.StringAttribute{
-								MarkdownDescription: "How the query's result is compared with `value`: greater than, greater than or equal, less than, less than or equal, equal, or not equal.",
+								MarkdownDescription: "How the query's result is compared with `value`: greater than, greater than or equal, less than, less than or equal, equal, or not equal. Valid values: `gt`, `gte`, `lt`, `lte`, `eq`, `neq`.",
 								Required:            true,
 								Validators:          []validator.String{stringvalidator.OneOf("gt", "gte", "lt", "lte", "eq", "neq")},
 							},
@@ -90,7 +90,7 @@ func alarmResourceSchema() schema.Schema {
 						Required:            true,
 					},
 					"type": schema.StringAttribute{
-						MarkdownDescription: "`alert_result_count` compares the number of results the query returns.",
+						MarkdownDescription: "`alert_result_count` compares the number of results the query returns. Valid values: `alert_result_count`.",
 						Required:            true,
 						Validators:          []validator.String{stringvalidator.OneOf("alert_result_count")},
 					},

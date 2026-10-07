@@ -40,7 +40,7 @@ func environmentResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"notifications": schema.BoolAttribute{
-				MarkdownDescription: "Whether errors in this environment notify. Null means the default.",
+				MarkdownDescription: "Whether errors in this environment notify. Null means the default. Defaults to `true`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(true),

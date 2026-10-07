@@ -117,7 +117,6 @@ func TestRealBundleFacts(t *testing.T) {
 
 func hasPrefix(s, prefix string) bool { return len(s) >= len(prefix) && s[:len(prefix)] == prefix }
 
-
 // An object property keeps its own properties, recursively, with their
 // required lists.
 func TestFieldFactsNestedObject(t *testing.T) {

@@ -35,10 +35,10 @@ output "project_id" {
 
 - `asana_workspace_id` (String) Asana workspace used by the project's Asana integration. Null clears it.
 - `customer_throttle` (Number) Notices accepted per minute before throttling kicks in. Null clears it.
-- `disable_public_links` (Boolean) Disallow shareable public fault links. Null resets it to false.
+- `disable_public_links` (Boolean) Disallow shareable public fault links. Null resets it to false. Defaults to `false`.
 - `language` (String) Primary language, used to format backtraces. Null clears it.
 - `purge_days` (Number) Days to retain notices. Accepted only on accounts with custom retention; otherwise a value other than the current one (on create, the default) is refused with 403 `feature_unavailable`. Null clears it. Removing it from config keeps the current value.
-- `resolve_errors_on_deploy` (Boolean) Resolve every open fault when a deploy is recorded. Null resets it to true.
+- `resolve_errors_on_deploy` (Boolean) Resolve every open fault when a deploy is recorded. Null resets it to true. Defaults to `true`.
 - `source_url` (String) Template for linking a backtrace line to your source host. `[file]` and `[line]` are substituted. Null clears it.
 - `user_search_field` (String) Context key identifying the affected user, for when it is not in the default `context.user_email` or `context.user_id`. Null clears it.
 - `user_url` (String) Template for linking a fault's affected user into your own system. `[user_id]` and `[user_email]` are substituted. Null clears it.

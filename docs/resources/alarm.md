@@ -58,14 +58,14 @@ resource "honeybadger_alarm" "errors" {
 Required:
 
 - `config` (Attributes) The comparison against the query's result that fires the trigger (see [below for nested schema](#nestedatt--trigger_config--config))
-- `type` (String) `alert_result_count` compares the number of results the query returns.
+- `type` (String) `alert_result_count` compares the number of results the query returns. Valid values: `alert_result_count`.
 
 <a id="nestedatt--trigger_config--config"></a>
 ### Nested Schema for `trigger_config.config`
 
 Required:
 
-- `operator` (String) How the query's result is compared with `value`: greater than, greater than or equal, less than, less than or equal, equal, or not equal.
+- `operator` (String) How the query's result is compared with `value`: greater than, greater than or equal, less than, less than or equal, equal, or not equal. Valid values: `gt`, `gte`, `lt`, `lte`, `eq`, `neq`.
 - `value` (Number) Threshold to compare against. `alert_result_count` takes a whole number >= 0.
 
 ## Notes

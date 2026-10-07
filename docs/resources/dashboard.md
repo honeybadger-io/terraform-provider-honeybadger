@@ -48,7 +48,7 @@ resource "honeybadger_dashboard" "ops" {
 ### Optional
 
 - `default_ts` (String) Default time range. Null clears it.
-- `widgets` (String) The dashboard's widgets, kept and read back in this order. Sent on an update, the list replaces the stored one.
+- `widgets` (String) The dashboard's widgets, kept and read back in this order. Sent on an update, the list replaces the stored one. Defaults to `[]`.
 
 ### Read-Only
 

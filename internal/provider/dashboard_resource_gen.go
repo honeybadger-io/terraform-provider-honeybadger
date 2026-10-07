@@ -74,7 +74,7 @@ func dashboardResourceSchema() schema.Schema {
 				Validators:          []validator.String{stringvalidator.LengthAtMost(255)},
 			},
 			"widgets": schema.StringAttribute{
-				MarkdownDescription: "The dashboard's widgets, kept and read back in this order. Sent on an update, the list replaces the stored one.",
+				MarkdownDescription: "The dashboard's widgets, kept and read back in this order. Sent on an update, the list replaces the stored one. Defaults to `[]`.",
 				Optional:            true,
 				Computed:            true,
 				CustomType:          customtypes.JSONSubsetType{},

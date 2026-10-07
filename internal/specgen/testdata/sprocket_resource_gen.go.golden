@@ -36,7 +36,7 @@ func sprocketResourceSchema() schema.Schema {
 				Computed:            true,
 			},
 			"gizmos": schema.StringAttribute{
-				MarkdownDescription: "Attachments, as JSON.",
+				MarkdownDescription: "Attachments, as JSON. Defaults to `[]`.",
 				Optional:            true,
 				Computed:            true,
 				CustomType:          customtypes.JSONSubsetType{},
@@ -45,7 +45,7 @@ func sprocketResourceSchema() schema.Schema {
 			},
 			"headers": schema.MapAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "Headers sent with each turn. Replaces the stored headers.",
+				MarkdownDescription: "Headers sent with each turn. Replaces the stored headers. Defaults to empty.",
 				Optional:            true,
 				Computed:            true,
 				Sensitive:           true,
@@ -56,7 +56,7 @@ func sprocketResourceSchema() schema.Schema {
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"mode": schema.StringAttribute{
-				MarkdownDescription: "How it turns. Null resets it to slow.",
+				MarkdownDescription: "How it turns. Null resets it to slow. Valid values: `slow`, `fast`. Defaults to `slow`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString("slow"),
@@ -72,7 +72,7 @@ func sprocketResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"speed": schema.Int64Attribute{
-				MarkdownDescription: "Turns a minute. Null resets it to 5.",
+				MarkdownDescription: "Turns a minute. Null resets it to 5. Valid values: `1`, `2`, `5`, `15`. Defaults to `5`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             int64default.StaticInt64(5),
@@ -85,7 +85,7 @@ func sprocketResourceSchema() schema.Schema {
 						Optional:            true,
 					},
 				},
-				MarkdownDescription: "Finishing. Replaced whole by an update.",
+				MarkdownDescription: "Finishing. Replaced whole by an update. Defaults to empty.",
 				Optional:            true,
 				Computed:            true,
 				Default: objectdefault.StaticValue(types.ObjectValueMust(sprocketTrimAttrTypes(), map[string]attr.Value{

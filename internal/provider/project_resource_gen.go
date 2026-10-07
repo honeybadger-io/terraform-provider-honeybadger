@@ -41,7 +41,7 @@ func projectResourceSchema() schema.Schema {
 				Optional:            true,
 			},
 			"disable_public_links": schema.BoolAttribute{
-				MarkdownDescription: "Disallow shareable public fault links. Null resets it to false.",
+				MarkdownDescription: "Disallow shareable public fault links. Null resets it to false. Defaults to `false`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
@@ -66,7 +66,7 @@ func projectResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.Int64{int64planmodifier.UseStateForUnknown()},
 			},
 			"resolve_errors_on_deploy": schema.BoolAttribute{
-				MarkdownDescription: "Resolve every open fault when a deploy is recorded. Null resets it to true.",
+				MarkdownDescription: "Resolve every open fault when a deploy is recorded. Null resets it to true. Defaults to `true`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(true),
