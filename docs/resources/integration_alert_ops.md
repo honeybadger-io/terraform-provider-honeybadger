@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_alert_ops Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Get alerts via AlertOps.
+  Get alerts via AlertOps. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_alert_ops (Resource)
 
-Get alerts via AlertOps.
+Get alerts via AlertOps. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

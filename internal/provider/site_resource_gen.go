@@ -30,7 +30,7 @@ import (
 
 func siteResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "A URL Honeybadger checks for uptime from several locations on a schedule, alerting when it goes down and when it recovers.",
+		MarkdownDescription: "A URL Honeybadger checks for uptime from several locations on a schedule, alerting when it goes down and when it recovers. Required scopes: `uptime:read`, `uptime:write`.",
 		Attributes: map[string]schema.Attribute{
 			"active": schema.BoolAttribute{
 				MarkdownDescription: "Whether monitoring is active. After 740 consecutive failed checks the server sets it to false. Null resets it to true. Defaults to `true`.",

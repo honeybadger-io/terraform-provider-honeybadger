@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_slack Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Get alerts via Slack group chat. It sends nothing until someone connects it in the web UI at links.web.
+  Get alerts via Slack group chat. It sends nothing until someone connects it in the web UI at links.web. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_slack (Resource)
 
-Get alerts via Slack group chat. It sends nothing until someone connects it in the web UI at `links.web`.
+Get alerts via Slack group chat. It sends nothing until someone connects it in the web UI at `links.web`. Required scopes: `integrations:read`, `integrations:write`.
 
 ## Example Usage
 

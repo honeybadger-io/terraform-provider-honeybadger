@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_campfire_v3 Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Get alerts via Campfire group chat.
+  Get alerts via Campfire group chat. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_campfire_v3 (Resource)
 
-Get alerts via Campfire group chat.
+Get alerts via Campfire group chat. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

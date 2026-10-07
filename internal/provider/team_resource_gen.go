@@ -21,7 +21,7 @@ import (
 
 func teamResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "A group of account members. Members of a team can access the team's projects.",
+		MarkdownDescription: "A group of account members. Members of a team can access the team's projects. Required scopes: `team:read`, `team:write`.",
 		Attributes: map[string]schema.Attribute{
 			"account_id": schema.StringAttribute{
 				MarkdownDescription: "ID of the account this team belongs to",

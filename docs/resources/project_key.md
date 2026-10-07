@@ -3,12 +3,12 @@
 page_title: "honeybadger_project_key Resource - honeybadger"
 subcategory: ""
 description: |-
-  A Project Key: what an app sends errors and events with, set as api_key in a notifier's config. It only sends data; reading or managing anything through the API takes an API Token.
+  A Project Key: what an app sends errors and events with, set as api_key in a notifier's config. It only sends data; reading or managing anything through the API takes an API Token. Required scopes: projects:read, projects:write.
 ---
 
 # honeybadger_project_key (Resource)
 
-A Project Key: what an app sends errors and events with, set as `api_key` in a notifier's config. It only sends data; reading or managing anything through the API takes an API Token.
+A Project Key: what an app sends errors and events with, set as `api_key` in a notifier's config. It only sends data; reading or managing anything through the API takes an API Token. Required scopes: `projects:read`, `projects:write`.
 
 ## Example Usage
 

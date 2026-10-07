@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_gitlab Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Create GitLab issues from errors. It sends nothing until someone connects it in the web UI at links.web.
+  Create GitLab issues from errors. It sends nothing until someone connects it in the web UI at links.web. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_gitlab (Resource)
 
-Create GitLab issues from errors. It sends nothing until someone connects it in the web UI at `links.web`.
+Create GitLab issues from errors. It sends nothing until someone connects it in the web UI at `links.web`. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

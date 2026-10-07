@@ -18,7 +18,7 @@ import (
 
 func projectKeyResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "A Project Key: what an app sends errors and events with, set as `api_key` in a notifier's config. It only sends data; reading or managing anything through the API takes an API Token.",
+		MarkdownDescription: "A Project Key: what an app sends errors and events with, set as `api_key` in a notifier's config. It only sends data; reading or managing anything through the API takes an API Token. Required scopes: `projects:read`, `projects:write`.",
 		Attributes: map[string]schema.Attribute{
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "When the key was created",

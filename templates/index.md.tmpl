@@ -1,0 +1,20 @@
+---
+page_title: "{{.ProviderShortName}} Provider"
+description: |-
+  Manages Honeybadger configuration through the v3 API.
+---
+
+# {{.ProviderShortName}} Provider
+
+{{ .Description | trimspace }}
+
+{{ if .HasExamples -}}
+## Example Usage
+
+{{- range .ExampleFiles }}
+
+{{ tffile . }}
+{{- end }}
+{{- end }}
+
+{{ .SchemaMarkdown | trimspace }}

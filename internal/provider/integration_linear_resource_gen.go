@@ -31,7 +31,7 @@ import (
 
 func integrationLinearResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "Create issues in your Linear.app team. It sends nothing until someone connects it in the web UI at `links.web`.",
+		MarkdownDescription: "Create issues in your Linear.app team. It sends nothing until someone connects it in the web UI at `links.web`. Required scopes: `integrations:read`, `integrations:write`.",
 		Attributes: map[string]schema.Attribute{
 			"active": schema.BoolAttribute{
 				MarkdownDescription: "Whether to use the integration. An OAuth integration that's active sends nothing until someone connects it in the web UI at `links.web`. Defaults to `true`.",

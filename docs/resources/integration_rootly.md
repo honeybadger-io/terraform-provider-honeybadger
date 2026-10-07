@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_rootly Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Get alerts via Rootly.
+  Get alerts via Rootly. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_rootly (Resource)
 
-Get alerts via Rootly.
+Get alerts via Rootly. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

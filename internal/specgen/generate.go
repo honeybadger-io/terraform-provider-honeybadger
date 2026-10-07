@@ -34,6 +34,7 @@ func Generate(specPath, configPath, outDir, apiPath string) error {
 	outputs := map[string][]byte{}    // written only after the rename guard passes
 	var wrappers []string
 	variants := map[string]map[string]string{}
+	scopes := map[string][]string{} // full type name -> API scopes, for the provider page
 	var api *API
 	for _, name := range names {
 		rc := cfg.Resources[name]
@@ -62,6 +63,9 @@ func Generate(specPath, configPath, outDir, apiPath string) error {
 				if m.Wrapper {
 					wrappers = append(wrappers, res.Name)
 				}
+			}
+			if len(res.Scopes) > 0 {
+				scopes[cfg.Provider+"_"+res.Name] = res.Scopes
 			}
 			if res.Variant != nil {
 				if variants[name] == nil {
@@ -111,7 +115,7 @@ func Generate(specPath, configPath, outDir, apiPath string) error {
 		}
 	}
 	// Always written, even empty, so the provider's call to it compiles.
-	registry, err := RenderRegistry(wrappers, variants)
+	registry, err := RenderRegistry(wrappers, variants, scopes)
 	if err != nil {
 		return err
 	}

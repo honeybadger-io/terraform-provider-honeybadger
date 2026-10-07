@@ -77,3 +77,16 @@ func TestFindOperationRealBundle(t *testing.T) {
 		t.Errorf("createCheckIn = request %v, response %v", op.Request, op.Response)
 	}
 }
+
+func TestFindOperationScopes(t *testing.T) {
+	doc := loadFixture(t)
+	op, err := FindOperation(doc, "getSprocket")
+	if err != nil || !reflect.DeepEqual(op.Scopes, []string{"sprockets:read"}) {
+		t.Errorf("getSprocket scopes = %v, %v", op.Scopes, err)
+	}
+	// No security of its own: the document's, which names no scopes.
+	w, err := FindOperation(doc, "getWidget")
+	if err != nil || len(w.Scopes) != 0 {
+		t.Errorf("getWidget scopes = %v, %v", w.Scopes, err)
+	}
+}

@@ -26,7 +26,7 @@ import (
 
 func dashboardResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "An Insights dashboard: a project's grid of widgets charting queries, errors, uptime, check-ins, deploys and alarms.",
+		MarkdownDescription: "An Insights dashboard: a project's grid of widgets charting queries, errors, uptime, check-ins, deploys and alarms. Required scopes: `dashboards:read`, `dashboards:write`.",
 		Attributes: map[string]schema.Attribute{
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "When the dashboard was created",

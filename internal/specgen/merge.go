@@ -54,6 +54,7 @@ type Resource struct {
 	Parents     []string     // the create operation's path parameters, in order
 	IDParam     string       // the read operation's last path parameter
 	Variant     *VariantInfo // set for a resource generated from a union branch
+	Scopes      []string     // the security scopes of its operations, sorted
 }
 
 // customTypes are the custom types resources.yaml may name.
@@ -100,11 +101,20 @@ func mergeWith(doc *openapi3.T, name string, rc ResourceConfig, createObj *Objec
 		}
 		update = *op.Request
 	}
+	scopes := append(append([]string{}, read.Scopes...), create.Scopes...)
+	if rc.Update != "" {
+		op, _ := FindOperation(doc, rc.Update)
+		scopes = append(scopes, op.Scopes...)
+	}
 	if rc.Delete != "" {
-		if _, err := FindOperation(doc, rc.Delete); err != nil {
+		del, err := FindOperation(doc, rc.Delete)
+		if err != nil {
 			return fail("delete: %v", err)
 		}
+		scopes = append(scopes, del.Scopes...)
 	}
+	sort.Strings(scopes)
+	scopes = slices.Compact(scopes)
 	R, C, U := read.Response, create.Request, update
 	if createObj != nil {
 		C = createObj
@@ -294,7 +304,7 @@ func mergeWith(doc *openapi3.T, name string, rc ResourceConfig, createObj *Objec
 		idParam = read.PathParams[n-1].Name
 	}
 	return Resource{Name: name, Description: strings.TrimSpace(R.Description), Import: rc.Import, Attributes: attrs,
-		Warnings: warnings, Parents: parentNames, IDParam: idParam}, nil
+		Warnings: warnings, Parents: parentNames, IDParam: idParam, Scopes: scopes}, nil
 }
 
 func setKind(a *Attribute, f Field) error {

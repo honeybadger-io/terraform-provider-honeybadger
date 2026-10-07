@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_instatus Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Update your status page.
+  Update your status page. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_instatus (Resource)
 
-Update your status page.
+Update your status page. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

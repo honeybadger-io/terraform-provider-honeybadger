@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_google_hangouts_chat Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Send alerts to a Google Chat room.
+  Send alerts to a Google Chat room. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_google_hangouts_chat (Resource)
 
-Send alerts to a Google Chat room.
+Send alerts to a Google Chat room. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

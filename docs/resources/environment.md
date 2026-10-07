@@ -2,12 +2,12 @@
 page_title: "honeybadger_environment Resource - honeybadger"
 subcategory: ""
 description: |-
-  An environment a project's errors are reported from, such as production or staging, and whether errors from it send notifications.
+  An environment a project's errors are reported from, such as production or staging, and whether errors from it send notifications. Required scopes: projects:read, projects:write.
 ---
 
 # honeybadger_environment (Resource)
 
-An environment a project's errors are reported from, such as production or staging, and whether errors from it send notifications.
+An environment a project's errors are reported from, such as production or staging, and whether errors from it send notifications. Required scopes: `projects:read`, `projects:write`.
 
 ## Example Usage
 

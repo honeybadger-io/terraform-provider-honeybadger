@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_pager_tree Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Get alerts via PagerTree.
+  Get alerts via PagerTree. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_pager_tree (Resource)
 
-Get alerts via PagerTree.
+Get alerts via PagerTree. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

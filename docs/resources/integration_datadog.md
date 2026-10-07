@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_datadog Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Get alerts in your Datadog cloud monitoring event stream.
+  Get alerts in your Datadog cloud monitoring event stream. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_datadog (Resource)
 
-Get alerts in your Datadog cloud monitoring event stream.
+Get alerts in your Datadog cloud monitoring event stream. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

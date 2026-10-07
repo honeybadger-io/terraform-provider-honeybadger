@@ -31,7 +31,7 @@ import (
 
 func integrationDiscordWebhookResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "Get alerts in Discord.",
+		MarkdownDescription: "Get alerts in Discord. Required scopes: `integrations:read`, `integrations:write`.",
 		Attributes: map[string]schema.Attribute{
 			"active": schema.BoolAttribute{
 				MarkdownDescription: "Whether to use the integration. An OAuth integration that's active sends nothing until someone connects it in the web UI at `links.web`. Defaults to `true`.",

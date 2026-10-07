@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_linear Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Create issues in your Linear.app team. It sends nothing until someone connects it in the web UI at links.web.
+  Create issues in your Linear.app team. It sends nothing until someone connects it in the web UI at links.web. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_linear (Resource)
 
-Create issues in your Linear.app team. It sends nothing until someone connects it in the web UI at `links.web`.
+Create issues in your Linear.app team. It sends nothing until someone connects it in the web UI at `links.web`. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

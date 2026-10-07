@@ -31,7 +31,7 @@ import (
 
 func integrationVictorOpsResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "Get alerts in your Splunk On-Call cloud monitoring timeline.",
+		MarkdownDescription: "Get alerts in your Splunk On-Call cloud monitoring timeline. Required scopes: `integrations:read`, `integrations:write`.",
 		Attributes: map[string]schema.Attribute{
 			"active": schema.BoolAttribute{
 				MarkdownDescription: "Whether to use the integration. An OAuth integration that's active sends nothing until someone connects it in the web UI at `links.web`. Defaults to `true`.",

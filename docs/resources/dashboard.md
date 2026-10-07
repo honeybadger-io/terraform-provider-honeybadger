@@ -2,12 +2,12 @@
 page_title: "honeybadger_dashboard Resource - honeybadger"
 subcategory: ""
 description: |-
-  An Insights dashboard: a project's grid of widgets charting queries, errors, uptime, check-ins, deploys and alarms.
+  An Insights dashboard: a project's grid of widgets charting queries, errors, uptime, check-ins, deploys and alarms. Required scopes: dashboards:read, dashboards:write.
 ---
 
 # honeybadger_dashboard (Resource)
 
-An Insights dashboard: a project's grid of widgets charting queries, errors, uptime, check-ins, deploys and alarms.
+An Insights dashboard: a project's grid of widgets charting queries, errors, uptime, check-ins, deploys and alarms. Required scopes: `dashboards:read`, `dashboards:write`.
 
 ## Example Usage
 

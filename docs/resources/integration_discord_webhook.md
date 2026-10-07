@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_discord_webhook Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Get alerts in Discord.
+  Get alerts in Discord. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_discord_webhook (Resource)
 
-Get alerts in Discord.
+Get alerts in Discord. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

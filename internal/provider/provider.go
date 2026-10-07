@@ -39,6 +39,10 @@ func (p *honeybadgerProvider) Metadata(_ context.Context, _ provider.MetadataReq
 func (p *honeybadgerProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Manages Honeybadger configuration through the v3 API.",
+		MarkdownDescription: "Manages Honeybadger configuration through the v3 API.\n\n" +
+			"## API Token scopes\n\n" +
+			"The API Token needs the scopes of the resources it manages. An account API Token holds the scopes chosen when it was created; a personal API Token acts as its user.\n\n" +
+			generatedScopes,
 		Attributes: map[string]schema.Attribute{
 			"api_token": schema.StringAttribute{
 				Optional:  true,

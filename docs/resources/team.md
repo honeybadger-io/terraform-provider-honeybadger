@@ -2,12 +2,12 @@
 page_title: "honeybadger_team Resource - honeybadger"
 subcategory: ""
 description: |-
-  A group of account members. Members of a team can access the team's projects.
+  A group of account members. Members of a team can access the team's projects. Required scopes: team:read, team:write.
 ---
 
 # honeybadger_team (Resource)
 
-A group of account members. Members of a team can access the team's projects.
+A group of account members. Members of a team can access the team's projects. Required scopes: `team:read`, `team:write`.
 
 ## Example Usage
 

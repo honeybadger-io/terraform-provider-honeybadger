@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_click_up_chat Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Send alerts to ClickUp Chat channels. It sends nothing until someone connects it in the web UI at links.web.
+  Send alerts to ClickUp Chat channels. It sends nothing until someone connects it in the web UI at links.web. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_click_up_chat (Resource)
 
-Send alerts to ClickUp Chat channels. It sends nothing until someone connects it in the web UI at `links.web`.
+Send alerts to ClickUp Chat channels. It sends nothing until someone connects it in the web UI at `links.web`. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

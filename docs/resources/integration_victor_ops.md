@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_victor_ops Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Get alerts in your Splunk On-Call cloud monitoring timeline.
+  Get alerts in your Splunk On-Call cloud monitoring timeline. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_victor_ops (Resource)
 
-Get alerts in your Splunk On-Call cloud monitoring timeline.
+Get alerts in your Splunk On-Call cloud monitoring timeline. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

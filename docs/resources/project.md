@@ -3,12 +3,12 @@
 page_title: "honeybadger_project Resource - honeybadger"
 subcategory: ""
 description: |-
-  A Honeybadger project: one application or service. Errors, Insights data, uptime sites, check-ins, deploys and integrations all belong to a project.
+  A Honeybadger project: one application or service. Errors, Insights data, uptime sites, check-ins, deploys and integrations all belong to a project. Required scopes: projects:create, projects:read, projects:write.
 ---
 
 # honeybadger_project (Resource)
 
-A Honeybadger project: one application or service. Errors, Insights data, uptime sites, check-ins, deploys and integrations all belong to a project.
+A Honeybadger project: one application or service. Errors, Insights data, uptime sites, check-ins, deploys and integrations all belong to a project. Required scopes: `projects:create`, `projects:read`, `projects:write`.
 
 ## Example Usage
 

@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_email Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Integrate with 3rd-party services that accept email.
+  Integrate with 3rd-party services that accept email. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_email (Resource)
 
-Integrate with 3rd-party services that accept email.
+Integrate with 3rd-party services that accept email. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

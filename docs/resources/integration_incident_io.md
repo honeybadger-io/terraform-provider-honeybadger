@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_incident_io Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Get alerts via incident.io.
+  Get alerts via incident.io. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_incident_io (Resource)
 
-Get alerts via incident.io.
+Get alerts via incident.io. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

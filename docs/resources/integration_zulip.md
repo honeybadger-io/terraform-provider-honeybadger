@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_zulip Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Get alerts via Zulip group chat.
+  Get alerts via Zulip group chat. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_zulip (Resource)
 
-Get alerts via Zulip group chat.
+Get alerts via Zulip group chat. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

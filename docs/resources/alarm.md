@@ -3,12 +3,12 @@
 page_title: "honeybadger_alarm Resource - honeybadger"
 subcategory: ""
 description: |-
-  An Insights alarm. Read from Honeybadger's copy of the alarm, written after each change; an edit made directly in the alarm service doesn't show here.
+  An Insights alarm. Read from Honeybadger's copy of the alarm, written after each change; an edit made directly in the alarm service doesn't show here. Required scopes: alarms:read, alarms:write.
 ---
 
 # honeybadger_alarm (Resource)
 
-An Insights alarm. Read from Honeybadger's copy of the alarm, written after each change; an edit made directly in the alarm service doesn't show here.
+An Insights alarm. Read from Honeybadger's copy of the alarm, written after each change; an edit made directly in the alarm service doesn't show here. Required scopes: `alarms:read`, `alarms:write`.
 
 ## Example Usage
 

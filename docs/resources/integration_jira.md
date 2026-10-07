@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_jira Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Track issues in Jira. Older, Basic Auth strategy -- works with JIRA Server & JIRA Cloud.
+  Track issues in Jira. Older, Basic Auth strategy -- works with JIRA Server & JIRA Cloud. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_jira (Resource)
 
-Track issues in Jira. Older, Basic Auth strategy -- works with JIRA Server & JIRA Cloud.
+Track issues in Jira. Older, Basic Auth strategy -- works with JIRA Server & JIRA Cloud. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

@@ -20,7 +20,7 @@ import (
 
 func projectResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "A Honeybadger project: one application or service. Errors, Insights data, uptime sites, check-ins, deploys and integrations all belong to a project.",
+		MarkdownDescription: "A Honeybadger project: one application or service. Errors, Insights data, uptime sites, check-ins, deploys and integrations all belong to a project. Required scopes: `projects:create`, `projects:read`, `projects:write`.",
 		Attributes: map[string]schema.Attribute{
 			"account_id": schema.StringAttribute{
 				MarkdownDescription: "ID of the account this project belongs to",

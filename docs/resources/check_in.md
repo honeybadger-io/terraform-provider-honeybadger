@@ -3,12 +3,12 @@
 page_title: "honeybadger_check_in Resource - honeybadger"
 subcategory: ""
 description: |-
-  A check-in monitor for a scheduled job. The job requests the check-in's report URL each time it runs, and Honeybadger alerts when a report doesn't arrive on schedule.
+  A check-in monitor for a scheduled job. The job requests the check-in's report URL each time it runs, and Honeybadger alerts when a report doesn't arrive on schedule. Required scopes: checkins:read, checkins:write.
 ---
 
 # honeybadger_check_in (Resource)
 
-A check-in monitor for a scheduled job. The job requests the check-in's report URL each time it runs, and Honeybadger alerts when a report doesn't arrive on schedule.
+A check-in monitor for a scheduled job. The job requests the check-in's report URL each time it runs, and Honeybadger alerts when a report doesn't arrive on schedule. Required scopes: `checkins:read`, `checkins:write`.
 
 ## Example Usage
 

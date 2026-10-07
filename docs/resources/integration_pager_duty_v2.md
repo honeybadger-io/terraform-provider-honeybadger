@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_pager_duty_v2 Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Get alerts via PagerDuty.
+  Get alerts via PagerDuty. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_pager_duty_v2 (Resource)
 
-Get alerts via PagerDuty.
+Get alerts via PagerDuty. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

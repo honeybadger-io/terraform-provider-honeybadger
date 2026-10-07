@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_sprintly Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Create Sprintly defects from errors.
+  Create Sprintly defects from errors. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_sprintly (Resource)
 
-Create Sprintly defects from errors.
+Create Sprintly defects from errors. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

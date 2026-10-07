@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_web_hook Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  DIY integrations via webhook.
+  DIY integrations via webhook. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_web_hook (Resource)
 
-DIY integrations via webhook.
+DIY integrations via webhook. Required scopes: `integrations:read`, `integrations:write`.
 
 ## Example Usage
 

@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_redmine Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Track issues in Redmine.
+  Track issues in Redmine. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_redmine (Resource)
 
-Track issues in Redmine.
+Track issues in Redmine. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

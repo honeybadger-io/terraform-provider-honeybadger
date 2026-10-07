@@ -2,6 +2,8 @@ openapi: 3.1.0
 info:
   title: Widgets
   version: "1"
+security:
+- bearer_auth: []
 paths:
   "/projects/{project_id}/widgets":
     parameters:
@@ -150,6 +152,9 @@ paths:
   "/sprockets":
     post:
       operationId: createSprocket
+      security:
+      - bearer_auth:
+        - sprockets:write
       requestBody:
         required: true
         content:
@@ -176,6 +181,9 @@ paths:
         format: uuid
     get:
       operationId: getSprocket
+      security:
+      - bearer_auth:
+        - sprockets:read
       responses:
         '200':
           description: ok
@@ -188,6 +196,9 @@ paths:
                     "$ref": "#/components/schemas/Sprocket"
     patch:
       operationId: updateSprocket
+      security:
+      - bearer_auth:
+        - sprockets:write
       requestBody:
         required: true
         content:
@@ -206,10 +217,17 @@ paths:
                     "$ref": "#/components/schemas/Sprocket"
     delete:
       operationId: deleteSprocket
+      security:
+      - bearer_auth:
+        - sprockets:write
       responses:
         '204':
           description: deleted
 components:
+  securitySchemes:
+    bearer_auth:
+      type: http
+      scheme: bearer
   parameters:
     ProjectId:
       name: project_id

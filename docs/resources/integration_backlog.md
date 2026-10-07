@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_backlog Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Track issues in Backlog.
+  Track issues in Backlog. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_backlog (Resource)
 
-Track issues in Backlog.
+Track issues in Backlog. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

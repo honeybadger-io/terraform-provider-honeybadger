@@ -31,7 +31,7 @@ import (
 
 func integrationEmailResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "Integrate with 3rd-party services that accept email.",
+		MarkdownDescription: "Integrate with 3rd-party services that accept email. Required scopes: `integrations:read`, `integrations:write`.",
 		Attributes: map[string]schema.Attribute{
 			"active": schema.BoolAttribute{
 				MarkdownDescription: "Whether to use the integration. An OAuth integration that's active sends nothing until someone connects it in the web UI at `links.web`. Defaults to `true`.",

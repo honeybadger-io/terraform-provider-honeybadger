@@ -2,12 +2,12 @@
 page_title: "honeybadger_status_page Resource - honeybadger"
 subcategory: ""
 description: |-
-  A public status page. Readable and deletable after the plan loses status pages; creating and editing need the feature.
+  A public status page. Readable and deletable after the plan loses status pages; creating and editing need the feature. Required scopes: status_pages:read, status_pages:write.
 ---
 
 # honeybadger_status_page (Resource)
 
-A public status page. Readable and deletable after the plan loses status pages; creating and editing need the feature.
+A public status page. Readable and deletable after the plan loses status pages; creating and editing need the feature. Required scopes: `status_pages:read`, `status_pages:write`.
 
 ## Example Usage
 

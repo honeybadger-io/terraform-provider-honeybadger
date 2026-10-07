@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_ops_genie_v2 Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Get alerts via OpsGenie.
+  Get alerts via OpsGenie. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_ops_genie_v2 (Resource)
 
-Get alerts via OpsGenie.
+Get alerts via OpsGenie. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

@@ -25,7 +25,7 @@ import (
 
 func alarmResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "An Insights alarm. Read from Honeybadger's copy of the alarm, written after each change; an edit made directly in the alarm service doesn't show here.",
+		MarkdownDescription: "An Insights alarm. Read from Honeybadger's copy of the alarm, written after each change; an edit made directly in the alarm service doesn't show here. Required scopes: `alarms:read`, `alarms:write`.",
 		Attributes: map[string]schema.Attribute{
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "When the alarm was created",

@@ -2,12 +2,12 @@
 page_title: "honeybadger_site Resource - honeybadger"
 subcategory: ""
 description: |-
-  A URL Honeybadger checks for uptime from several locations on a schedule, alerting when it goes down and when it recovers.
+  A URL Honeybadger checks for uptime from several locations on a schedule, alerting when it goes down and when it recovers. Required scopes: uptime:read, uptime:write.
 ---
 
 # honeybadger_site (Resource)
 
-A URL Honeybadger checks for uptime from several locations on a schedule, alerting when it goes down and when it recovers.
+A URL Honeybadger checks for uptime from several locations on a schedule, alerting when it goes down and when it recovers. Required scopes: `uptime:read`, `uptime:write`.
 
 ## Example Usage
 

@@ -28,7 +28,7 @@ import (
 
 func statusPageResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "A public status page. Readable and deletable after the plan loses status pages; creating and editing need the feature.",
+		MarkdownDescription: "A public status page. Readable and deletable after the plan loses status pages; creating and editing need the feature. Required scopes: `status_pages:read`, `status_pages:write`.",
 		Attributes: map[string]schema.Attribute{
 			"account_id": schema.StringAttribute{
 				MarkdownDescription: "ID of the account this status page belongs to",

@@ -23,7 +23,7 @@ import (
 
 func checkInResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "A check-in monitor for a scheduled job. The job requests the check-in's report URL each time it runs, and Honeybadger alerts when a report doesn't arrive on schedule.",
+		MarkdownDescription: "A check-in monitor for a scheduled job. The job requests the check-in's report URL each time it runs, and Honeybadger alerts when a report doesn't arrive on schedule. Required scopes: `checkins:read`, `checkins:write`.",
 		Attributes: map[string]schema.Attribute{
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "When the check-in was created",

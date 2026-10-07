@@ -21,7 +21,7 @@ import (
 
 func environmentResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "An environment a project's errors are reported from, such as production or staging, and whether errors from it send notifications.",
+		MarkdownDescription: "An environment a project's errors are reported from, such as production or staging, and whether errors from it send notifications. Required scopes: `projects:read`, `projects:write`.",
 		Attributes: map[string]schema.Attribute{
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "When the environment was created",

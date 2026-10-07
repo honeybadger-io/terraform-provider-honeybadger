@@ -29,7 +29,7 @@ import (
 
 func sprocketResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "A sprocket.",
+		MarkdownDescription: "A sprocket. Required scopes: `sprockets:read`, `sprockets:write`.",
 		Attributes: map[string]schema.Attribute{
 			"checked_at": schema.StringAttribute{
 				MarkdownDescription: "When it was last checked; null for one never checked.",

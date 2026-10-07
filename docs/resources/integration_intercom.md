@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_intercom Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Send events to Intercom when users encounter errors. It sends nothing until someone connects it in the web UI at links.web.
+  Send events to Intercom when users encounter errors. It sends nothing until someone connects it in the web UI at links.web. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_intercom (Resource)
 
-Send events to Intercom when users encounter errors. It sends nothing until someone connects it in the web UI at `links.web`.
+Send events to Intercom when users encounter errors. It sends nothing until someone connects it in the web UI at `links.web`. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

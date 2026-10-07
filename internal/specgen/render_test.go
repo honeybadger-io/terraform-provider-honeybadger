@@ -2,6 +2,7 @@ package specgen
 
 import (
 	"bytes"
+	"reflect"
 	"flag"
 	"os"
 	"os/exec"
@@ -158,7 +159,7 @@ func TestRenderCRUDMatchesGolden(t *testing.T) {
 
 func TestRenderRegistry(t *testing.T) {
 	got, err := RenderRegistry([]string{"project", "check_in"}, map[string]map[string]string{
-		"gadget": {"Alpha": "honeybadger_gadget_alpha"}})
+		"gadget": {"Alpha": "honeybadger_gadget_alpha"}}, nil)
 	if err != nil {
 		t.Fatalf("RenderRegistry: %v", err)
 	}
@@ -436,5 +437,33 @@ func TestRenderJSONObjectDefault(t *testing.T) {
 	}
 	if !strings.Contains(b.String(), `stringdefault.StaticString("{}")`) {
 		t.Errorf("rendered = %s", b.String())
+	}
+}
+
+func TestRenderScopes(t *testing.T) {
+	_, r := mapSprocket(t)
+	if !reflect.DeepEqual(r.Scopes, []string{"sprockets:read", "sprockets:write"}) {
+		t.Fatalf("scopes = %v", r.Scopes)
+	}
+	got, err := Render(r, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(got), `MarkdownDescription: "A sprocket. Required scopes: `+"`sprockets:read`, `sprockets:write`"+`.",`) {
+		t.Errorf("description lacks the scopes line:\n%s", got)
+	}
+	// A resource whose operations name no scopes gets no line.
+	if s := scopesSentence(nil); s != "" {
+		t.Errorf("scopesSentence(nil) = %q", s)
+	}
+}
+
+func TestRenderRegistryScopesTable(t *testing.T) {
+	got, err := RenderRegistry([]string{"sprocket"}, nil, map[string][]string{"honeybadger_sprocket": {"sprockets:read", "sprockets:write"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(got), "| `honeybadger_sprocket` | `sprockets:read`, `sprockets:write` |") {
+		t.Errorf("registry lacks the scopes table:\n%s", got)
 	}
 }

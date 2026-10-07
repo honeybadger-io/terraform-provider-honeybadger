@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_jira_cloud Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Track issues in Jira. Newer, OAuth 2 strategy -- works with JIRA Cloud. It sends nothing until someone connects it in the web UI at links.web.
+  Track issues in Jira. Newer, OAuth 2 strategy -- works with JIRA Cloud. It sends nothing until someone connects it in the web UI at links.web. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_jira_cloud (Resource)
 
-Track issues in Jira. Newer, OAuth 2 strategy -- works with JIRA Cloud. It sends nothing until someone connects it in the web UI at `links.web`.
+Track issues in Jira. Newer, OAuth 2 strategy -- works with JIRA Cloud. It sends nothing until someone connects it in the web UI at `links.web`. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

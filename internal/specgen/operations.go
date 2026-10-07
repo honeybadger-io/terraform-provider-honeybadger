@@ -3,6 +3,7 @@ package specgen
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -23,6 +24,7 @@ type Operation struct {
 	Request       *Object             // nil without a JSON request body
 	RequestSchema *openapi3.SchemaRef // the request body's schema, for unions
 	Response      *Object             // the success response's data object; nil when there isn't one
+	Scopes        []string            // the operation's security scopes, or the document's
 }
 
 var pathParam = regexp.MustCompile(`\{([^}]+)\}`)
@@ -34,14 +36,31 @@ func FindOperation(doc *openapi3.T, id string) (Operation, error) {
 			if op.OperationID != id {
 				continue
 			}
-			return describe(path, method, item, op)
+			return describe(doc, path, method, item, op)
 		}
 	}
 	return Operation{}, fmt.Errorf("operation %q isn't in the spec", id)
 }
 
-func describe(path, method string, item *openapi3.PathItem, op *openapi3.Operation) (Operation, error) {
+func describe(doc *openapi3.T, path, method string, item *openapi3.PathItem, op *openapi3.Operation) (Operation, error) {
 	out := Operation{ID: op.OperationID, Method: strings.ToUpper(method), Path: path}
+
+	reqs := doc.Security
+	if op.Security != nil {
+		reqs = *op.Security
+	}
+	seen := map[string]bool{}
+	for _, req := range reqs {
+		for _, scopes := range req {
+			for _, s := range scopes {
+				if !seen[s] {
+					seen[s] = true
+					out.Scopes = append(out.Scopes, s)
+				}
+			}
+		}
+	}
+	sort.Strings(out.Scopes)
 
 	described := map[string]string{}
 	for _, params := range []openapi3.Parameters{item.Parameters, op.Parameters} {

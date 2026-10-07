@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_trello Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Track issues in Trello. It sends nothing until someone connects it in the web UI at links.web.
+  Track issues in Trello. It sends nothing until someone connects it in the web UI at links.web. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_trello (Resource)
 
-Track issues in Trello. It sends nothing until someone connects it in the web UI at `links.web`.
+Track issues in Trello. It sends nothing until someone connects it in the web UI at `links.web`. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

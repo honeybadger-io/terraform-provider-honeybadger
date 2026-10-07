@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"sort"
+	"strings"
 	"sync"
 	"testing"
 
@@ -319,5 +320,13 @@ func TestProviderRegistersTheResources(t *testing.T) {
 	sort.Strings(want)
 	if !reflect.DeepEqual(names, want) {
 		t.Errorf("resources = %v, want %v", names, want)
+	}
+}
+
+func TestProviderDescriptionListsScopes(t *testing.T) {
+	resp := &provider.SchemaResponse{}
+	New("test")().Schema(context.Background(), provider.SchemaRequest{}, resp)
+	if !strings.Contains(resp.Schema.MarkdownDescription, "| `honeybadger_site` | `uptime:read`, `uptime:write` |") {
+		t.Errorf("provider description lacks the site's scopes:\n%s", resp.Schema.MarkdownDescription)
 	}
 }

@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_shortcut_v2 Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Create stories in your Shortcut projects.
+  Create stories in your Shortcut projects. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_shortcut_v2 (Resource)
 
-Create stories in your Shortcut projects.
+Create stories in your Shortcut projects. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

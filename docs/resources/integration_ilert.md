@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_ilert Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Get alerts via ilert.
+  Get alerts via ilert. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_ilert (Resource)
 
-Get alerts via ilert.
+Get alerts via ilert. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

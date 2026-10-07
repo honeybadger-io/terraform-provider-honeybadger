@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_microsoft_teams_v2 Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Get alerts via Microsoft Teams group chat.
+  Get alerts via Microsoft Teams group chat. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_microsoft_teams_v2 (Resource)
 
-Get alerts via Microsoft Teams group chat.
+Get alerts via Microsoft Teams group chat. Required scopes: `integrations:read`, `integrations:write`.
 
 
 

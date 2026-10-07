@@ -2,12 +2,12 @@
 page_title: "honeybadger_integration_mattermost Resource - honeybadger"
 subcategory: "Integrations"
 description: |-
-  Get alerts via Mattermost group chat.
+  Get alerts via Mattermost group chat. Required scopes: integrations:read, integrations:write.
 ---
 
 # honeybadger_integration_mattermost (Resource)
 
-Get alerts via Mattermost group chat.
+Get alerts via Mattermost group chat. Required scopes: `integrations:read`, `integrations:write`.
 
 
 
