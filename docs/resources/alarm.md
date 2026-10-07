@@ -94,6 +94,6 @@ terraform import honeybadger_alarm.errors "<project_id>/<id>"
 - **Trigger rules:** rules that depend on `trigger_config.type` are checked by the API when the alarm is applied, not at plan time.
 - **An invalid trigger on update** is answered with success and the old trigger kept. Terraform then reports "Provider produced inconsistent result after apply".
 - **Import:** an alarm whose stored copy has no trigger imports with `trigger_config` null, so the next plan adds one.
-- **A create that times out** can leave an evaluator behind in Honeybadger's alarm service with no alarm attached. Check the project's alarms before applying again.
-- **A retried delete can fail** if the alarm service already removed the alarm's evaluator.
-- **When the alarm service is unavailable**, the API answers 503. On create, Terraform reports that the create may have succeeded and how to adopt the alarm with import.
+- **A create that times out** may still have created the alarm. Check the project's alarms, and import it if it's there, before applying again.
+- **A retried delete can fail** when the first attempt already removed the alarm. Refresh, then apply again.
+- **When alarms are briefly unavailable**, the API answers 503. On create, Terraform reports that the create may have succeeded and how to adopt the alarm with import.
