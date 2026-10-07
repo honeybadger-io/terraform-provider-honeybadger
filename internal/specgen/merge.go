@@ -42,6 +42,7 @@ type Attribute struct {
 	MaxItems           *int64
 	Attributes         []Attribute // an object's attributes, sorted by name
 	NotRead            bool        // write-only, never read back
+	Example            any         // the spec's example, for generated docs examples
 }
 
 // Resource is a resource's attributes, sorted by name, and its import format.
@@ -246,6 +247,7 @@ func mergeWith(doc *openapi3.T, name string, rc ResourceConfig, createObj *Objec
 			a.MinLength, a.MaxLength = src.MinLength, src.MaxLength
 			a.Minimum, a.Maximum = src.Minimum, src.Maximum
 			a.MinItems, a.MaxItems = src.MinItems, src.MaxItems
+			a.Example = src.Example
 		}
 
 		// A collection the read schema calls unordered is a set, even when an
@@ -433,7 +435,7 @@ func nestedAttributes(obj Object, computed bool) ([]Attribute, error) {
 		}
 		a := Attribute{Name: n, Description: strings.TrimSpace(f.Description), Sensitive: f.Secret || f.WriteOnly,
 			Enum: f.Enum, Pattern: f.Pattern, MinLength: f.MinLength, MaxLength: f.MaxLength,
-			Minimum: f.Minimum, Maximum: f.Maximum, MinItems: f.MinItems, MaxItems: f.MaxItems}
+			Minimum: f.Minimum, Maximum: f.Maximum, MinItems: f.MinItems, MaxItems: f.MaxItems, Example: f.Example}
 		switch {
 		case obj.Required[n]:
 			a.Required = true
@@ -584,6 +586,9 @@ func narrow(base, branch Object) (Object, error) {
 		}
 		if b.Default != nil {
 			f.Default = b.Default
+		}
+		if b.Example != nil {
+			f.Example = b.Example
 		}
 		if b.Description != "" && b.Properties == nil {
 			f.Description = b.Description

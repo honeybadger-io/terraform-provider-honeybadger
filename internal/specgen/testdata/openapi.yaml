@@ -714,6 +714,7 @@ components:
       properties:
         name:
           type: string
+          example: Main sprocket
         headers:
           type:
           - object
@@ -723,6 +724,8 @@ components:
             format: password
           default: {}
           description: Headers sent with each turn. Replaces the stored headers.
+          example:
+            Authorization: "<Token>"
         speed:
           description: Turns a minute. Null resets it to 5.
           default: 5
@@ -759,6 +762,7 @@ components:
             type: string
             format: uuid
             description: The sprocket this one hangs from.
+            example: 0b6f2b8e-4f7c-4c1a-9a51-6c1f0e1b2a3d
     SprocketSpeed:
       type: integer
       enum:

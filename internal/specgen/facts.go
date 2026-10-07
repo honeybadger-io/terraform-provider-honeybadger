@@ -46,6 +46,7 @@ type Field struct {
 	Values           *Field  // an object's additionalProperties schema
 	Const            any     // OpenAPI 3.1 const
 	Conditional      bool    // has if/then allOf parts specgen doesn't model
+	Example          any     // the schema's example, if any
 }
 
 // Object is a schema's properties, with allOf flattened.
@@ -178,6 +179,9 @@ func FieldFacts(name string, ref *openapi3.SchemaRef) (Field, error) {
 	}
 	if s.Default != nil {
 		f.Default = s.Default
+	}
+	if s.Example != nil {
+		f.Example = s.Example
 	}
 	if s.Const != nil {
 		f.Const = s.Const

@@ -305,3 +305,10 @@ func TestFieldFactsAllOfRequiredOnly(t *testing.T) {
 }
 
 func ptr[T any](v T) *T { return &v }
+
+func TestFieldFactsExample(t *testing.T) {
+	f := schemaFacts(t, loadFixture(t), "SprocketInput").Fields["name"]
+	if f.Example != "Main sprocket" {
+		t.Errorf("example = %#v", f.Example)
+	}
+}
