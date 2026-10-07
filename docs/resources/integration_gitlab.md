@@ -30,7 +30,7 @@ Create GitLab issues from errors. It sends nothing until someone connects it in 
 - `filters` (Attributes List) An ordered list. Each event that has a filter notifies only for errors matching its query. Replaces the stored filters; send [] or null to clear. Applies only on plans with integration filters; changing it on other plans is 403 feature_unavailable. Reads return what's stored. (see [below for nested schema](#nestedatt--filters))
 - `included_environments` (Set of String) When non-empty, only errors from these environments notify through this integration, including environments that haven't reported yet. Empty means every environment not excluded. Send null or [] to clear. Applies only on plans with environment settings; changing it on other plans is 403 feature_unavailable. Reads return what's stored. A set; order is ignored and duplicates are dropped.
 - `notification_limit` (Number) Maximum notifications in a 10-minute window before flood control.
-- `rate` (String) Rate threshold period (e.g. min, hour).
+- `rate` (String) Period the rate_exceeded threshold counts over.
 - `site_ids` (Set of String) Sites whose up and down events this integration receives. null follows every site in the project, including ones added later; a create that leaves it out does the same. [] follows none, and a list follows just those sites. An ID that isn't one of this project's sites fails the request with 422. A set; order is ignored and duplicates are dropped.
 - `threshold` (Number) Number of occurrences before rate_exceeded fires.
 

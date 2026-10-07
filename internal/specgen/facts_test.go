@@ -117,7 +117,6 @@ func TestRealBundleFacts(t *testing.T) {
 
 func hasPrefix(s, prefix string) bool { return len(s) >= len(prefix) && s[:len(prefix)] == prefix }
 
-func ptr[T any](v T) *T { return &v }
 
 // An object property keeps its own properties, recursively, with their
 // required lists.
@@ -274,3 +273,36 @@ func TestFieldFactsConditionalAllOf(t *testing.T) {
 		t.Errorf("setKind(array of conditional) err = %v", err)
 	}
 }
+
+// allOf [$ref, {required: [...]}] adds required keys to the referenced
+// object (honeybadger b1c36c0dc9: integration branches' config). A part that
+// does anything besides `required` is still refused.
+func TestFieldFactsAllOfRequiredOnly(t *testing.T) {
+	obj := &openapi3.Schema{Type: &openapi3.Types{"object"}, Properties: openapi3.Schemas{
+		"url":   {Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}},
+		"label": {Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}},
+	}}
+	s := &openapi3.Schema{AllOf: openapi3.SchemaRefs{
+		{Ref: "#/components/schemas/Config", Value: obj},
+		{Value: &openapi3.Schema{Required: []string{"url"}}},
+	}}
+	f, err := FieldFacts("config", &openapi3.SchemaRef{Value: s})
+	if err != nil {
+		t.Fatalf("FieldFacts: %v", err)
+	}
+	if f.Properties == nil || !f.Properties.Required["url"] || f.Properties.Required["label"] {
+		t.Errorf("config = %+v; want url required, label not", f.Properties)
+	}
+	if obj.Required != nil {
+		t.Error("the referenced schema was changed; required belongs to this use only")
+	}
+	bad := &openapi3.Schema{AllOf: openapi3.SchemaRefs{
+		{Value: obj},
+		{Value: &openapi3.Schema{Required: []string{"url"}, MinProps: 1}},
+	}}
+	if _, err := FieldFacts("config", &openapi3.SchemaRef{Value: bad}); err == nil {
+		t.Error("an allOf part that does more than require keys should be refused")
+	}
+}
+
+func ptr[T any](v T) *T { return &v }

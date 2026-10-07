@@ -5,6 +5,7 @@ package specgen
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/getkin/kin-openapi/openapi3"
 )
@@ -101,14 +102,20 @@ func FieldFacts(name string, ref *openapi3.SchemaRef) (Field, error) {
 
 	// if/then parts are conditional constraints (per-type shapes): recorded,
 	// so setKind can refuse to type them, and otherwise left to the API.
+	// A part that only lists required keys adds them to the object the
+	// other part describes (allOf [$ref, {required: [...]}]).
 	var structural openapi3.SchemaRefs
+	var required []string
 	conditional := false
 	for _, p := range s.AllOf {
-		if p.Value != nil && (p.Value.If != nil || p.Value.Then != nil) {
+		switch {
+		case p.Value != nil && (p.Value.If != nil || p.Value.Then != nil):
 			conditional = true
-			continue
+		case p.Value != nil && requiredOnly(p.Value):
+			required = append(required, p.Value.Required...)
+		default:
+			structural = append(structural, p)
 		}
-		structural = append(structural, p)
 	}
 
 	var f Field
@@ -138,6 +145,17 @@ func FieldFacts(name string, ref *openapi3.SchemaRef) (Field, error) {
 		return Field{}, fmt.Errorf("unsupported allOf with %d parts on a property", len(structural))
 	}
 	f.Conditional = f.Conditional || conditional
+	if len(required) > 0 {
+		if f.Properties == nil {
+			return Field{}, fmt.Errorf("an allOf part requires %v of something that isn't an object with properties", required)
+		}
+		for _, k := range required {
+			if _, ok := f.Properties.Fields[k]; !ok {
+				return Field{}, fmt.Errorf("an allOf part requires %s, which isn't a property", k)
+			}
+			f.Properties.Required[k] = true
+		}
+	}
 
 	f.Name = name
 	if s.Type != nil {
@@ -293,4 +311,14 @@ func Variants(input *openapi3.SchemaRef, field string) ([]Variant, error) {
 		out = append(out, Variant{Const: c, Then: then})
 	}
 	return out, nil
+}
+
+// requiredOnly reports whether a schema does nothing but list required keys.
+func requiredOnly(s *openapi3.Schema) bool {
+	if len(s.Required) == 0 {
+		return false
+	}
+	rest := *s
+	rest.Required = nil
+	return reflect.DeepEqual(rest, openapi3.Schema{})
 }

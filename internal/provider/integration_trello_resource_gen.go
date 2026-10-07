@@ -149,10 +149,11 @@ func integrationTrelloResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"rate": schema.StringAttribute{
-				MarkdownDescription: "Rate threshold period (e.g. min, hour).",
+				MarkdownDescription: "Period the rate_exceeded threshold counts over.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString("wday"),
+				Validators:          []validator.String{stringvalidator.OneOf("min", "hour", "wday", "week")},
 			},
 			"site_ids": schema.SetAttribute{
 				ElementType:         types.StringType,
@@ -241,7 +242,7 @@ func (m integrationTrelloResourceModel) createParams(diags *diag.Diagnostics) ap
 	createNullableObjects(&p.Filters, m.Filters, integrationTrelloFiltersToAPI, path.Root("filters"), diags)
 	createNullableSlice(&p.IncludedEnvironments, m.IncludedEnvironments, fromString)
 	p.NotificationLimit = createInt(m.NotificationLimit)
-	p.Rate = createString(m.Rate)
+	createEnum(&p.Rate, m.Rate)
 	createNullableSlice(&p.SiteIds, m.SiteIds, fromUUID)
 	p.Threshold = createInt(m.Threshold)
 	setEnum(&p.Type, types.StringValue("Trello"))
@@ -260,7 +261,7 @@ func (m integrationTrelloResourceModel) updateParams(state integrationTrelloReso
 	updateNullableObjects(&p.Filters, m.Filters, state.Filters, integrationTrelloFiltersToAPI, path.Root("filters"), diags)
 	updateNullableSlice(&p.IncludedEnvironments, m.IncludedEnvironments, state.IncludedEnvironments, fromString)
 	p.NotificationLimit = updateInt(m.NotificationLimit, state.NotificationLimit)
-	p.Rate = updateString(m.Rate, state.Rate)
+	updateEnum(&p.Rate, m.Rate, state.Rate)
 	updateNullableSlice(&p.SiteIds, m.SiteIds, state.SiteIds, fromUUID)
 	p.Threshold = updateInt(m.Threshold, state.Threshold)
 	return p
@@ -281,7 +282,7 @@ func (m *integrationTrelloResourceModel) fromAPI(c *apiv3.Integration) {
 	m.Links = integrationTrelloLinksFromAPI(&c.Links)
 	m.NotificationLimit = int64Value(c.NotificationLimit)
 	m.ProjectID = types.StringValue(c.ProjectId)
-	m.Rate = types.StringValue(c.Rate)
+	m.Rate = types.StringValue(string(c.Rate))
 	m.SiteIds = setOf(nullableSlice(c.SiteIds), types.StringType, uuidElem)
 	m.Threshold = types.Int64Value(int64(c.Threshold))
 }

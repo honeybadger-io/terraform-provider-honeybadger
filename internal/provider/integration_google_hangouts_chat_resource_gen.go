@@ -147,10 +147,11 @@ func integrationGoogleHangoutsChatResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"rate": schema.StringAttribute{
-				MarkdownDescription: "Rate threshold period (e.g. min, hour).",
+				MarkdownDescription: "Period the rate_exceeded threshold counts over.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString("wday"),
+				Validators:          []validator.String{stringvalidator.OneOf("min", "hour", "wday", "week")},
 			},
 			"site_ids": schema.SetAttribute{
 				ElementType:         types.StringType,
@@ -237,7 +238,7 @@ func (m integrationGoogleHangoutsChatResourceModel) createParams(diags *diag.Dia
 	createNullableObjects(&p.Filters, m.Filters, integrationGoogleHangoutsChatFiltersToAPI, path.Root("filters"), diags)
 	createNullableSlice(&p.IncludedEnvironments, m.IncludedEnvironments, fromString)
 	p.NotificationLimit = createInt(m.NotificationLimit)
-	p.Rate = createString(m.Rate)
+	createEnum(&p.Rate, m.Rate)
 	createNullableSlice(&p.SiteIds, m.SiteIds, fromUUID)
 	p.Threshold = createInt(m.Threshold)
 	setEnum(&p.Type, types.StringValue("GoogleHangoutsChat"))
@@ -256,7 +257,7 @@ func (m integrationGoogleHangoutsChatResourceModel) updateParams(state integrati
 	updateNullableObjects(&p.Filters, m.Filters, state.Filters, integrationGoogleHangoutsChatFiltersToAPI, path.Root("filters"), diags)
 	updateNullableSlice(&p.IncludedEnvironments, m.IncludedEnvironments, state.IncludedEnvironments, fromString)
 	p.NotificationLimit = updateInt(m.NotificationLimit, state.NotificationLimit)
-	p.Rate = updateString(m.Rate, state.Rate)
+	updateEnum(&p.Rate, m.Rate, state.Rate)
 	updateNullableSlice(&p.SiteIds, m.SiteIds, state.SiteIds, fromUUID)
 	p.Threshold = updateInt(m.Threshold, state.Threshold)
 	return p
@@ -277,7 +278,7 @@ func (m *integrationGoogleHangoutsChatResourceModel) fromAPI(c *apiv3.Integratio
 	m.Links = integrationGoogleHangoutsChatLinksFromAPI(&c.Links)
 	m.NotificationLimit = int64Value(c.NotificationLimit)
 	m.ProjectID = types.StringValue(c.ProjectId)
-	m.Rate = types.StringValue(c.Rate)
+	m.Rate = types.StringValue(string(c.Rate))
 	m.SiteIds = setOf(nullableSlice(c.SiteIds), types.StringType, uuidElem)
 	m.Threshold = types.Int64Value(int64(c.Threshold))
 }
