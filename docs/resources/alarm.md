@@ -68,6 +68,25 @@ Required:
 - `operator` (String) How the query's result is compared with `value`: greater than, greater than or equal, less than, less than or equal, equal, or not equal. Valid values: `gt`, `gte`, `lt`, `lte`, `eq`, `neq`.
 - `value` (Number) Threshold to compare against. `alert_result_count` takes a whole number >= 0.
 
+## Import
+
+Import is supported using the following syntax:
+
+In Terraform v1.5.0 and later, the [`import` block](https://developer.hashicorp.com/terraform/language/import) can be used with the `id` attribute, for example:
+
+```terraform
+import {
+  to = honeybadger_alarm.errors
+  id = "<project_id>/<id>"
+}
+```
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+terraform import honeybadger_alarm.errors "<project_id>/<id>"
+```
+
 ## Notes
 
 - **`stream_ids`:** left out, the alarm gets the project's current streams, and state shows them. Removing `stream_ids` from config stops Terraform managing it and keeps the stored list. To change the streams, list them.

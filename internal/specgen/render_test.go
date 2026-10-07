@@ -2,11 +2,11 @@ package specgen
 
 import (
 	"bytes"
-	"reflect"
 	"flag"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"

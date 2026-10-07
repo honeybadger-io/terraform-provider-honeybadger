@@ -69,3 +69,24 @@ Required:
 Read-Only:
 
 - `web` (String) Absolute URL of this resource's page in the Honeybadger web UI, on the web UI's host rather than the API's. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on, on Heroku's host.
+
+## Import
+
+Import is supported using the following syntax:
+
+In Terraform v1.5.0 and later, the [`import` block](https://developer.hashicorp.com/terraform/language/import) can be used with the `id` attribute, for example:
+
+```terraform
+# Import can't read `config.webhook_authorization_token` back: set it in config.
+import {
+  to = honeybadger_integration_rootly.example
+  id = "<project_id>/<id>"
+}
+```
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Import can't read `config.webhook_authorization_token` back: set it in config.
+terraform import honeybadger_integration_rootly.example "<project_id>/<id>"
+```

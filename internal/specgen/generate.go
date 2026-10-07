@@ -33,6 +33,7 @@ func Generate(specPath, configPath, outDir, apiPath string) error {
 	categories := map[string]string{} // resource name -> docs category
 	outputs := map[string][]byte{}    // written only after the rename guard passes
 	var wrappers []string
+	var merged []Resource // every resource, for its example and import files
 	variants := map[string]map[string]string{}
 	scopes := map[string][]string{} // full type name -> API scopes, for the provider page
 	var api *API
@@ -44,6 +45,7 @@ func Generate(specPath, configPath, outDir, apiPath string) error {
 			return err
 		}
 		for _, res := range resources {
+			merged = append(merged, res)
 			for _, w := range res.Warnings {
 				fmt.Fprintln(os.Stderr, "specgen: warning:", w)
 			}
@@ -109,6 +111,9 @@ func Generate(specPath, configPath, outDir, apiPath string) error {
 	if err := docsTemplates(cfg, configPath, categories); err != nil {
 		return err
 	}
+	if err := exampleFiles(cfg, configPath, merged); err != nil {
+		return err
+	}
 	for file, src := range outputs {
 		if err := os.WriteFile(file, src, 0o644); err != nil {
 			return err
@@ -167,7 +172,8 @@ func docsTemplates(cfg Config, configPath string, categories map[string]string) 
 	return nil
 }
 
-// docsTemplate is tfplugindocs' resource layout with a subcategory.
+// docsTemplate is tfplugindocs v0.25's default resource layout, copied
+// verbatim (examples and import included), with a subcategory.
 const docsTemplate = `---
 page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
 subcategory: %q
@@ -179,11 +185,40 @@ description: |-
 
 {{ .Description | trimspace }}
 
-{{ if .HasExample -}}
+{{ if .HasExamples -}}
 ## Example Usage
 
-{{ tffile .ExampleFile }}
+{{- range .ExampleFiles }}
+
+{{ tffile . }}
+{{- end }}
 {{- end }}
 
 {{ .SchemaMarkdown | trimspace }}
+{{- if or .HasImport .HasImportIDConfig .HasImportIdentityConfig }}
+
+## Import
+
+Import is supported using the following syntax:
+{{- end }}
+{{- if .HasImportIdentityConfig }}
+
+In Terraform v1.12.0 and later, the [` + "`" + `import` + "`" + ` block](https://developer.hashicorp.com/terraform/language/import) can be used with the ` + "`" + `identity` + "`" + ` attribute, for example:
+
+{{tffile .ImportIdentityConfigFile }}
+
+{{ .IdentitySchemaMarkdown | trimspace }}
+{{- end }}
+{{- if .HasImportIDConfig }}
+
+In Terraform v1.5.0 and later, the [` + "`" + `import` + "`" + ` block](https://developer.hashicorp.com/terraform/language/import) can be used with the ` + "`" + `id` + "`" + ` attribute, for example:
+
+{{tffile .ImportIDConfigFile }}
+{{- end }}
+{{- if .HasImport }}
+
+The [` + "`" + `terraform import` + "`" + ` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+{{codefile "shell" .ImportFile }}
+{{- end }}
 `

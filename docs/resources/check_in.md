@@ -49,3 +49,22 @@ output "nightly_check_in_url" {
 - `created_at` (String) When the check-in was created
 - `id` (String) Unique identifier
 - `report_url` (String) URL to ping when the task completes
+
+## Import
+
+Import is supported using the following syntax:
+
+In Terraform v1.5.0 and later, the [`import` block](https://developer.hashicorp.com/terraform/language/import) can be used with the `id` attribute, for example:
+
+```terraform
+import {
+  to = honeybadger_check_in.nightly
+  id = "<project_id>/<id>"
+}
+```
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+terraform import honeybadger_check_in.nightly "<project_id>/<id>"
+```

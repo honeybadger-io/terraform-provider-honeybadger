@@ -3,6 +3,7 @@
 # generated from these and openapi/bundled.yaml.
 provider: honeybadger
 docs_templates: ../../templates
+docs_examples: ../../examples
 resources:
   project:
     create: createProject

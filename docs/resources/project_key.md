@@ -41,3 +41,22 @@ output "deploy_project_key" {
 - `created_at` (String) When the key was created
 - `id` (String) Identifier for this key. Use it in paths.
 - `key` (String) The Project Key value a notifier sends. Returned in full: unlike an API Token, it's meant to ship with your application.
+
+## Import
+
+Import is supported using the following syntax:
+
+In Terraform v1.5.0 and later, the [`import` block](https://developer.hashicorp.com/terraform/language/import) can be used with the `id` attribute, for example:
+
+```terraform
+import {
+  to = honeybadger_project_key.deploy
+  id = "<project_id>/<id>"
+}
+```
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+terraform import honeybadger_project_key.deploy "<project_id>/<id>"
+```

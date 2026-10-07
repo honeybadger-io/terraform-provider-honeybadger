@@ -13,6 +13,7 @@ import (
 // overrides for facts the spec doesn't state (spec section 5.2).
 type Config struct {
 	DocsTemplates string                    `yaml:"docs_templates"` // tfplugindocs templates directory, relative to this file
+	DocsExamples  string                    `yaml:"docs_examples"`  // tfplugindocs examples directory, relative to this file
 	Retired       []string                  `yaml:"retired"`        // generated resources deliberately removed
 	Provider      string                    `yaml:"provider"`       // the provider's type-name prefix, e.g. honeybadger
 	Resources     map[string]ResourceConfig `yaml:"resources"`

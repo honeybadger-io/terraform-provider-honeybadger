@@ -48,3 +48,22 @@ output "project_id" {
 - `account_id` (String) ID of the account this project belongs to
 - `created_at` (String) When the project was created
 - `id` (String) Unique identifier
+
+## Import
+
+Import is supported using the following syntax:
+
+In Terraform v1.5.0 and later, the [`import` block](https://developer.hashicorp.com/terraform/language/import) can be used with the `id` attribute, for example:
+
+```terraform
+import {
+  to = honeybadger_project.app
+  id = "<id>"
+}
+```
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+terraform import honeybadger_project.app "<id>"
+```

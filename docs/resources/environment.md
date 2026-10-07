@@ -36,6 +36,25 @@ resource "honeybadger_environment" "staging" {
 - `created_at` (String) When the environment was created
 - `id` (String) Unique identifier
 
+## Import
+
+Import is supported using the following syntax:
+
+In Terraform v1.5.0 and later, the [`import` block](https://developer.hashicorp.com/terraform/language/import) can be used with the `id` attribute, for example:
+
+```terraform
+import {
+  to = honeybadger_environment.staging
+  id = "<project_id>/<id>"
+}
+```
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+terraform import honeybadger_environment.staging "<project_id>/<id>"
+```
+
 ## Notes
 
 - **Existing environments:** Honeybadger creates an environment the first time an error arrives from it, so the one you want to manage often exists already, and creating it again fails with a 422. Adopt it with an `import` block instead, using the project ID and the environment's ID:

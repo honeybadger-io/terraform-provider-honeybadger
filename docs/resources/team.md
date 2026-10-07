@@ -43,6 +43,25 @@ Read-Only:
 
 - `web` (String) Absolute URL of this resource's page in the Honeybadger web UI, on the web UI's host rather than the API's. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on, on Heroku's host.
 
+## Import
+
+Import is supported using the following syntax:
+
+In Terraform v1.5.0 and later, the [`import` block](https://developer.hashicorp.com/terraform/language/import) can be used with the `id` attribute, for example:
+
+```terraform
+import {
+  to = honeybadger_team.backend
+  id = "<id>"
+}
+```
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+terraform import honeybadger_team.backend "<id>"
+```
+
 ## Notes
 
 - **Needs the `team:write` scope:** creating, changing or deleting a team needs an API Token with `team:write`. Account API Tokens made before it was offered to them don't have it; add it in the token's settings.
