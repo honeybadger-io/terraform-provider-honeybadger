@@ -7,3 +7,8 @@ resource "honeybadger_integration_web_hook" "alerts" {
     bearer_token = var.webhook_token
   }
 }
+
+variable "webhook_token" {
+  type      = string
+  sensitive = true
+}

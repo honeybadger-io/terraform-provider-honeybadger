@@ -14,3 +14,8 @@ resource "honeybadger_site" "api" {
 output "api_uptime_url" {
   value = honeybadger_site.api.links.web
 }
+
+variable "health_check_token" {
+  type      = string
+  sensitive = true
+}

@@ -5,7 +5,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 	"testing"
 )
@@ -47,7 +46,8 @@ func TestRegistryDocs(t *testing.T) {
 }
 
 // Every example, generated and hand-written, is valid together against a
-// fresh build of the provider; skipped without terraform on PATH.
+// fresh build of the provider, declaring its own variables (a copied example
+// must work); skipped without terraform on PATH.
 func TestExamplesValidate(t *testing.T) {
 	tf, err := exec.LookPath("terraform")
 	if err != nil {
@@ -75,21 +75,6 @@ func TestExamplesValidate(t *testing.T) {
 		b, _ := os.ReadFile(f)
 		all.Write(b)
 		all.WriteString("\n")
-	}
-	declared := map[string]bool{}
-	for _, m := range regexp.MustCompile(`variable "([^"]+)"`).FindAllStringSubmatch(all.String(), -1) {
-		declared[m[1]] = true
-	}
-	var missing []string
-	for _, m := range regexp.MustCompile(`var\.(\w+)`).FindAllStringSubmatch(all.String(), -1) {
-		if !declared[m[1]] {
-			declared[m[1]] = true
-			missing = append(missing, m[1])
-		}
-	}
-	sort.Strings(missing)
-	for _, v := range missing {
-		all.WriteString("variable \"" + v + "\" {\n  type      = string\n  sensitive = true\n}\n")
 	}
 	if err := os.WriteFile(filepath.Join(cfg, "main.tf"), []byte(all.String()), 0o644); err != nil {
 		t.Fatal(err)
