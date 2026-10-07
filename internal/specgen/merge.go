@@ -197,12 +197,12 @@ func mergeWith(doc *openapi3.T, name string, rc ResourceConfig, createObj *Objec
 
 		if !writable {
 			a.Computed = true
-			a.Description = stripCallerWording(rf.Description)
+			a.Description = strings.TrimSpace(rf.Description)
 			a.UseStateForUnknown = f == "id"
 		} else {
-			a.Description = stripCallerWording(src.Description)
+			a.Description = strings.TrimSpace(src.Description)
 			if a.Description == "" && inR {
-				a.Description = stripCallerWording(rf.Description)
+				a.Description = strings.TrimSpace(rf.Description)
 			}
 			def := cf.Default
 			if def == nil {
@@ -284,7 +284,7 @@ func mergeWith(doc *openapi3.T, name string, rc ResourceConfig, createObj *Objec
 	if n := len(read.PathParams); n > 0 {
 		idParam = read.PathParams[n-1].Name
 	}
-	return Resource{Name: name, Description: stripCallerWording(R.Description), Import: rc.Import, Attributes: attrs,
+	return Resource{Name: name, Description: strings.TrimSpace(R.Description), Import: rc.Import, Attributes: attrs,
 		Warnings: warnings, Parents: parentNames, IDParam: idParam}, nil
 }
 
@@ -399,7 +399,7 @@ func nestedAttributes(obj Object, computed bool) ([]Attribute, error) {
 	for _, n := range names {
 		f := obj.Fields[n]
 		if computed {
-			a := Attribute{Name: n, Computed: true, Description: stripCallerWording(f.Description)}
+			a := Attribute{Name: n, Computed: true, Description: strings.TrimSpace(f.Description)}
 			if err := setKind(&a, f); err != nil {
 				return nil, fmt.Errorf("%s: %w", n, err)
 			}
@@ -412,7 +412,7 @@ func nestedAttributes(obj Object, computed bool) ([]Attribute, error) {
 		case !obj.Required[n] && !f.Nullable && f.Default == nil:
 			return nil, fmt.Errorf("%s: an optional attribute inside an object must be nullable, or removing it can't clear it", n)
 		}
-		a := Attribute{Name: n, Description: stripCallerWording(f.Description), Sensitive: f.Secret || f.WriteOnly,
+		a := Attribute{Name: n, Description: strings.TrimSpace(f.Description), Sensitive: f.Secret || f.WriteOnly,
 			Enum: f.Enum, Pattern: f.Pattern, MinLength: f.MinLength, MaxLength: f.MaxLength,
 			Minimum: f.Minimum, Maximum: f.Maximum, MinItems: f.MinItems, MaxItems: f.MaxItems}
 		switch {
@@ -434,46 +434,6 @@ func nestedAttributes(obj Object, computed bool) ([]Attribute, error) {
 	return out, nil
 }
 
-// stripCallerWording drops "Send null to …" instructions: in Terraform,
-// removing the attribute is how a value is cleared or reset (spec section 3.3).
-// A sentence that continues after a semicolon keeps its continuation.
-func stripCallerWording(s string) string {
-	var kept []string
-	for _, sentence := range splitSentences(strings.TrimSpace(s)) {
-		if rest, ok := strings.CutPrefix(sentence, "Send null to"); ok {
-			_, after, found := strings.Cut(rest, ";")
-			after = strings.TrimSpace(after)
-			if !found || after == "" {
-				continue
-			}
-			sentence = strings.ToUpper(after[:1]) + after[1:]
-		}
-		kept = append(kept, sentence)
-	}
-	return strings.Join(kept, " ")
-}
-
-// splitSentences splits after a period followed by whitespace or the end,
-// never inside a `code span`.
-func splitSentences(s string) []string {
-	var out []string
-	inCode, start := false, 0
-	for i := 0; i < len(s); i++ {
-		switch s[i] {
-		case '`':
-			inCode = !inCode
-		case '.':
-			if !inCode && (i+1 == len(s) || s[i+1] == ' ' || s[i+1] == '\n') {
-				out = append(out, strings.TrimSpace(s[start:i+1]))
-				start = i + 1
-			}
-		}
-	}
-	if rest := strings.TrimSpace(s[start:]); rest != "" {
-		out = append(out, rest)
-	}
-	return out
-}
 
 func keys[V any](m map[string]V) []string {
 	out := make([]string, 0, len(m))
@@ -529,7 +489,7 @@ func MergeAll(doc *openapi3.T, name string, rc ResourceConfig) ([]Resource, erro
 			return nil, err
 		}
 		r.Variant = &VariantInfo{Field: rc.Variants, Const: v.Const}
-		if d := stripCallerWording(v.Then.Description); d != "" {
+		if d := strings.TrimSpace(v.Then.Description); d != "" {
 			r.Description = d
 		}
 		out = append(out, r)

@@ -40,7 +40,7 @@ func TestMergeFollowsTheMergeRule(t *testing.T) {
 			}},
 		{Name: "id", Kind: "string", Computed: true, UseStateForUnknown: true,
 			Description: "Unique identifier"},
-		{Name: "name", Kind: "string", Required: true, Description: "Widget name."},
+		{Name: "name", Kind: "string", Required: true, Description: "Widget name. Null clears it."},
 		{Name: "parts", Kind: "set", ElemKind: "string", Optional: true, Computed: true, UseStateForUnknown: true,
 			MinItems: 1, MaxItems: ptr(int64(10)),
 			Description: "Part numbers fitted. Left out on create, every stocked part. Removing it from config keeps the current value."},
@@ -53,9 +53,9 @@ func TestMergeFollowsTheMergeRule(t *testing.T) {
 		{Name: "serial", Kind: "string", Optional: true, RequiresReplace: true, MaxLength: ptr(int64(32)),
 			Description: "Factory serial number, set once."},
 		{Name: "shape", Kind: "string", Optional: true, Computed: true, Default: "round",
-			Enum: []string{"round", "square"}, Description: "How the widget looks."},
+			Enum: []string{"round", "square"}, Description: "How the widget looks. Null resets it to `round`."},
 		{Name: "size", Kind: "int64", Optional: true, Computed: true, UseStateForUnknown: true,
-			Minimum: ptr(1.0), Maximum: ptr(500.0), Description: "Size in centimetres. Removing it from config keeps the current value."},
+			Minimum: ptr(1.0), Maximum: ptr(500.0), Description: "Size in centimetres. Null clears it. Removing it from config keeps the current value."},
 		{Name: "tags", Kind: "set", ElemKind: "string", Optional: true, Description: "Labels on the widget."},
 		{Name: "token", Kind: "string", Computed: true, Sensitive: true,
 			Description: "Credential for the widget"},
@@ -121,20 +121,6 @@ func TestMergeErrors(t *testing.T) {
 	}
 }
 
-func TestStripCallerWording(t *testing.T) {
-	tests := map[string]string{
-		"Widget name. Send null to clear.":                                                        "Widget name.",
-		"Zero is `00:00:00`. Send null to reset to zero.":                                         "Zero is `00:00:00`.",
-		"Send null to clear; an unnamed check-in shows its ID.":                                   "An unnamed check-in shows its ID.",
-		"No caller wording here.":                                                                 "No caller wording here.",
-		"Context key, when not in `context.user_email` or `context.user_id`. Send null to clear.": "Context key, when not in `context.user_email` or `context.user_id`.",
-	}
-	for in, want := range tests {
-		if got := stripCallerWording(in); got != want {
-			t.Errorf("stripCallerWording(%q) = %q, want %q", in, got, want)
-		}
-	}
-}
 
 func TestLoadConfigReadsCRUDKeys(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "r.yaml")

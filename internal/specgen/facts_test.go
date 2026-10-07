@@ -31,7 +31,7 @@ func schemaFacts(t *testing.T, doc *openapi3.T, name string) Object {
 func TestFieldFactsThroughAllOfRef(t *testing.T) {
 	shape := schemaFacts(t, loadFixture(t), "WidgetInput").Fields["shape"]
 	want := Field{Name: "shape", Type: "string", Enum: []string{"round", "square"}, Default: "round",
-		Description: "How the widget looks. Send null to reset to `round`."}
+		Description: "How the widget looks. Null resets it to `round`."}
 	if !reflect.DeepEqual(shape, want) {
 		t.Errorf("shape = %+v, want %+v", shape, want)
 	}
@@ -58,7 +58,7 @@ func TestFieldFacts(t *testing.T) {
 	}{
 		{"type array nullable, with bounds", input.Fields["size"],
 			Field{Name: "size", Type: "integer", Nullable: true, Minimum: ptr(1.0), Maximum: ptr(500.0),
-				Description: "Size in centimetres. Send null to clear."}},
+				Description: "Size in centimetres. Null clears it."}},
 		{"readOnly with format", widget.Fields["created_at"],
 			Field{Name: "created_at", Type: "string", Format: "date-time", ReadOnly: true, Description: "When it was made"}},
 		{"writeOnly secret", input.Fields["secret"],

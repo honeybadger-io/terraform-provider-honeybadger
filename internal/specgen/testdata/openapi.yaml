@@ -352,9 +352,9 @@ components:
       properties:
         name:
           type: string
-          description: Widget name. Send null to clear.
+          description: Widget name. Null clears it.
         shape:
-          description: How the widget looks. Send null to reset to `round`.
+          description: How the widget looks. Null resets it to `round`.
           allOf:
           - "$ref": "#/components/schemas/Shape"
         size:
@@ -363,7 +363,7 @@ components:
           - 'null'
           minimum: 1
           maximum: 500
-          description: Size in centimetres. Send null to clear.
+          description: Size in centimetres. Null clears it.
         color:
           description: The widget's color, as a hex code.
           oneOf:
@@ -706,13 +706,13 @@ components:
           default: {}
           description: Headers sent with each turn. Replaces the stored headers.
         speed:
-          description: Turns a minute. Send null to reset to 5.
+          description: Turns a minute. Null resets it to 5.
           default: 5
           anyOf:
           - "$ref": "#/components/schemas/SprocketSpeed"
           - type: 'null'
         mode:
-          description: How it turns. Send null to reset to slow.
+          description: How it turns. Null resets it to slow.
           default: slow
           anyOf:
           - "$ref": "#/components/schemas/SprocketMode"

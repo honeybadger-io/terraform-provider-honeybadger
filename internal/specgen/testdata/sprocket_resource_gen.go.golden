@@ -56,7 +56,7 @@ func sprocketResourceSchema() schema.Schema {
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"mode": schema.StringAttribute{
-				MarkdownDescription: "How it turns.",
+				MarkdownDescription: "How it turns. Null resets it to slow.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString("slow"),
@@ -72,7 +72,7 @@ func sprocketResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"speed": schema.Int64Attribute{
-				MarkdownDescription: "Turns a minute.",
+				MarkdownDescription: "Turns a minute. Null resets it to 5.",
 				Optional:            true,
 				Computed:            true,
 				Default:             int64default.StaticInt64(5),

@@ -72,7 +72,7 @@ func widgetResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Widget name.",
+				MarkdownDescription: "Widget name. Null clears it.",
 				Required:            true,
 			},
 			"parts": schema.SetAttribute{
@@ -105,14 +105,14 @@ func widgetResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"shape": schema.StringAttribute{
-				MarkdownDescription: "How the widget looks.",
+				MarkdownDescription: "How the widget looks. Null resets it to `round`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString("round"),
 				Validators:          []validator.String{stringvalidator.OneOf("round", "square")},
 			},
 			"size": schema.Int64Attribute{
-				MarkdownDescription: "Size in centimetres. Removing it from config keeps the current value.",
+				MarkdownDescription: "Size in centimetres. Null clears it. Removing it from config keeps the current value.",
 				Optional:            true,
 				Computed:            true,
 				Validators:          []validator.Int64{int64validator.Between(1, 500)},
