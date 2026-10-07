@@ -47,8 +47,9 @@ label of the first `resource "<type>"` block in that directory's
 resource the example declares (`honeybadger_alarm.errors`), or `example` when
 there's no `resource.tf`.
 
-When a resource has write-only attributes (never read back), a generated
-sentence follows: "Import can't read `password` back: set it in config."
+When a resource has write-only attributes (never read back), nested ones
+named by path (`config.bearer_token`), a generated comment heads both import
+files: "Import can't read `password` back: set it in config."
 (the umbrella spec's promise that import docs name what it can't recover).
 
 Both the generated category template (`docsTemplate` in `generate.go`, used
@@ -79,10 +80,12 @@ also appears in the page's front-matter description.)
 
 ### 3.4 Provider page
 
-The provider page (`templates/index.md.tmpl`, hand-written) gains a generated
-table of every resource and its required scopes, written by specgen to a
-partial the template includes, and a sentence on API Tokens: an account API
-Token needs the scopes of the resources it manages.
+The provider page gains an "API Token scopes" section: a sentence on what a
+token needs, and a generated table of every resource and its required
+scopes. tfplugindocs templates can't include a partial, so specgen writes
+the table as a constant in `resources_gen.go` and the provider schema's
+`MarkdownDescription` (hand-written in `provider.go`) appends it; the page
+renders it from the description.
 
 ### 3.5 Examples
 
@@ -106,11 +109,14 @@ exists and starts with the generated header, specgen writes one:
   entry and `<label>` is the first block label in the parent's
   `resource.tf` (`honeybadger_project.app`); otherwise the parameter's
   `example:`.
-- A sensitive value becomes `var.<name>_<attribute>` (`<name>` the resource
-  name without the provider prefix), so names never collide across
-  examples, with a matching `variable` block marked `sensitive`.
-- A required attribute without a usable example is a generation warning
-  naming it; the file is still written without it.
+- A sensitive value of any kind becomes `var.<name>_<path>` (`<name>` the
+  resource name without the provider prefix, `<path>` the attribute path
+  with `_`), so names never collide across examples, with a matching typed
+  `variable` block marked `sensitive`.
+- A required attribute without a usable example (none, or a placeholder
+  anywhere in it) becomes a typed variable too, with a generation warning
+  naming it, so every generated example validates.
+- Object keys in example values are always quoted.
 
 Known limit: kin-openapi drops `required:` written beside a `$ref`, so a
 variant branch's `config.required` (Slack's) isn't seen; those keys are
@@ -152,7 +158,7 @@ for the site Removing it…" reads "Display name for the site. Removing it…".
 
 ## 5. Dependencies
 
-- **honeybadger** (sent): rephrase request-building sentences as behaviour;
+- **honeybadger** (landed: `6d07eea82e`, `11c667a454`, `b1c36c0dc9`): rephrase request-building sentences as behaviour;
   describe the 34 undescribed properties; richer model descriptions for
   CheckIn, Dashboard, Environment, Project, Site and Team; better
   `project_id` and integration `created_at` descriptions; realistic
