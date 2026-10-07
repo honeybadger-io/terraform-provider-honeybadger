@@ -20,7 +20,7 @@ import (
 
 func projectResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "A Honeybadger project",
+		MarkdownDescription: "A Honeybadger project: one application or service. Errors, Insights data, uptime sites, check-ins, deploys and integrations all belong to a project.",
 		Attributes: map[string]schema.Attribute{
 			"account_id": schema.StringAttribute{
 				MarkdownDescription: "ID of the account this project belongs to",
@@ -28,7 +28,7 @@ func projectResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"asana_workspace_id": schema.StringAttribute{
-				MarkdownDescription: "Asana workspace used by the project's Asana integration.",
+				MarkdownDescription: "Asana workspace used by the project's Asana integration. Null clears it.",
 				Optional:            true,
 			},
 			"created_at": schema.StringAttribute{
@@ -37,11 +37,11 @@ func projectResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"customer_throttle": schema.Int64Attribute{
-				MarkdownDescription: "Notices accepted per minute before throttling kicks in.",
+				MarkdownDescription: "Notices accepted per minute before throttling kicks in. Null clears it.",
 				Optional:            true,
 			},
 			"disable_public_links": schema.BoolAttribute{
-				MarkdownDescription: "Disallow shareable public fault links.",
+				MarkdownDescription: "Disallow shareable public fault links. Null resets it to false.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
@@ -52,7 +52,7 @@ func projectResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"language": schema.StringAttribute{
-				MarkdownDescription: "Primary language, used to format backtraces.",
+				MarkdownDescription: "Primary language, used to format backtraces. Null clears it.",
 				Optional:            true,
 			},
 			"name": schema.StringAttribute{
@@ -60,27 +60,27 @@ func projectResourceSchema() schema.Schema {
 				Required:            true,
 			},
 			"purge_days": schema.Int64Attribute{
-				MarkdownDescription: "Days to retain notices. Accepted only on accounts with custom retention; otherwise a value other than the current one (on create, the default) is refused with 403 `feature_unavailable`. Removing it from config keeps the current value.",
+				MarkdownDescription: "Days to retain notices. Accepted only on accounts with custom retention; otherwise a value other than the current one (on create, the default) is refused with 403 `feature_unavailable`. Null clears it. Removing it from config keeps the current value.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Int64{int64planmodifier.UseStateForUnknown()},
 			},
 			"resolve_errors_on_deploy": schema.BoolAttribute{
-				MarkdownDescription: "Resolve every open fault when a deploy is recorded.",
+				MarkdownDescription: "Resolve every open fault when a deploy is recorded. Null resets it to true.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(true),
 			},
 			"source_url": schema.StringAttribute{
-				MarkdownDescription: "Template for linking a backtrace line to your source host. `[file]` and `[line]` are substituted.",
+				MarkdownDescription: "Template for linking a backtrace line to your source host. `[file]` and `[line]` are substituted. Null clears it.",
 				Optional:            true,
 			},
 			"user_search_field": schema.StringAttribute{
-				MarkdownDescription: "Context key identifying the affected user, for when it is not in the default `context.user_email` or `context.user_id`.",
+				MarkdownDescription: "Context key identifying the affected user, for when it is not in the default `context.user_email` or `context.user_id`. Null clears it.",
 				Optional:            true,
 			},
 			"user_url": schema.StringAttribute{
-				MarkdownDescription: "Template for linking a fault's affected user into your own system. `[user_id]` and `[user_email]` are substituted.",
+				MarkdownDescription: "Template for linking a fault's affected user into your own system. `[user_id]` and `[user_email]` are substituted. Null clears it.",
 				Optional:            true,
 			},
 		},

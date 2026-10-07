@@ -44,19 +44,19 @@ output "status_page_admin_url" {
 
 ### Optional
 
-- `check_ins` (Attributes List) Check-ins listed on the page, in page order, replacing the current list. null or [] removes every check-in. (see [below for nested schema](#nestedatt--check_ins))
-- `domain` (String) Custom domain the page is served on. Unique across Honeybadger. An account can set at most 30 domains a week; past that the change is 422.
+- `check_ins` (Attributes List) Check-ins listed on the page, in page order, replacing the current list. Null or empty removes every check-in. (see [below for nested schema](#nestedatt--check_ins))
+- `domain` (String) Custom domain the page is served on. Unique across Honeybadger. An account can set at most 30 domains a week; past that the change is 422. Null clears it.
 - `features` (Attributes) Presentation copy and styling. Replaces the whole object; null clears it. Requires advanced status pages to change; refused with 403 `feature_unavailable` otherwise. The default ({}) or the stored value is accepted on any plan. (see [below for nested schema](#nestedatt--features))
-- `google_analytics_id` (String) A Google Analytics measurement ID for the page.
-- `hide_branding` (Boolean) Requires advanced status pages to change; refused with 403 `feature_unavailable` otherwise. The default (false) or the stored value is accepted on any plan.
-- `incidents_enabled` (Boolean) Whether the page shows incidents. Requires status page incidents on the plan; changing it otherwise is 403 `feature_unavailable`. On create, defaults to whether the plan has them. Removing it from config keeps the current value.
-- `message_body` (String) The message banner's text.
-- `message_enabled` (Boolean) Shows the message banner.
-- `message_title` (String) The message banner's title.
+- `google_analytics_id` (String) A Google Analytics measurement ID for the page. Null clears it.
+- `hide_branding` (Boolean) Requires advanced status pages to change; refused with 403 `feature_unavailable` otherwise. The default (false) or the stored value is accepted on any plan. Null resets it to false.
+- `incidents_enabled` (Boolean) Whether the page shows incidents. Requires status page incidents on the plan; changing it otherwise is 403 `feature_unavailable`. On create, defaults to whether the plan has them. Null resets it to that same create default. Removing it from config keeps the current value.
+- `message_body` (String) The message banner's text. Null clears it.
+- `message_enabled` (Boolean) Shows the message banner. Null resets it to false.
+- `message_title` (String) The message banner's title. Null clears it.
 - `password` (String, Sensitive) Basic-auth password when password protected. Never returned. Requires advanced status pages and password protection on the plan.
-- `password_protected` (Boolean) Requires advanced status pages and password protection on the plan to change; refused with 403 `feature_unavailable` otherwise. The default (false) or the stored value is accepted on any plan. Turning it on needs a username and password, sent or already stored, or it's 422.
-- `search_engine_indexing_disabled` (Boolean) Asks search engines not to index the page.
-- `sites` (Attributes List) Sites listed on the page, in page order, replacing the current list. null or [] removes every site. (see [below for nested schema](#nestedatt--sites))
+- `password_protected` (Boolean) Requires advanced status pages and password protection on the plan to change; refused with 403 `feature_unavailable` otherwise. The default (false) or the stored value is accepted on any plan. Turning it on needs a username and password, sent or already stored, or it's 422. Null resets it to false.
+- `search_engine_indexing_disabled` (Boolean) Asks search engines not to index the page. Null resets it to false.
+- `sites` (Attributes List) Sites listed on the page, in page order, replacing the current list. Null or empty removes every site. (see [below for nested schema](#nestedatt--sites))
 - `username` (String) Basic-auth user when password protected. Requires advanced status pages and password protection on the plan.
 
 ### Read-Only
@@ -85,11 +85,11 @@ Optional:
 
 Optional:
 
-- `custom_css` (String)
-- `down_caption` (String)
-- `home_link` (String)
-- `mixed_caption` (String)
-- `up_caption` (String)
+- `custom_css` (String) CSS added to the page after its own styles.
+- `down_caption` (String) Text shown when every check is down. Unset, the page says "All systems are experiencing issues".
+- `home_link` (String) URL the page header links to, usually your own site.
+- `mixed_caption` (String) Text shown when only some checks are down. Unset, the page says "Some systems are experiencing issues".
+- `up_caption` (String) Text shown when every check is up. Unset, the page says "All systems are operational".
 
 
 <a id="nestedatt--sites"></a>

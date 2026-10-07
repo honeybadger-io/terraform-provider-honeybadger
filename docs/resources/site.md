@@ -2,12 +2,12 @@
 page_title: "honeybadger_site Resource - honeybadger"
 subcategory: ""
 description: |-
-  An uptime monitoring site
+  A URL Honeybadger checks for uptime from several locations on a schedule, alerting when it goes down and when it recovers.
 ---
 
 # honeybadger_site (Resource)
 
-An uptime monitoring site
+A URL Honeybadger checks for uptime from several locations on a schedule, alerting when it goes down and when it recovers.
 
 ## Example Usage
 
@@ -35,23 +35,23 @@ output "api_uptime_url" {
 
 ### Required
 
-- `project_id` (String) Project public ID
+- `project_id` (String) The project's `id`, as a project read returns it.
 - `url` (String) Must start with http:// or https://, with no surrounding whitespace.
 
 ### Optional
 
-- `active` (Boolean) Whether monitoring is active. After 740 consecutive failed checks the server sets it to false.
-- `frequency` (Number) Minutes between checks. Defaults to 5; plans set the most frequent allowed, and a value under it is 403 `feature_unavailable`.
-- `locations` (Set of String) A set of location names to check from. [] or null means every location. An unknown name is 422. A set; order is ignored and duplicates are dropped.
-- `match` (String) What `match_type` compares against (see SiteMatchType). Required unless `match_type` is `success`, and must be left out with `success`.
-- `match_type` (String) How a response is judged. `success`: any 2xx; `match` must be left out. `exact`: the response status code equals `match`. `include` / `exclude`: the body does / doesn't contain `match`. `jmespath`: `match` is a JMESPath expression evaluated against the JSON body; numbers in it use backticks, not quotes.
-- `name` (String) Display name for the site Removing it from config keeps the current value.
+- `active` (Boolean) Null resets it to true.
+- `frequency` (Number) Minutes between checks. Defaults to 5; plans set the most frequent allowed, and a value under it is 403 `feature_unavailable`. Null resets it to 5.
+- `locations` (Set of String) A set of location names to check from. Null or empty means every location. An unknown name is 422. A set; order is ignored and duplicates are dropped.
+- `match` (String) What `match_type` compares against (see SiteMatchType). Required unless `match_type` is `success`, and must be left out with `success`. Null clears it.
+- `match_type` (String) How a check decides the site is up (see SiteMatchType). Null resets it to success.
+- `name` (String) Name shown for the site in Honeybadger and on status pages. Removing it from config keeps the current value.
 - `outage_threshold` (Number) Consecutive failures before an outage is declared. null means down once failures reach 50% of locations.
-- `request_body` (String) Body to send with the request, up to 32 KB.
-- `request_headers` (Map of String, Sensitive) Headers to send with the request, as header name to value. Replaces the stored headers; send `{}` or null to clear them.
-- `request_method` (String)
-- `timeout` (Number) Request timeout in seconds, 1 to 120, default 30, and less than the frequency in seconds. Accepted only on accounts with the uptime-timeout feature; otherwise a value other than the current one (on create, the default) is refused with 403 `feature_unavailable`.
-- `validate_ssl` (Boolean) Fail the check when the TLS certificate does not validate.
+- `request_body` (String) Body to send with the request, up to 32 KB. Null clears it.
+- `request_headers` (Map of String, Sensitive) Headers to send with the request, as header name to value. Replaces the stored headers; null or `{}` clears them.
+- `request_method` (String) HTTP method each check sends. Null resets it to GET.
+- `timeout` (Number) Request timeout in seconds, 1 to 120, default 30, and less than the frequency in seconds. Accepted only on accounts with the uptime-timeout feature; otherwise a value other than the current one (on create, the default) is refused with 403 `feature_unavailable`. Null resets it to the default.
+- `validate_ssl` (Boolean) Fail the check when the TLS certificate does not validate. Null resets it to true.
 
 ### Read-Only
 

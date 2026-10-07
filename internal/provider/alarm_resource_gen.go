@@ -33,7 +33,7 @@ func alarmResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "What the alarm watches for, shown with it in Honeybadger.",
+				MarkdownDescription: "What the alarm watches for, shown with it in Honeybadger. Null clears it.",
 				Optional:            true,
 			},
 			"evaluation_period": schema.StringAttribute{
@@ -56,7 +56,7 @@ func alarmResourceSchema() schema.Schema {
 				Required:            true,
 			},
 			"project_id": schema.StringAttribute{
-				MarkdownDescription: "Project public ID",
+				MarkdownDescription: "The project's `id`, as a project read returns it.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},

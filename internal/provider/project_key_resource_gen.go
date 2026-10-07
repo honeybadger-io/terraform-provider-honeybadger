@@ -40,7 +40,7 @@ func projectKeyResourceSchema() schema.Schema {
 				Optional:            true,
 			},
 			"project_id": schema.StringAttribute{
-				MarkdownDescription: "Project public ID",
+				MarkdownDescription: "The project's `id`, as a project read returns it.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},

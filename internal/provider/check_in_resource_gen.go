@@ -23,7 +23,7 @@ import (
 
 func checkInResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "A scheduled task check-in monitor",
+		MarkdownDescription: "A check-in monitor for a scheduled job. The job requests the check-in's report URL each time it runs, and Honeybadger alerts when a report doesn't arrive on schedule.",
 		Attributes: map[string]schema.Attribute{
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "When the check-in was created",
@@ -35,13 +35,13 @@ func checkInResourceSchema() schema.Schema {
 				Optional:            true,
 			},
 			"cron_timezone": schema.StringAttribute{
-				MarkdownDescription: "Timezone the cron schedule is evaluated in. A Rails/ActiveSupport zone NAME, not an IANA identifier — `Central Time (US & Canada)`, not `America/Chicago`, which is rejected. Required when `schedule_type` is `cron`.",
+				MarkdownDescription: "Timezone the cron schedule is evaluated in. A Rails/ActiveSupport zone NAME, not an IANA identifier — `Central Time (US & Canada)`, not `America/Chicago`, which is rejected. Required when `schedule_type` is `cron`. Null resets it to `UTC`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString("UTC"),
 			},
 			"grace_period": schema.StringAttribute{
-				MarkdownDescription: "How long after the expected time before the check-in is considered missing. Same format as `report_period`; zero is `00:00:00`.",
+				MarkdownDescription: "How long after the expected time before the check-in is considered missing. Same format as `report_period`; zero is `00:00:00`. Null resets it to zero.",
 				Optional:            true,
 				Computed:            true,
 				CustomType:          customtypes.PeriodType{},
@@ -54,11 +54,11 @@ func checkInResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "An unnamed check-in shows its ID.",
+				MarkdownDescription: "Null clears it; an unnamed check-in shows its ID.",
 				Optional:            true,
 			},
 			"project_id": schema.StringAttribute{
-				MarkdownDescription: "Project public ID",
+				MarkdownDescription: "The project's `id`, as a project read returns it.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
@@ -81,7 +81,7 @@ func checkInResourceSchema() schema.Schema {
 				Validators:          []validator.String{stringvalidator.OneOf("simple", "cron")},
 			},
 			"slug": schema.StringAttribute{
-				MarkdownDescription: "Short identifier used in the check-in's reporting URL. Renaming it breaks jobs reporting to `…/check_in/<project key>/<slug>` and changes how `PUT /check_ins` matches this check-in.",
+				MarkdownDescription: "Short identifier used in the check-in's reporting URL. Null clears it. Renaming it breaks jobs reporting to `…/check_in/<project key>/<slug>` and changes how `PUT /check_ins` matches this check-in.",
 				Optional:            true,
 			},
 		},

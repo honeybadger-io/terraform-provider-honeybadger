@@ -30,10 +30,10 @@ import (
 
 func siteResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "An uptime monitoring site",
+		MarkdownDescription: "A URL Honeybadger checks for uptime from several locations on a schedule, alerting when it goes down and when it recovers.",
 		Attributes: map[string]schema.Attribute{
 			"active": schema.BoolAttribute{
-				MarkdownDescription: "Whether monitoring is active. After 740 consecutive failed checks the server sets it to false.",
+				MarkdownDescription: "Null resets it to true.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(true),
@@ -44,7 +44,7 @@ func siteResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"frequency": schema.Int64Attribute{
-				MarkdownDescription: "Minutes between checks. Defaults to 5; plans set the most frequent allowed, and a value under it is 403 `feature_unavailable`.",
+				MarkdownDescription: "Minutes between checks. Defaults to 5; plans set the most frequent allowed, and a value under it is 403 `feature_unavailable`. Null resets it to 5.",
 				Optional:            true,
 				Computed:            true,
 				Default:             int64default.StaticInt64(5),
@@ -68,26 +68,26 @@ func siteResourceSchema() schema.Schema {
 			},
 			"locations": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "A set of location names to check from. [] or null means every location. An unknown name is 422. A set; order is ignored and duplicates are dropped.",
+				MarkdownDescription: "A set of location names to check from. Null or empty means every location. An unknown name is 422. A set; order is ignored and duplicates are dropped.",
 				Optional:            true,
 				Computed:            true,
 				Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 				Validators:          []validator.Set{setvalidator.ValueStringsAre(stringvalidator.OneOf("Virginia", "Frankfurt", "Singapore", "London", "Oregon"))},
 			},
 			"match": schema.StringAttribute{
-				MarkdownDescription: "What `match_type` compares against (see SiteMatchType). Required unless `match_type` is `success`, and must be left out with `success`.",
+				MarkdownDescription: "What `match_type` compares against (see SiteMatchType). Required unless `match_type` is `success`, and must be left out with `success`. Null clears it.",
 				Optional:            true,
 				Validators:          []validator.String{stringvalidator.LengthAtMost(255)},
 			},
 			"match_type": schema.StringAttribute{
-				MarkdownDescription: "How a response is judged. `success`: any 2xx; `match` must be left out. `exact`: the response status code equals `match`. `include` / `exclude`: the body does / doesn't contain `match`. `jmespath`: `match` is a JMESPath expression evaluated against the JSON body; numbers in it use backticks, not quotes.",
+				MarkdownDescription: "How a check decides the site is up (see SiteMatchType). Null resets it to success.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString("success"),
 				Validators:          []validator.String{stringvalidator.OneOf("success", "exact", "include", "exclude", "jmespath")},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Display name for the site Removing it from config keeps the current value.",
+				MarkdownDescription: "Name shown for the site in Honeybadger and on status pages. Removing it from config keeps the current value.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -98,31 +98,32 @@ func siteResourceSchema() schema.Schema {
 				Validators:          []validator.Int64{int64validator.AtLeast(1)},
 			},
 			"project_id": schema.StringAttribute{
-				MarkdownDescription: "Project public ID",
+				MarkdownDescription: "The project's `id`, as a project read returns it.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"request_body": schema.StringAttribute{
-				MarkdownDescription: "Body to send with the request, up to 32 KB.",
+				MarkdownDescription: "Body to send with the request, up to 32 KB. Null clears it.",
 				Optional:            true,
 				Validators:          []validator.String{stringvalidator.LengthAtMost(32768)},
 			},
 			"request_headers": schema.MapAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "Headers to send with the request, as header name to value. Replaces the stored headers; send `{}` or null to clear them.",
+				MarkdownDescription: "Headers to send with the request, as header name to value. Replaces the stored headers; null or `{}` clears them.",
 				Optional:            true,
 				Computed:            true,
 				Sensitive:           true,
 				Default:             mapdefault.StaticValue(types.MapValueMust(types.StringType, map[string]attr.Value{})),
 			},
 			"request_method": schema.StringAttribute{
-				Optional:   true,
-				Computed:   true,
-				Default:    stringdefault.StaticString("GET"),
-				Validators: []validator.String{stringvalidator.OneOf("GET", "POST", "PUT", "PATCH", "DELETE")},
+				MarkdownDescription: "HTTP method each check sends. Null resets it to GET.",
+				Optional:            true,
+				Computed:            true,
+				Default:             stringdefault.StaticString("GET"),
+				Validators:          []validator.String{stringvalidator.OneOf("GET", "POST", "PUT", "PATCH", "DELETE")},
 			},
 			"timeout": schema.Int64Attribute{
-				MarkdownDescription: "Request timeout in seconds, 1 to 120, default 30, and less than the frequency in seconds. Accepted only on accounts with the uptime-timeout feature; otherwise a value other than the current one (on create, the default) is refused with 403 `feature_unavailable`.",
+				MarkdownDescription: "Request timeout in seconds, 1 to 120, default 30, and less than the frequency in seconds. Accepted only on accounts with the uptime-timeout feature; otherwise a value other than the current one (on create, the default) is refused with 403 `feature_unavailable`. Null resets it to the default.",
 				Optional:            true,
 			},
 			"url": schema.StringAttribute{
@@ -131,7 +132,7 @@ func siteResourceSchema() schema.Schema {
 				Validators:          []validator.String{stringvalidator.RegexMatches(regexp.MustCompile("^https?://\\S"), "must match ^https?://\\S")},
 			},
 			"validate_ssl": schema.BoolAttribute{
-				MarkdownDescription: "Fail the check when the TLS certificate does not validate.",
+				MarkdownDescription: "Fail the check when the TLS certificate does not validate. Null resets it to true.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(true),

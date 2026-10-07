@@ -2,12 +2,12 @@
 page_title: "honeybadger_dashboard Resource - honeybadger"
 subcategory: ""
 description: |-
-  An Insights dashboard
+  An Insights dashboard: a project's grid of widgets charting queries, errors, uptime, check-ins, deploys and alarms.
 ---
 
 # honeybadger_dashboard (Resource)
 
-An Insights dashboard
+An Insights dashboard: a project's grid of widgets charting queries, errors, uptime, check-ins, deploys and alarms.
 
 ## Example Usage
 
@@ -42,12 +42,12 @@ resource "honeybadger_dashboard" "ops" {
 
 ### Required
 
-- `project_id` (String) Project public ID
+- `project_id` (String) The project's `id`, as a project read returns it.
 - `title` (String) Dashboard title
 
 ### Optional
 
-- `default_ts` (String) Default time range.
+- `default_ts` (String) Default time range. Null clears it.
 - `widgets` (String) The dashboard's widgets, kept and read back in this order. Sent on an update, the list replaces the stored one.
 
 ### Read-Only

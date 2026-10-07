@@ -17,26 +17,26 @@ Get alerts via AlertOps.
 ### Required
 
 - `config` (Attributes) The type's settings, listed per type in [Integration types](https://docs.honeybadger.io/api/v3/integrations/types/). (see [below for nested schema](#nestedatt--config))
-- `project_id` (String) Project public ID
+- `project_id` (String) The project's `id`, as a project read returns it.
 
 ### Optional
 
 - `active` (Boolean) Whether to use the integration. An OAuth integration that's active sends nothing until someone connects it in the web UI at `links.web`.
-- `alarm_alert_ids` (Set of String) IDs of alarms whose alert events this integration receives. Send null or [] to clear. A set; order is ignored and duplicates are dropped.
-- `alarm_ok_ids` (Set of String) IDs of alarms whose recovery events this integration receives. Send null or [] to clear. A set; order is ignored and duplicates are dropped.
+- `alarm_alert_ids` (Set of String) IDs of alarms whose alert events this integration receives. Null or empty clears it. A set; order is ignored and duplicates are dropped.
+- `alarm_ok_ids` (Set of String) IDs of alarms whose recovery events this integration receives. Null or empty clears it. A set; order is ignored and duplicates are dropped.
 - `check_in_ids` (Set of String) Check-ins whose events this integration receives. null follows every check-in in the project, including ones added later; a create that leaves it out does the same. [] follows none, and a list follows just those check-ins. An ID that isn't one of this project's check-ins fails the request with 422. A set; order is ignored and duplicates are dropped.
-- `events` (Set of String) Left out or null: `occurred`, `assigned`, `up`, `down`, `cert_will_expire`, `check_in_missing`, and `check_in_reporting`, less any the plan doesn't include. Removing it from config keeps the current value.
-- `excluded_environments` (Set of String) Errors from these environments never notify through this integration. Takes precedence over included_environments. Names are stored as given, so an environment can be excluded before it first reports. Send null or [] to clear. Applies only on plans with environment settings; changing it on other plans is 403 feature_unavailable. Reads return what's stored. A set; order is ignored and duplicates are dropped.
-- `filters` (Attributes List) An ordered list. Each event that has a filter notifies only for errors matching its query. Replaces the stored filters; send [] or null to clear. Applies only on plans with integration filters; changing it on other plans is 403 feature_unavailable. Reads return what's stored. (see [below for nested schema](#nestedatt--filters))
-- `included_environments` (Set of String) When non-empty, only errors from these environments notify through this integration, including environments that haven't reported yet. Empty means every environment not excluded. Send null or [] to clear. Applies only on plans with environment settings; changing it on other plans is 403 feature_unavailable. Reads return what's stored. A set; order is ignored and duplicates are dropped.
-- `notification_limit` (Number) Maximum notifications in a 10-minute window before flood control.
-- `rate` (String) Period the rate_exceeded threshold counts over.
+- `events` (Set of String) Defaults to `occurred`, `assigned`, `up`, `down`, `cert_will_expire`, `check_in_missing`, and `check_in_reporting`, less any the plan doesn't include. Removing it from config keeps the current value.
+- `excluded_environments` (Set of String) Errors from these environments never notify through this integration. Takes precedence over included_environments. Names are stored as given, so an environment can be excluded before it first reports. Null or empty clears it. Applies only on plans with environment settings; changing it on other plans is 403 feature_unavailable. Reads return what's stored. A set; order is ignored and duplicates are dropped.
+- `filters` (Attributes List) An ordered list. Each event that has a filter notifies only for errors matching its query. Replaces the stored filters; null or empty clears them. Applies only on plans with integration filters; changing it on other plans is 403 feature_unavailable. Reads return what's stored. (see [below for nested schema](#nestedatt--filters))
+- `included_environments` (Set of String) When non-empty, only errors from these environments notify through this integration, including environments that haven't reported yet. Empty means every environment not excluded. Null or empty clears it. Applies only on plans with environment settings; changing it on other plans is 403 feature_unavailable. Reads return what's stored. A set; order is ignored and duplicates are dropped.
+- `notification_limit` (Number) Maximum notifications in a 10-minute window before flood control. Null removes the limit.
+- `rate` (String) Period the rate_exceeded threshold counts over. Null resets it to wday.
 - `site_ids` (Set of String) Sites whose up and down events this integration receives. null follows every site in the project, including ones added later; a create that leaves it out does the same. [] follows none, and a list follows just those sites. An ID that isn't one of this project's sites fails the request with 422. A set; order is ignored and duplicates are dropped.
-- `threshold` (Number) Number of occurrences before rate_exceeded fires.
+- `threshold` (Number) Number of occurrences before rate_exceeded fires. Null resets it to 100.
 
 ### Read-Only
 
-- `created_at` (String) When the channel was created
+- `created_at` (String) When the integration was created
 - `id` (String) Unique identifier
 - `links` (Attributes) Links into the Honeybadger web UI (see [below for nested schema](#nestedatt--links))
 

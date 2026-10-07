@@ -26,7 +26,7 @@ import (
 
 func dashboardResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "An Insights dashboard",
+		MarkdownDescription: "An Insights dashboard: a project's grid of widgets charting queries, errors, uptime, check-ins, deploys and alarms.",
 		Attributes: map[string]schema.Attribute{
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "When the dashboard was created",
@@ -34,7 +34,7 @@ func dashboardResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"default_ts": schema.StringAttribute{
-				MarkdownDescription: "Default time range.",
+				MarkdownDescription: "Default time range. Null clears it.",
 				Optional:            true,
 			},
 			"id": schema.StringAttribute{
@@ -59,7 +59,7 @@ func dashboardResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
 			},
 			"project_id": schema.StringAttribute{
-				MarkdownDescription: "Project public ID",
+				MarkdownDescription: "The project's `id`, as a project read returns it.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},

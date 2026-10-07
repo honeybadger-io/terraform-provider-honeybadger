@@ -54,7 +54,7 @@ func statusPageResourceSchema() schema.Schema {
 						},
 					},
 				},
-				MarkdownDescription: "Check-ins listed on the page, in page order, replacing the current list. null or [] removes every check-in.",
+				MarkdownDescription: "Check-ins listed on the page, in page order, replacing the current list. Null or empty removes every check-in.",
 				Optional:            true,
 				Computed:            true,
 				Default:             listdefault.StaticValue(types.ListValueMust(types.ObjectType{AttrTypes: statusPageCheckInsAttrTypes()}, []attr.Value{})),
@@ -65,25 +65,30 @@ func statusPageResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"domain": schema.StringAttribute{
-				MarkdownDescription: "Custom domain the page is served on. Unique across Honeybadger. An account can set at most 30 domains a week; past that the change is 422.",
+				MarkdownDescription: "Custom domain the page is served on. Unique across Honeybadger. An account can set at most 30 domains a week; past that the change is 422. Null clears it.",
 				Optional:            true,
 			},
 			"features": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"custom_css": schema.StringAttribute{
-						Optional: true,
+						MarkdownDescription: "CSS added to the page after its own styles.",
+						Optional:            true,
 					},
 					"down_caption": schema.StringAttribute{
-						Optional: true,
+						MarkdownDescription: "Text shown when every check is down. Unset, the page says \"All systems are experiencing issues\".",
+						Optional:            true,
 					},
 					"home_link": schema.StringAttribute{
-						Optional: true,
+						MarkdownDescription: "URL the page header links to, usually your own site.",
+						Optional:            true,
 					},
 					"mixed_caption": schema.StringAttribute{
-						Optional: true,
+						MarkdownDescription: "Text shown when only some checks are down. Unset, the page says \"Some systems are experiencing issues\".",
+						Optional:            true,
 					},
 					"up_caption": schema.StringAttribute{
-						Optional: true,
+						MarkdownDescription: "Text shown when every check is up. Unset, the page says \"All systems are operational\".",
+						Optional:            true,
 					},
 				},
 				MarkdownDescription: "Presentation copy and styling. Replaces the whole object; null clears it. Requires advanced status pages to change; refused with 403 `feature_unavailable` otherwise. The default ({}) or the stored value is accepted on any plan.",
@@ -98,11 +103,11 @@ func statusPageResourceSchema() schema.Schema {
 				})),
 			},
 			"google_analytics_id": schema.StringAttribute{
-				MarkdownDescription: "A Google Analytics measurement ID for the page.",
+				MarkdownDescription: "A Google Analytics measurement ID for the page. Null clears it.",
 				Optional:            true,
 			},
 			"hide_branding": schema.BoolAttribute{
-				MarkdownDescription: "Requires advanced status pages to change; refused with 403 `feature_unavailable` otherwise. The default (false) or the stored value is accepted on any plan.",
+				MarkdownDescription: "Requires advanced status pages to change; refused with 403 `feature_unavailable` otherwise. The default (false) or the stored value is accepted on any plan. Null resets it to false.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
@@ -113,7 +118,7 @@ func statusPageResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"incidents_enabled": schema.BoolAttribute{
-				MarkdownDescription: "Whether the page shows incidents. Requires status page incidents on the plan; changing it otherwise is 403 `feature_unavailable`. On create, defaults to whether the plan has them. Removing it from config keeps the current value.",
+				MarkdownDescription: "Whether the page shows incidents. Requires status page incidents on the plan; changing it otherwise is 403 `feature_unavailable`. On create, defaults to whether the plan has them. Null resets it to that same create default. Removing it from config keeps the current value.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
@@ -130,17 +135,17 @@ func statusPageResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
 			},
 			"message_body": schema.StringAttribute{
-				MarkdownDescription: "The message banner's text.",
+				MarkdownDescription: "The message banner's text. Null clears it.",
 				Optional:            true,
 			},
 			"message_enabled": schema.BoolAttribute{
-				MarkdownDescription: "Shows the message banner.",
+				MarkdownDescription: "Shows the message banner. Null resets it to false.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
 			},
 			"message_title": schema.StringAttribute{
-				MarkdownDescription: "The message banner's title.",
+				MarkdownDescription: "The message banner's title. Null clears it.",
 				Optional:            true,
 			},
 			"name": schema.StringAttribute{
@@ -154,13 +159,13 @@ func statusPageResourceSchema() schema.Schema {
 				Sensitive:           true,
 			},
 			"password_protected": schema.BoolAttribute{
-				MarkdownDescription: "Requires advanced status pages and password protection on the plan to change; refused with 403 `feature_unavailable` otherwise. The default (false) or the stored value is accepted on any plan. Turning it on needs a username and password, sent or already stored, or it's 422.",
+				MarkdownDescription: "Requires advanced status pages and password protection on the plan to change; refused with 403 `feature_unavailable` otherwise. The default (false) or the stored value is accepted on any plan. Turning it on needs a username and password, sent or already stored, or it's 422. Null resets it to false.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
 			},
 			"search_engine_indexing_disabled": schema.BoolAttribute{
-				MarkdownDescription: "Asks search engines not to index the page.",
+				MarkdownDescription: "Asks search engines not to index the page. Null resets it to false.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
@@ -185,7 +190,7 @@ func statusPageResourceSchema() schema.Schema {
 						},
 					},
 				},
-				MarkdownDescription: "Sites listed on the page, in page order, replacing the current list. null or [] removes every site.",
+				MarkdownDescription: "Sites listed on the page, in page order, replacing the current list. Null or empty removes every site.",
 				Optional:            true,
 				Computed:            true,
 				Default:             listdefault.StaticValue(types.ListValueMust(types.ObjectType{AttrTypes: statusPageSitesAttrTypes()}, []attr.Value{})),

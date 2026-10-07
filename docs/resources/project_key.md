@@ -30,7 +30,7 @@ output "deploy_project_key" {
 
 ### Required
 
-- `project_id` (String) Project public ID
+- `project_id` (String) The project's `id`, as a project read returns it.
 
 ### Optional
 

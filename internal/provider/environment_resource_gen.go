@@ -21,7 +21,7 @@ import (
 
 func environmentResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "A project environment configuration",
+		MarkdownDescription: "An environment a project's errors are reported from, such as production or staging, and whether errors from it send notifications.",
 		Attributes: map[string]schema.Attribute{
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "When the environment was created",
@@ -40,13 +40,13 @@ func environmentResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"notifications": schema.BoolAttribute{
-				MarkdownDescription: "Whether errors in this environment notify. Send null for the default.",
+				MarkdownDescription: "Whether errors in this environment notify. Null means the default.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(true),
 			},
 			"project_id": schema.StringAttribute{
-				MarkdownDescription: "Project public ID",
+				MarkdownDescription: "The project's `id`, as a project read returns it.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},

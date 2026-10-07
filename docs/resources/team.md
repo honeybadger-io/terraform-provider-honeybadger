@@ -2,12 +2,12 @@
 page_title: "honeybadger_team Resource - honeybadger"
 subcategory: ""
 description: |-
-  A team within an account
+  A group of account members. Members of a team can access the team's projects.
 ---
 
 # honeybadger_team (Resource)
 
-A team within an account
+A group of account members. Members of a team can access the team's projects.
 
 ## Example Usage
 

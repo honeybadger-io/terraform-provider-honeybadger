@@ -2,12 +2,12 @@
 page_title: "honeybadger_environment Resource - honeybadger"
 subcategory: ""
 description: |-
-  A project environment configuration
+  An environment a project's errors are reported from, such as production or staging, and whether errors from it send notifications.
 ---
 
 # honeybadger_environment (Resource)
 
-A project environment configuration
+An environment a project's errors are reported from, such as production or staging, and whether errors from it send notifications.
 
 ## Example Usage
 
@@ -25,11 +25,11 @@ resource "honeybadger_environment" "staging" {
 ### Required
 
 - `name` (String) Environment name
-- `project_id` (String) Project public ID
+- `project_id` (String) The project's `id`, as a project read returns it.
 
 ### Optional
 
-- `notifications` (Boolean) Whether errors in this environment notify. Send null for the default.
+- `notifications` (Boolean) Whether errors in this environment notify. Null means the default.
 
 ### Read-Only
 
