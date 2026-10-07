@@ -32,10 +32,10 @@ func TestWebHookConfigWrites(t *testing.T) {
 				Config: webHookHCL(f.srv.URL, "    url = \"https://a.example/hook\"\n    bearer_token = \"s1\"\n"),
 				Check: lastBody(f, "POST", `/integrations$`, map[string]any{
 					"type": "WebHook", "active": true,
-					"config":   map[string]any{"url": "https://a.example/hook", "bearer_token": "s1", "payload_version": "v2"},
-					"site_ids": []any{}, "check_in_ids": []any{}, "alarm_alert_ids": []any{}, "alarm_ok_ids": []any{},
+					"config":          map[string]any{"url": "https://a.example/hook", "bearer_token": "s1", "payload_version": "v2"},
+					"alarm_alert_ids": []any{}, "alarm_ok_ids": []any{},
 					"included_environments": []any{}, "excluded_environments": []any{}, "filters": []any{},
-					"all_sites": false, "all_check_ins": false, "rate": "wday", "threshold": float64(100),
+					"rate": "wday", "threshold": float64(100),
 				}),
 			},
 			{
@@ -296,4 +296,57 @@ func TestIntegrationLinksStableOnUpdate(t *testing.T) {
 			},
 		},
 	})
+}
+
+// site_ids (and check_in_ids) mean three things (honeybadger 854fd20da7):
+// left out, every site; [] none; a list, just those. Removing the list from
+// config sends null, which goes back to every site.
+func TestIntegrationSiteIDs(t *testing.T) {
+	f := newFakeHoneybadger(t)
+	hcl := func(siteIDs string) string {
+		return providerConfig(f.srv.URL) + fmt.Sprintf(`
+resource "honeybadger_integration_web_hook" "t" {
+  project_id = "p1"
+%s  config = { url = "https://a.example/hook" }
+}
+`, siteIDs)
+	}
+	const site = "0b6f2b8e-4f7c-4c1a-9a51-6c1f0e1b2a3d"
+	tfresource.UnitTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testFactories,
+		Steps: []tfresource.TestStep{
+			{
+				// Left out: not sent, so every site; the read's null matches.
+				Config: hcl(""),
+				Check:  noBodyKey(f, "POST", `/integrations$`, "site_ids"),
+			},
+			{
+				Config: hcl(fmt.Sprintf("  site_ids = [%q]\n", site)),
+				Check:  lastBodyKey(f, "PATCH", `/integrations/`, "site_ids", []any{site}),
+			},
+			{
+				Config: hcl("  site_ids = []\n"),
+				Check:  lastBodyKey(f, "PATCH", `/integrations/`, "site_ids", []any{}),
+			},
+			{
+				// Removed from config: null, back to every site.
+				Config: hcl(""),
+				Check:  lastBodyKey(f, "PATCH", `/integrations/`, "site_ids", nil),
+			},
+		},
+	})
+}
+
+// noBodyKey checks the last matching request's body leaves key out.
+func noBodyKey(f *fakeHoneybadger, method, pattern, key string) tfresource.TestCheckFunc {
+	return func(*terraform.State) error {
+		bodies := f.bodies(method, pattern)
+		if len(bodies) == 0 {
+			return fmt.Errorf("no %s request to %s", method, pattern)
+		}
+		if v, ok := bodies[len(bodies)-1][key]; ok {
+			return fmt.Errorf("%s %s sent %s = %v, want it left out", method, pattern, key, v)
+		}
+		return nil
+	}
 }

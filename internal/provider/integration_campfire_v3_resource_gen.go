@@ -53,24 +53,10 @@ func integrationCampfireV3ResourceSchema() schema.Schema {
 				Computed:            true,
 				Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 			},
-			"all_check_ins": schema.BoolAttribute{
-				MarkdownDescription: "Follow every check-in in the project, including ones added later. When true, check_in_ids must be empty or left out, and reads return []. Sending a non-empty check_in_ids turns it off. With it off and check_in_ids empty, the integration gets no check-in events.",
-				Optional:            true,
-				Computed:            true,
-				Default:             booldefault.StaticBool(false),
-			},
-			"all_sites": schema.BoolAttribute{
-				MarkdownDescription: "Follow every site in the project, including ones added later. When true, site_ids must be empty or left out, and reads return []. Sending a non-empty site_ids turns it off. With it off and site_ids empty, the integration gets no up or down events.",
-				Optional:            true,
-				Computed:            true,
-				Default:             booldefault.StaticBool(false),
-			},
 			"check_in_ids": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "Specific check-ins whose events this integration receives. An empty list turns check-in notifications off unless all_check_ins is true; a non-empty list with all_check_ins: true is 422. An ID that isn't one of this project's check-ins fails the request with 422. Send null or [] to clear. A set; order is ignored and duplicates are dropped.",
+				MarkdownDescription: "Check-ins whose events this integration receives. null follows every check-in in the project, including ones added later; a create that leaves it out does the same. [] follows none, and a list follows just those check-ins. An ID that isn't one of this project's check-ins fails the request with 422. A set; order is ignored and duplicates are dropped.",
 				Optional:            true,
-				Computed:            true,
-				Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 			},
 			"config": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
@@ -162,10 +148,8 @@ func integrationCampfireV3ResourceSchema() schema.Schema {
 			},
 			"site_ids": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "Specific sites whose up and down events this integration receives. An empty list turns site notifications off unless all_sites is true; a non-empty list with all_sites: true is 422. An ID that isn't one of this project's sites fails the request with 422. Send null or [] to clear. A set; order is ignored and duplicates are dropped.",
+				MarkdownDescription: "Sites whose up and down events this integration receives. null follows every site in the project, including ones added later; a create that leaves it out does the same. [] follows none, and a list follows just those sites. An ID that isn't one of this project's sites fails the request with 422. A set; order is ignored and duplicates are dropped.",
 				Optional:            true,
-				Computed:            true,
-				Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 				Validators:          []validator.Set{setvalidator.ValueStringsAre(stringvalidator.RegexMatches(regexp.MustCompile("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"), "must be a lowercase UUID"))},
 			},
 			"threshold": schema.Int64Attribute{
@@ -182,8 +166,6 @@ type integrationCampfireV3ResourceModel struct {
 	Active               types.Bool   `tfsdk:"active"`
 	AlarmAlertIds        types.Set    `tfsdk:"alarm_alert_ids"`
 	AlarmOkIds           types.Set    `tfsdk:"alarm_ok_ids"`
-	AllCheckIns          types.Bool   `tfsdk:"all_check_ins"`
-	AllSites             types.Bool   `tfsdk:"all_sites"`
 	CheckInIds           types.Set    `tfsdk:"check_in_ids"`
 	Config               types.Object `tfsdk:"config"`
 	CreatedAt            types.String `tfsdk:"created_at"`
@@ -240,8 +222,6 @@ func (m integrationCampfireV3ResourceModel) createParams(diags *diag.Diagnostics
 	p.Active = createBoolPtr(m.Active)
 	createNullableSlice(&p.AlarmAlertIds, m.AlarmAlertIds, fromString)
 	createNullableSlice(&p.AlarmOkIds, m.AlarmOkIds, fromString)
-	p.AllCheckIns = createBoolPtr(m.AllCheckIns)
-	p.AllSites = createBoolPtr(m.AllSites)
 	createNullableSlice(&p.CheckInIds, m.CheckInIds, fromString)
 	p.Config = integrationCampfireV3ConfigToMap(m.Config, types.ObjectNull(integrationCampfireV3ConfigAttrTypes()), path.Root("config"), diags)
 	createNullableSlice(&p.Events, m.Events, fromString)
@@ -261,8 +241,6 @@ func (m integrationCampfireV3ResourceModel) updateParams(state integrationCampfi
 	p.Active = updateBoolPtr(m.Active, state.Active)
 	updateNullableSlice(&p.AlarmAlertIds, m.AlarmAlertIds, state.AlarmAlertIds, fromString)
 	updateNullableSlice(&p.AlarmOkIds, m.AlarmOkIds, state.AlarmOkIds, fromString)
-	p.AllCheckIns = updateBoolPtr(m.AllCheckIns, state.AllCheckIns)
-	p.AllSites = updateBoolPtr(m.AllSites, state.AllSites)
 	updateNullableSlice(&p.CheckInIds, m.CheckInIds, state.CheckInIds, fromString)
 	p.Config = changedPtr(m.Config, state.Config, integrationCampfireV3ConfigToMap(m.Config, state.Config, path.Root("config"), diags))
 	updateNullableSlice(&p.Events, m.Events, state.Events, fromString)
@@ -280,9 +258,7 @@ func (m *integrationCampfireV3ResourceModel) fromAPI(c *apiv3.Integration) {
 	m.Active = types.BoolValue(c.Active)
 	m.AlarmAlertIds = setOf(c.AlarmAlertIds, types.StringType, stringElem)
 	m.AlarmOkIds = setOf(c.AlarmOkIds, types.StringType, stringElem)
-	m.AllCheckIns = types.BoolValue(c.AllCheckIns)
-	m.AllSites = types.BoolValue(c.AllSites)
-	m.CheckInIds = setOf(c.CheckInIds, types.StringType, stringElem)
+	m.CheckInIds = setOf(nullableSlice(c.CheckInIds), types.StringType, stringElem)
 	m.Config = integrationCampfireV3ConfigFromMap(c.Config, m.Config)
 	m.CreatedAt = timeValue(c.CreatedAt)
 	m.Events = setOf(c.Events, types.StringType, stringElem)
@@ -294,7 +270,7 @@ func (m *integrationCampfireV3ResourceModel) fromAPI(c *apiv3.Integration) {
 	m.NotificationLimit = int64Value(c.NotificationLimit)
 	m.ProjectID = types.StringValue(c.ProjectId)
 	m.Rate = types.StringValue(c.Rate)
-	m.SiteIds = setOf(c.SiteIds, types.StringType, uuidElem)
+	m.SiteIds = setOf(nullableSlice(c.SiteIds), types.StringType, uuidElem)
 	m.Threshold = types.Int64Value(int64(c.Threshold))
 }
 

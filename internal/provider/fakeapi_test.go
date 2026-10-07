@@ -222,7 +222,10 @@ func (f *fakeHoneybadger) create(w http.ResponseWriter, collection, projectID, k
 		obj["project_id"] = projectID
 		obj["links"] = map[string]any{"web": "https://app.honeybadger.io/projects/" + projectID + "/integrations/" + id}
 		obj["events"] = []any{"occurred"}
-		for _, k := range []string{"site_ids", "check_in_ids", "alarm_alert_ids", "alarm_ok_ids", "included_environments", "excluded_environments", "filters"} {
+		// site_ids and check_in_ids left out follow every site and check-in,
+		// which reads as null (honeybadger 854fd20da7).
+		obj["site_ids"], obj["check_in_ids"] = nil, nil
+		for _, k := range []string{"alarm_alert_ids", "alarm_ok_ids", "included_environments", "excluded_environments", "filters"} {
 			obj[k] = []any{}
 		}
 		obj["rate"], obj["threshold"] = "wday", 100

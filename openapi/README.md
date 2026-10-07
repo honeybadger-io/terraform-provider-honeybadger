@@ -11,6 +11,6 @@ definitions it was built from.
 | | |
 | --- | --- |
 | Source | `honeybadger/openapi/v3/bundled.yaml` |
-| Sources built from | `feat/terraform-3-v3-contract` @ `585f49ed6d` |
+| Sources built from | `feat/terraform-3-v3-contract` @ `c87dfe8010` |
 | Copied | 2026-10-06 |
-| sha256 | `761f3b491ae019556469918d09a7a12f7d5362961508d770b6402e00ced91d89` |
+| sha256 | `2f51756155d9d68460af3971859983b4fec8e1db2aad13e927ed44f2881e3288` |
