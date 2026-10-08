@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/honeybadger-io/api-go/apiv3"
+	"github.com/oapi-codegen/nullable"
 )
 
 const checkInAddr = "honeybadger_check_in.t"
@@ -168,6 +170,45 @@ func TestAccCheckInDeletedOutsideTerraform(t *testing.T) {
 				Config:             config,
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: true,
+			},
+		},
+	})
+}
+
+// A check-in edited outside Terraform: the refresh sees the change, the plan
+// is an update back to config, and after the apply the plan is empty.
+func TestAccCheckInChangedOutsideTerraform(t *testing.T) {
+	name := accName()
+	config := checkInAccConfig(name, "a", "  name = \"nightly\"\n  report_period = \"1 day\"\n")
+	var projectID, checkInID string
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					rs := s.RootModule().Resources[checkInAddr]
+					projectID, checkInID = rs.Primary.Attributes["project_id"], rs.Primary.ID
+					return nil
+				},
+			},
+			{
+				PreConfig: func() {
+					_, err := accClient().CheckIns.Update(context.Background(), projectID, checkInID, apiv3.CheckInUpdateParams{
+						Name:         nullable.NewNullableWithValue("renamed in the UI"),
+						ReportPeriod: nullable.NewNullableWithValue("2 hours"),
+					})
+					if err != nil {
+						t.Fatalf("changing the check-in outside Terraform: %v", err)
+					}
+				},
+				Config:           config,
+				ConfigPlanChecks: expectUpdate(checkInAddr),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(checkInAddr, "name", "nightly"),
+					resource.TestCheckResourceAttr(checkInAddr, "report_period", "1 day"),
+				),
 			},
 		},
 	})
