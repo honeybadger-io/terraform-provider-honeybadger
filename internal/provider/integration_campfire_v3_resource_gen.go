@@ -63,6 +63,7 @@ func integrationCampfireV3ResourceSchema() schema.Schema {
 					"chatbot_url": schema.StringAttribute{
 						MarkdownDescription: "The [integration URL](https://docs.honeybadger.io/guides/integrations/campfire/#create-a-chatbot-integration-in-basecamp) for your Campfire chatbot.",
 						Required:            true,
+						Sensitive:           true,
 					},
 				},
 				MarkdownDescription: "The type's settings, listed per type in [Integration types](https://docs.honeybadger.io/api/v3/integrations/types/).",

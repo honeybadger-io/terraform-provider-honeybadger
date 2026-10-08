@@ -52,7 +52,7 @@ variable "health_check_token" {
 - `match_type` (String) How a check decides the site is up (see SiteMatchType). Null resets it to success. Valid values: `success`, `exact`, `include`, `exclude`, `jmespath`. Defaults to `success`.
 - `name` (String) Name shown for the site in Honeybadger and on status pages. Removing it from config keeps the current value.
 - `outage_threshold` (Number) Consecutive failures before an outage is declared. null means down once failures reach 50% of locations.
-- `request_body` (String) Body to send with the request, up to 32 KB. Null clears it.
+- `request_body` (String, Sensitive) Body to send with the request, up to 32 KB. Null clears it.
 - `request_headers` (Map of String, Sensitive) Headers to send with the request, as header name to value. Replaces the stored headers; null or `{}` clears them. Defaults to empty.
 - `request_method` (String) HTTP method each check sends. Null resets it to GET. Valid values: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`. Defaults to `GET`.
 - `timeout` (Number) Request timeout in seconds, 1 to 120, default 30, and less than the frequency in seconds. Accepted only on accounts with the uptime-timeout feature; otherwise a value other than the current one (on create, the default) is refused with 403 `feature_unavailable`. Null resets it to the default.

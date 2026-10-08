@@ -15,9 +15,14 @@ Get alerts via Campfire group chat. Required scopes: `integrations:read`, `integ
 # A minimal configuration, generated from the API spec's examples.
 resource "honeybadger_integration_campfire_v3" "example" {
   config = {
-    chatbot_url = "https://example.com"
+    chatbot_url = var.integration_campfire_v3_config_chatbot_url
   }
   project_id = honeybadger_project.app.id
+}
+
+variable "integration_campfire_v3_config_chatbot_url" {
+  type      = string
+  sensitive = true
 }
 ```
 
@@ -55,7 +60,7 @@ resource "honeybadger_integration_campfire_v3" "example" {
 
 Required:
 
-- `chatbot_url` (String) The [integration URL](https://docs.honeybadger.io/guides/integrations/campfire/#create-a-chatbot-integration-in-basecamp) for your Campfire chatbot.
+- `chatbot_url` (String, Sensitive) The [integration URL](https://docs.honeybadger.io/guides/integrations/campfire/#create-a-chatbot-integration-in-basecamp) for your Campfire chatbot.
 
 
 <a id="nestedatt--filters"></a>

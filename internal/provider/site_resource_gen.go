@@ -105,6 +105,7 @@ func siteResourceSchema() schema.Schema {
 			"request_body": schema.StringAttribute{
 				MarkdownDescription: "Body to send with the request, up to 32 KB. Null clears it.",
 				Optional:            true,
+				Sensitive:           true,
 				Validators:          []validator.String{stringvalidator.LengthAtMost(32768)},
 			},
 			"request_headers": schema.MapAttribute{
