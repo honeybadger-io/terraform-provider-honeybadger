@@ -11,6 +11,6 @@ definitions it was built from.
 | | |
 | --- | --- |
 | Source | `honeybadger/openapi/v3/bundled.yaml` |
-| Sources built from | `feat/terraform-5-account-team-tokens` @ `00d8372570` |
+| Sources built from | `feat/terraform-5-account-team-tokens` @ `56e730bc67` |
 | Copied | 2026-10-08 |
 | sha256 | `812a35e8e3f2a0cc204cdf623b72ae00e9e8728b034d835237c18f17f012f355` |
