@@ -18,7 +18,7 @@ import (
 
 func ingestionKeyResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "An Ingestion Key: what an app sends errors and events with, set as `api_key` in a notifier's config. It only sends data; reading or managing anything through the API takes an API Token. Required scopes: `projects:read`, `projects:write`.",
+		MarkdownDescription: "The key your app uses to send data to Honeybadger, set as `ingestion_key` in the client's config (`api_key` in older clients). It can't call the Data API; use an API Token for that. Required scopes: `projects:read`, `projects:write`.",
 		Attributes: map[string]schema.Attribute{
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "When the key was created",

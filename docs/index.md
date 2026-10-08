@@ -1,12 +1,12 @@
 ---
 page_title: "honeybadger Provider"
 description: |-
-  Manages Honeybadger configuration through the v3 API.
+  Manages Honeybadger configuration through Honeybadger's Data API (v3).
 ---
 
 # honeybadger Provider
 
-Manages Honeybadger configuration through the v3 API.
+Manages Honeybadger configuration through Honeybadger's Data API (v3).
 
 ## API Token scopes
 
@@ -72,5 +72,5 @@ provider "honeybadger" {
 
 ### Optional
 
-- `api_token` (String, Sensitive) A Honeybadger API token: an `hbt_` personal token, an `hba_` account token, or an OAuth access token. Defaults to `HONEYBADGER_API_TOKEN`, then `HONEYBADGER_PERSONAL_AUTH_TOKEN`.
-- `api_url` (String) The Honeybadger API host. Defaults to `HONEYBADGER_API_URL`, then `https://app.honeybadger.io`. EU accounts use `https://eu-app.honeybadger.io`.
+- `api_token` (String, Sensitive) A Honeybadger API Token: an `hbt_` personal API Token, an `hba_` account API Token, or an OAuth access token. Defaults to `HONEYBADGER_API_TOKEN`, then `HONEYBADGER_PERSONAL_AUTH_TOKEN`.
+- `api_url` (String) The Data API host. Defaults to `HONEYBADGER_API_URL`, then `https://app.honeybadger.io`. EU accounts use `https://eu-app.honeybadger.io`.
