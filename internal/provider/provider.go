@@ -38,8 +38,8 @@ func (p *honeybadgerProvider) Metadata(_ context.Context, _ provider.MetadataReq
 
 func (p *honeybadgerProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages Honeybadger configuration through the v3 API.",
-		MarkdownDescription: "Manages Honeybadger configuration through the v3 API.\n\n" +
+		Description: "Manages Honeybadger configuration through Honeybadger's Data API (v3).",
+		MarkdownDescription: "Manages Honeybadger configuration through Honeybadger's Data API (v3).\n\n" +
 			"## API Token scopes\n\n" +
 			"The API Token needs the scopes of the resources it manages. An account API Token holds the scopes chosen when it was created; a personal API Token acts as its user.\n\n" +
 			generatedScopes,
@@ -47,13 +47,13 @@ func (p *honeybadgerProvider) Schema(_ context.Context, _ provider.SchemaRequest
 			"api_token": schema.StringAttribute{
 				Optional:  true,
 				Sensitive: true,
-				Description: "A Honeybadger API token: an `hbt_` personal token, an `hba_` account token, " +
+				Description: "A Honeybadger API Token: an `hbt_` personal API Token, an `hba_` account API Token, " +
 					"or an OAuth access token. Defaults to `HONEYBADGER_API_TOKEN`, then " +
 					"`HONEYBADGER_PERSONAL_AUTH_TOKEN`.",
 			},
 			"api_url": schema.StringAttribute{
 				Optional: true,
-				Description: "The Honeybadger API host. Defaults to `HONEYBADGER_API_URL`, then " +
+				Description: "The Data API host. Defaults to `HONEYBADGER_API_URL`, then " +
 					"`https://app.honeybadger.io`. EU accounts use `https://eu-app.honeybadger.io`.",
 			},
 		},
@@ -87,7 +87,7 @@ func (p *honeybadgerProvider) Configure(ctx context.Context, req provider.Config
 	}
 	if token == "" {
 		resp.Diagnostics.AddAttributeError(path.Root("api_token"), "Missing API token",
-			"Set api_token, or the HONEYBADGER_API_TOKEN environment variable, to a Honeybadger API token.")
+			"Set api_token, or the HONEYBADGER_API_TOKEN environment variable, to a Honeybadger API Token.")
 		return
 	}
 

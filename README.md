@@ -2,7 +2,7 @@
 
 Manage [Honeybadger](https://www.honeybadger.io) as code: projects, uptime
 checks, check-ins, Insights alarms and dashboards, teams, status pages, and 34
-alerting integrations, through the Honeybadger API v3.
+alerting integrations, through Honeybadger's Data API (v3).
 
 Write your monitoring next to the service it watches, review it in a pull
 request, and stand up a new app's whole Honeybadger setup with one
