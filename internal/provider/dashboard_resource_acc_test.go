@@ -85,3 +85,26 @@ resource "honeybadger_dashboard" "adopted" {
 		},
 	})
 }
+
+// A dashboard written without widgets is created empty: Honeybadger adds
+// none of its own, so the next plan is empty.
+func TestAccDashboardWithoutWidgets(t *testing.T) {
+	name := accName()
+	config := accProvider() + fmt.Sprintf(`
+resource "honeybadger_project" "a" {
+  name = %[1]q
+}
+
+resource "honeybadger_dashboard" "t" {
+  project_id = honeybadger_project.a.id
+  title      = %[1]q
+}
+`, name)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{Config: config, Check: resource.TestCheckResourceAttr(dashboardAddr, "widgets", "[]")},
+		},
+	})
+}

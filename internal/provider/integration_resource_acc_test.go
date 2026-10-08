@@ -227,11 +227,12 @@ func TestAccIntegrationTypes(t *testing.T) {
 	}
 }
 
-// An integration limited to a site, the gap phase 4b left (no site resource
-// then).
+// An integration limited to a site (the gap phase 4b left: no site resource
+// then), then to none, then back to every site (site_ids left out).
 func TestAccIntegrationSiteIDs(t *testing.T) {
 	name := accName()
-	config := accProvider() + fmt.Sprintf(`
+	config := func(siteIDs string) string {
+		return accProvider() + fmt.Sprintf(`
 resource "honeybadger_project" "a" {
   name = %q
 }
@@ -243,15 +244,29 @@ resource "honeybadger_site" "s" {
 
 resource "honeybadger_integration_web_hook" "t" {
   project_id = honeybadger_project.a.id
-  site_ids   = [honeybadger_site.s.id]
   config     = { url = "https://93.184.216.34/hook" }
-}
-`, name)
+%s}
+`, name, siteIDs)
+	}
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testFactories,
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
-			{Config: config, Check: resource.TestCheckTypeSetElemAttrPair(webHookAddr, "site_ids.*", "honeybadger_site.s", "id")},
+			{
+				Config: config("  site_ids = [honeybadger_site.s.id]\n"),
+				Check:  resource.TestCheckTypeSetElemAttrPair(webHookAddr, "site_ids.*", "honeybadger_site.s", "id"),
+			},
+			{ResourceName: webHookAddr, ImportState: true, ImportStateIdFunc: importID(webHookAddr), ImportStateVerify: true},
+			{
+				Config:           config("  site_ids = []\n"),
+				ConfigPlanChecks: expectUpdate(webHookAddr),
+				Check:            resource.TestCheckResourceAttr(webHookAddr, "site_ids.#", "0"),
+			},
+			{
+				Config:           config(""),
+				ConfigPlanChecks: expectUpdate(webHookAddr),
+				Check:            resource.TestCheckNoResourceAttr(webHookAddr, "site_ids.#"),
+			},
 			{ResourceName: webHookAddr, ImportState: true, ImportStateIdFunc: importID(webHookAddr), ImportStateVerify: true},
 		},
 	})

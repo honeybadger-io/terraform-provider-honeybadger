@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -136,6 +137,50 @@ func TestAccProjectAndKeysInOneApply(t *testing.T) {
 				ImportState:       true,
 				ImportStateIdFunc: importID("honeybadger_ingestion_key.one"),
 				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// A project deleted outside Terraform takes its children with it: refreshing
+// a child under the missing project removes it from state (a 404), so the
+// plan recreates both instead of failing.
+func TestAccProjectDeletedWithChildren(t *testing.T) {
+	name := accName()
+	config := accProvider() + fmt.Sprintf(`
+resource "honeybadger_project" "t" {
+  name = %q
+}
+
+resource "honeybadger_check_in" "t" {
+  project_id    = honeybadger_project.t.id
+  name          = "nightly"
+  report_period = "1 day"
+}
+`, name)
+	var projectID string
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					projectID = s.RootModule().Resources["honeybadger_project.t"].Primary.ID
+					return nil
+				},
+			},
+			{
+				PreConfig: func() {
+					if err := accClient().Projects.Delete(context.Background(), projectID); err != nil {
+						t.Fatalf("deleting the project outside Terraform: %v", err)
+					}
+				},
+				Config: config,
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction("honeybadger_project.t", plancheck.ResourceActionCreate),
+					plancheck.ExpectResourceAction(checkInAddr, plancheck.ResourceActionCreate),
+				}},
 			},
 		},
 	})

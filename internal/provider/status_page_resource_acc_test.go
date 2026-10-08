@@ -68,6 +68,9 @@ func TestAccStatusPageAdvanced(t *testing.T) {
 				ConfigPlanChecks: expectUpdate(statusPageAddr),
 			},
 			{ResourceName: statusPageAddr, ImportState: true, ImportStateVerify: true, ImportStateVerifyIgnore: []string{"password"}},
+			// Protection removed: password_protected, username and password
+			// all go.
+			{Config: statusPageAccConfig(name, sites, ""), ConfigPlanChecks: expectUpdate(statusPageAddr)},
 		},
 	})
 }

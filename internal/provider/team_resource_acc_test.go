@@ -36,6 +36,8 @@ func TestAccTeam(t *testing.T) {
 				ConfigPlanChecks: expectUpdate(teamAddr),
 			},
 			{ResourceName: teamAddr, ImportState: true, ImportStateVerify: true},
+			{Config: teamAccConfig(name, "[]"), ConfigPlanChecks: expectUpdate(teamAddr)},
+			{ResourceName: teamAddr, ImportState: true, ImportStateVerify: true},
 		},
 	})
 }
