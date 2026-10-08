@@ -71,8 +71,10 @@ func addAPIError(ctx context.Context, diags *diag.Diagnostics, schema attributeT
 			"The API token covers more than one Honeybadger account. Use a token for a single account."))
 	case apiErr.Code == apiv3.CodeStreamsProvisioning:
 		// Retried already; the project's streams took longer than the retries.
-		diags.AddError(summary, detail(
-			"Honeybadger is still setting up the project's streams, so nothing was created. Run terraform apply again shortly."))
+		withoutID := *apiErr
+		withoutID.RequestID = ""
+		diags.AddError(summary, detail(withoutID.Error()+
+			"\n\nNothing was created. Run terraform apply again shortly."))
 	case apiErr.Code == apiv3.CodeRateLimitExceeded:
 		msg := "The Honeybadger API rate limit was reached."
 		// apiv3 reports a missing X-RateLimit-Reset header as the Unix epoch.
