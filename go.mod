@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.31.0
 	github.com/hashicorp/terraform-plugin-log v0.11.0
 	github.com/hashicorp/terraform-plugin-testing v1.16.0
-	github.com/honeybadger-io/api-go v0.9.1-0.20261008091927-e8288cbc9cb8
+	github.com/honeybadger-io/api-go v0.9.1-0.20261008175434-a02a6857a617
 	github.com/oapi-codegen/nullable v1.2.0
 	golang.org/x/tools v0.51.0
 	gopkg.in/yaml.v3 v3.0.1

@@ -146,6 +146,8 @@ github.com/honeybadger-io/api-go v0.9.1-0.20261007042454-6b721ddc4ff4 h1:uDYGTEQ
 github.com/honeybadger-io/api-go v0.9.1-0.20261007042454-6b721ddc4ff4/go.mod h1:8xHktvfvDGEbdQa0iEY4uNnNK/jceI3XLuQ3vdnR/R8=
 github.com/honeybadger-io/api-go v0.9.1-0.20261008091927-e8288cbc9cb8 h1:Zn/j9CTAypdYbnhKAcAiCwXi2Nf1YOs9naRUjAMV4c8=
 github.com/honeybadger-io/api-go v0.9.1-0.20261008091927-e8288cbc9cb8/go.mod h1:8xHktvfvDGEbdQa0iEY4uNnNK/jceI3XLuQ3vdnR/R8=
+github.com/honeybadger-io/api-go v0.9.1-0.20261008175434-a02a6857a617 h1:yeoXIX6iVZoFhZU4Lsheov0dd2VPDX/oEG/CAIlm3ms=
+github.com/honeybadger-io/api-go v0.9.1-0.20261008175434-a02a6857a617/go.mod h1:8xHktvfvDGEbdQa0iEY4uNnNK/jceI3XLuQ3vdnR/R8=
 github.com/huandu/xstrings v1.3.3 h1:/Gcsuc1x8JVbJ9/rlye4xZnVAbEkGauT8lbebqcQws4=
 github.com/huandu/xstrings v1.3.3/go.mod h1:y5/lhBue+AyNmUVz9RLU9xbLR0o4KIIExikq4ovT0aE=
 github.com/imdario/mergo v0.3.11/go.mod h1:jmQim1M+e3UYxmgPu/WyfjB3N3VflVyUjjjwH0dnCYA=
