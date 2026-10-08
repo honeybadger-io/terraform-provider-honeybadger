@@ -34,7 +34,7 @@ type fakeResponse struct {
 	Headers map[string]string
 }
 
-// fakeHoneybadger is an in-memory v3 API for the project, project key,
+// fakeHoneybadger is an in-memory v3 API for the project, Ingestion Key,
 // check-in, alarm, integration, environment, site, team and status page
 // endpoints. It records every request and fills server-side defaults
 // the way the API does. It isn't a general emulator (spec 8.2).
@@ -50,8 +50,8 @@ type fakeHoneybadger struct {
 }
 
 var (
-	collectionPath = regexp.MustCompile(`^/v3/(?:projects/([^/]+)/(check_ins|keys|alarms|integrations|environments|sites|dashboards)|(projects|teams|status_pages))$`)
-	objectPath     = regexp.MustCompile(`^/v3/(?:projects/[^/]+/(?:check_ins|keys|alarms|integrations|environments|sites|dashboards)|projects|teams|status_pages)/[^/]+$`)
+	collectionPath = regexp.MustCompile(`^/v3/(?:projects/([^/]+)/(check_ins|ingestion_keys|alarms|integrations|environments|sites|dashboards)|(projects|teams|status_pages))$`)
+	objectPath     = regexp.MustCompile(`^/v3/(?:projects/[^/]+/(?:check_ins|ingestion_keys|alarms|integrations|environments|sites|dashboards)|projects|teams|status_pages)/[^/]+$`)
 )
 
 func newFakeHoneybadger(t *testing.T) *fakeHoneybadger {
@@ -210,7 +210,7 @@ func (f *fakeHoneybadger) create(w http.ResponseWriter, collection, projectID, k
 		obj["grace_period"] = "00:00:00"
 		obj["cron_timezone"] = "UTC"
 		obj["report_url"] = "https://example.com/check_in/" + id
-	case "keys":
+	case "ingestion_keys":
 		obj["project_id"] = projectID
 		obj["key"] = "hbp_" + id
 	case "alarms":

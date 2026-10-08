@@ -82,8 +82,8 @@ func TestAccProject(t *testing.T) {
 	})
 }
 
-// A project and its Project Keys change together in one apply. Configs get a
-// key's value from honeybadger_project_key: project reads don't include one.
+// A project and its Ingestion Keys change together in one apply. Configs get a
+// key's value from honeybadger_ingestion_key: project reads don't include one.
 func TestAccProjectAndKeysInOneApply(t *testing.T) {
 	name := accName()
 	config := func(project, keys string) string {
@@ -94,7 +94,7 @@ func TestAccProjectAndKeysInOneApply(t *testing.T) {
 		if label != "" {
 			attrs += fmt.Sprintf("  label = %q\n", label)
 		}
-		return fmt.Sprintf("resource \"honeybadger_project_key\" %q {\n%s}\n", n, attrs)
+		return fmt.Sprintf("resource \"honeybadger_ingestion_key\" %q {\n%s}\n", n, attrs)
 	}
 	key := func(n, label string) string { return keyIn(n, "t", label) }
 	other := fmt.Sprintf("resource \"honeybadger_project\" \"u\" {\n  name = %q\n}\n", name+"-u")
@@ -107,34 +107,34 @@ func TestAccProjectAndKeysInOneApply(t *testing.T) {
 				Config: config(name+"-2", key("one", "first")+key("two", "second")),
 				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
 					plancheck.ExpectResourceAction("honeybadger_project.t", plancheck.ResourceActionUpdate),
-					plancheck.ExpectResourceAction("honeybadger_project_key.two", plancheck.ResourceActionCreate),
+					plancheck.ExpectResourceAction("honeybadger_ingestion_key.two", plancheck.ResourceActionCreate),
 				}},
 			},
 			{
 				Config: config(name+"-2", key("one", "renamed")+key("two", "second")),
 				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
-					plancheck.ExpectResourceAction("honeybadger_project_key.one", plancheck.ResourceActionUpdate),
+					plancheck.ExpectResourceAction("honeybadger_ingestion_key.one", plancheck.ResourceActionUpdate),
 				}},
 			},
 			{
 				// Removing the label clears it.
 				Config: config(name+"-2", key("one", "")+key("two", "second")),
 				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
-					plancheck.ExpectResourceAction("honeybadger_project_key.one", plancheck.ResourceActionUpdate),
-					plancheck.ExpectKnownValue("honeybadger_project_key.one", tfjsonpath.New("label"), knownvalue.Null()),
+					plancheck.ExpectResourceAction("honeybadger_ingestion_key.one", plancheck.ResourceActionUpdate),
+					plancheck.ExpectKnownValue("honeybadger_ingestion_key.one", tfjsonpath.New("label"), knownvalue.Null()),
 				}},
 			},
 			{
 				// A key can't move between projects: it's replaced.
 				Config: config(name+"-2", key("one", "")+keyIn("two", "u", "second")+other),
 				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
-					plancheck.ExpectResourceAction("honeybadger_project_key.two", plancheck.ResourceActionReplace),
+					plancheck.ExpectResourceAction("honeybadger_ingestion_key.two", plancheck.ResourceActionReplace),
 				}},
 			},
 			{
-				ResourceName:      "honeybadger_project_key.one",
+				ResourceName:      "honeybadger_ingestion_key.one",
 				ImportState:       true,
-				ImportStateIdFunc: importID("honeybadger_project_key.one"),
+				ImportStateIdFunc: importID("honeybadger_ingestion_key.one"),
 				ImportStateVerify: true,
 			},
 		},

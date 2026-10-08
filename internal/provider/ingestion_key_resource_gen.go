@@ -16,9 +16,9 @@ import (
 	"github.com/honeybadger-io/api-go/apiv3"
 )
 
-func projectKeyResourceSchema() schema.Schema {
+func ingestionKeyResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "A Project Key: what an app sends errors and events with, set as `api_key` in a notifier's config. It only sends data; reading or managing anything through the API takes an API Token. Required scopes: `projects:read`, `projects:write`.",
+		MarkdownDescription: "An Ingestion Key: what an app sends errors and events with, set as `api_key` in a notifier's config. It only sends data; reading or managing anything through the API takes an API Token. Required scopes: `projects:read`, `projects:write`.",
 		Attributes: map[string]schema.Attribute{
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "When the key was created",
@@ -31,7 +31,7 @@ func projectKeyResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"key": schema.StringAttribute{
-				MarkdownDescription: "The Project Key value a notifier sends. Returned in full: unlike an API Token, it's meant to ship with your application.",
+				MarkdownDescription: "The Ingestion Key value a notifier sends. Returned in full: unlike an API Token, it's meant to ship with your application.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
@@ -48,7 +48,7 @@ func projectKeyResourceSchema() schema.Schema {
 	}
 }
 
-type projectKeyResourceModel struct {
+type ingestionKeyResourceModel struct {
 	CreatedAt types.String `tfsdk:"created_at"`
 	ID        types.String `tfsdk:"id"`
 	Key       types.String `tfsdk:"key"`
@@ -56,22 +56,22 @@ type projectKeyResourceModel struct {
 	ProjectID types.String `tfsdk:"project_id"`
 }
 
-// projectKeyImportFormat is the ID terraform import takes.
-const projectKeyImportFormat = "<project_id>/<id>"
+// ingestionKeyImportFormat is the ID terraform import takes.
+const ingestionKeyImportFormat = "<project_id>/<id>"
 
-func (m projectKeyResourceModel) createParams(diags *diag.Diagnostics) apiv3.ProjectKeyParams {
-	var p apiv3.ProjectKeyParams
+func (m ingestionKeyResourceModel) createParams(diags *diag.Diagnostics) apiv3.IngestionKeyParams {
+	var p apiv3.IngestionKeyParams
 	p.Label = createString(m.Label)
 	return p
 }
 
-func (m projectKeyResourceModel) updateParams(state projectKeyResourceModel, diags *diag.Diagnostics) apiv3.ProjectKeyParams {
-	var p apiv3.ProjectKeyParams
+func (m ingestionKeyResourceModel) updateParams(state ingestionKeyResourceModel, diags *diag.Diagnostics) apiv3.IngestionKeyParams {
+	var p apiv3.IngestionKeyParams
 	p.Label = updateString(m.Label, state.Label)
 	return p
 }
 
-func (m *projectKeyResourceModel) fromAPI(c *apiv3.ProjectKey) {
+func (m *ingestionKeyResourceModel) fromAPI(c *apiv3.IngestionKey) {
 	m.CreatedAt = timeValue(c.CreatedAt)
 	m.ID = types.StringValue(c.Id)
 	m.Key = types.StringValue(c.Key)
@@ -80,29 +80,29 @@ func (m *projectKeyResourceModel) fromAPI(c *apiv3.ProjectKey) {
 }
 
 var (
-	_ resource.Resource                = (*projectKeyResource)(nil)
-	_ resource.ResourceWithConfigure   = (*projectKeyResource)(nil)
-	_ resource.ResourceWithImportState = (*projectKeyResource)(nil)
+	_ resource.Resource                = (*ingestionKeyResource)(nil)
+	_ resource.ResourceWithConfigure   = (*ingestionKeyResource)(nil)
+	_ resource.ResourceWithImportState = (*ingestionKeyResource)(nil)
 )
 
-// projectKeyResource manages a project key through apiv3.Client.ProjectKeys.
-type projectKeyResource struct {
+// ingestionKeyResource manages a ingestion key through apiv3.Client.IngestionKeys.
+type ingestionKeyResource struct {
 	client *apiv3.Client
 }
 
-func newProjectKeyResource() resource.Resource { return &projectKeyResource{} }
+func newIngestionKeyResource() resource.Resource { return &ingestionKeyResource{} }
 
-func (r *projectKeyResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_project_key"
+func (r *ingestionKeyResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_ingestion_key"
 }
 
-func (r *projectKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = projectKeyResourceSchema()
+func (r *ingestionKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = ingestionKeyResourceSchema()
 }
 
 // Configure takes the client. Provider data is nil while Terraform validates
 // config before the provider is configured.
-func (r *projectKeyResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *ingestionKeyResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -114,8 +114,8 @@ func (r *projectKeyResource) Configure(_ context.Context, req resource.Configure
 	r.client = client
 }
 
-func (r *projectKeyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan projectKeyResourceModel
+func (r *ingestionKeyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan ingestionKeyResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -124,22 +124,22 @@ func (r *projectKeyResource) Create(ctx context.Context, req resource.CreateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	out, err := r.client.ProjectKeys.Create(ctx, plan.ProjectID.ValueString(), params)
+	out, err := r.client.IngestionKeys.Create(ctx, plan.ProjectID.ValueString(), params)
 	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {
 		if isUnknownOutcome(err) {
 			addUnknownCreateOutcome(&resp.Diagnostics, createOutcome{
-				TypeName:     "honeybadger_project_key",
+				TypeName:     "honeybadger_ingestion_key",
 				ProjectID:    plan.ProjectID.ValueString(),
 				Name:         plan.Label.ValueString(),
-				ImportFormat: projectKeyImportFormat,
-				FindHint:     "the project's Project Keys in Honeybadger",
+				ImportFormat: ingestionKeyImportFormat,
+				FindHint:     "the project's Ingestion Keys in Honeybadger",
 			}, err)
 			return
 		}
-		addAPIError(ctx, &resp.Diagnostics, projectKeyResourceSchema(), "Creating project key", err)
+		addAPIError(ctx, &resp.Diagnostics, ingestionKeyResourceSchema(), "Creating ingestion key", err)
 		return
 	}
 	// Start from the plan so attributes the API doesn't return, such as
@@ -150,13 +150,13 @@ func (r *projectKeyResource) Create(ctx context.Context, req resource.CreateRequ
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (r *projectKeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state projectKeyResourceModel
+func (r *ingestionKeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state ingestionKeyResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	out, err := r.client.ProjectKeys.Get(ctx, state.ProjectID.ValueString(), state.ID.ValueString())
+	out, err := r.client.IngestionKeys.Get(ctx, state.ProjectID.ValueString(), state.ID.ValueString())
 	if errors.Is(err, apiv3.ErrNotFound) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -165,15 +165,15 @@ func (r *projectKeyResource) Read(ctx context.Context, req resource.ReadRequest,
 		err = errNoResult
 	}
 	if err != nil {
-		addAPIError(ctx, &resp.Diagnostics, projectKeyResourceSchema(), "Reading project key", err)
+		addAPIError(ctx, &resp.Diagnostics, ingestionKeyResourceSchema(), "Reading ingestion key", err)
 		return
 	}
 	state.fromAPI(out)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (r *projectKeyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan, state projectKeyResourceModel
+func (r *ingestionKeyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan, state ingestionKeyResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
@@ -183,35 +183,35 @@ func (r *projectKeyResource) Update(ctx context.Context, req resource.UpdateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	out, err := r.client.ProjectKeys.Update(ctx, state.ProjectID.ValueString(), state.ID.ValueString(), params)
+	out, err := r.client.IngestionKeys.Update(ctx, state.ProjectID.ValueString(), state.ID.ValueString(), params)
 	if err == nil && (out == nil || isZero(out.Id)) {
 		err = errNoResult
 	}
 	if err != nil {
-		addAPIError(ctx, &resp.Diagnostics, projectKeyResourceSchema(), "Updating project key", err)
+		addAPIError(ctx, &resp.Diagnostics, ingestionKeyResourceSchema(), "Updating ingestion key", err)
 		return
 	}
 	plan.fromAPI(out)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-func (r *projectKeyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state projectKeyResourceModel
+func (r *ingestionKeyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state ingestionKeyResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	err := r.client.ProjectKeys.Delete(ctx, state.ProjectID.ValueString(), state.ID.ValueString())
+	err := r.client.IngestionKeys.Delete(ctx, state.ProjectID.ValueString(), state.ID.ValueString())
 	if err == nil || errors.Is(err, apiv3.ErrNotFound) {
 		return
 	}
 	if isUnknownOutcome(err) {
-		addUnknownDeleteOutcome(&resp.Diagnostics, "honeybadger_project_key", state.ID.ValueString(), err)
+		addUnknownDeleteOutcome(&resp.Diagnostics, "honeybadger_ingestion_key", state.ID.ValueString(), err)
 		return
 	}
-	addAPIError(ctx, &resp.Diagnostics, projectKeyResourceSchema(), "Deleting project key", err)
+	addAPIError(ctx, &resp.Diagnostics, ingestionKeyResourceSchema(), "Deleting ingestion key", err)
 }
 
-func (r *projectKeyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	importByFormat(ctx, projectKeyImportFormat, req, resp)
+func (r *ingestionKeyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	importByFormat(ctx, ingestionKeyImportFormat, req, resp)
 }

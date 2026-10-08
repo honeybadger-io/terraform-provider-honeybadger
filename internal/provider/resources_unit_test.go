@@ -114,24 +114,24 @@ func TestProjectWireBodies(t *testing.T) {
 
 func keyConfigHCL(url, extra string) string {
 	return providerConfig(url) + fmt.Sprintf(`
-resource "honeybadger_project_key" "t" {
+resource "honeybadger_ingestion_key" "t" {
   project_id = "p1"
 %s}
 `, extra)
 }
 
-func TestProjectKeyWireBodies(t *testing.T) {
+func TestIngestionKeyWireBodies(t *testing.T) {
 	f := newFakeHoneybadger(t)
 	tfresource.UnitTest(t, tfresource.TestCase{
 		ProtoV6ProviderFactories: testFactories,
 		Steps: []tfresource.TestStep{
 			{
 				Config: keyConfigHCL(f.srv.URL, "  label = \"deploys\"\n"),
-				Check:  lastBody(f, "POST", `/keys$`, map[string]any{"label": "deploys"}),
+				Check:  lastBody(f, "POST", `/ingestion_keys$`, map[string]any{"label": "deploys"}),
 			},
 			{
 				Config: keyConfigHCL(f.srv.URL, ""),
-				Check:  lastBody(f, "PATCH", `/keys/`, map[string]any{"label": nil}),
+				Check:  lastBody(f, "PATCH", `/ingestion_keys/`, map[string]any{"label": nil}),
 			},
 		},
 	})

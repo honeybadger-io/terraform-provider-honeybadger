@@ -42,7 +42,7 @@ output "nightly_check_in_url" {
 - `name` (String) Display name. Null clears it; an unnamed check-in shows its ID.
 - `report_period` (String) How often a report is expected, for `simple` schedules. Required unless `schedule_type` is `cron`, and may not be zero. A duration such as `5 minutes`, `1 hour 30 minutes` or `01:30:00`. Reads return the canonical long form (`1 week` reads `7 days`); every form a read returns can be written back. Compare periods by duration, not text.
 - `schedule_type` (String) Switching to `simple` clears `cron_schedule` and resets `cron_timezone` to `UTC`; switching to `cron` clears `report_period`. Valid values: `simple`, `cron`. Defaults to `simple`.
-- `slug` (String) Short identifier used in the check-in's reporting URL. Null clears it. Renaming it breaks jobs reporting to `…/check_in/<project key>/<slug>` and changes how `PUT /check_ins` matches this check-in.
+- `slug` (String) Short identifier used in the check-in's reporting URL. Null clears it. Renaming it breaks jobs reporting to `…/check_in/<ingestion key>/<slug>` and changes how `PUT /check_ins` matches this check-in.
 
 ### Read-Only
 

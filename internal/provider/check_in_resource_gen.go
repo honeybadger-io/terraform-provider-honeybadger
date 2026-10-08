@@ -81,7 +81,7 @@ func checkInResourceSchema() schema.Schema {
 				Validators:          []validator.String{stringvalidator.OneOf("simple", "cron")},
 			},
 			"slug": schema.StringAttribute{
-				MarkdownDescription: "Short identifier used in the check-in's reporting URL. Null clears it. Renaming it breaks jobs reporting to `…/check_in/<project key>/<slug>` and changes how `PUT /check_ins` matches this check-in.",
+				MarkdownDescription: "Short identifier used in the check-in's reporting URL. Null clears it. Renaming it breaks jobs reporting to `…/check_in/<ingestion key>/<slug>` and changes how `PUT /check_ins` matches this check-in.",
 				Optional:            true,
 			},
 		},

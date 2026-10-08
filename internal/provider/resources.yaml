@@ -27,15 +27,15 @@ resources:
     server_filled: [purge_days]
     use_state_for_unknown: [account_id, created_at]
 
-  project_key:
-    create: createProjectKey
-    read: getProjectKey
-    update: updateProjectKey
-    delete: deleteProjectKey
+  ingestion_key:
+    create: createIngestionKey
+    read: getIngestionKey
+    update: updateIngestionKey
+    delete: deleteIngestionKey
     import: "<project_id>/<id>"
-    service: ProjectKeys
-    api: {model: ProjectKey, create_params: ProjectKeyParams, update_params: ProjectKeyParams}
-    find_hint: "the project's Project Keys in Honeybadger"
+    service: IngestionKeys
+    api: {model: IngestionKey, create_params: IngestionKeyParams, update_params: IngestionKeyParams}
+    find_hint: "the project's Ingestion Keys in Honeybadger"
     use_state_for_unknown: [created_at, key]
 
   check_in:

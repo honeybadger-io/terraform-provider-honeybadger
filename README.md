@@ -31,8 +31,8 @@ resource "honeybadger_project" "app" {
   language = "ruby"
 }
 
-# The Project Key your app reports errors with.
-resource "honeybadger_project_key" "app" {
+# The Ingestion Key your app reports errors with.
+resource "honeybadger_ingestion_key" "app" {
   project_id = honeybadger_project.app.id
   label      = "production"
 }
@@ -60,8 +60,8 @@ resource "honeybadger_team" "backend" {
   project_ids = [honeybadger_project.app.id]
 }
 
-output "project_key" {
-  value = honeybadger_project_key.app.key
+output "ingestion_key" {
+  value = honeybadger_ingestion_key.app.key
 }
 
 output "check_in_url" {
@@ -81,7 +81,7 @@ resource.
 
 | Area | Resources |
 | --- | --- |
-| Projects | `honeybadger_project`, `honeybadger_project_key`, `honeybadger_environment` |
+| Projects | `honeybadger_project`, `honeybadger_ingestion_key`, `honeybadger_environment` |
 | Uptime and cron monitoring | `honeybadger_site`, `honeybadger_check_in` |
 | Insights | `honeybadger_alarm`, `honeybadger_dashboard` |
 | Access | `honeybadger_team` |

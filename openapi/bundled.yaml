@@ -208,7 +208,7 @@ tags:
   description: Insights alarms
 - name: Integrations
   description: Notification integrations (webhooks, PagerDuty, email, etc.)
-- name: Project Keys
+- name: Ingestion Keys
   description: Project ingestion keys
 - name: Comments
   description: Comments on errors
@@ -3595,13 +3595,13 @@ paths:
       security:
       - bearer_auth:
         - integrations:write
-  "/projects/{project_id}/keys":
+  "/projects/{project_id}/ingestion_keys":
     get:
-      operationId: listProjectKeys
-      summary: List project keys
+      operationId: listIngestionKeys
+      summary: List ingestion keys
       description: Returns the project's ingestion keys.
       tags:
-      - Project Keys
+      - Ingestion Keys
       parameters:
       - "$ref": "#/components/parameters/ProjectId"
       - "$ref": "#/components/parameters/Page"
@@ -3619,7 +3619,7 @@ paths:
                   data:
                     type: array
                     items:
-                      "$ref": "#/components/schemas/ProjectKey"
+                      "$ref": "#/components/schemas/IngestionKey"
                   pagination:
                     "$ref": "#/components/schemas/Pagination"
                   links:
@@ -3638,14 +3638,14 @@ paths:
       - bearer_auth:
         - projects:read
     post:
-      operationId: createProjectKey
-      summary: Create a project key
+      operationId: createIngestionKey
+      summary: Create an ingestion key
       description: 'Creates a new ingestion key for the project. A project may hold
         a limited number of keys; a request beyond that limit is refused with 403.
 
         '
       tags:
-      - Project Keys
+      - Ingestion Keys
       parameters:
       - "$ref": "#/components/parameters/ProjectId"
       requestBody:
@@ -3653,7 +3653,7 @@ paths:
         content:
           application/json:
             schema:
-              "$ref": "#/components/schemas/ProjectKeyInput"
+              "$ref": "#/components/schemas/IngestionKeyInput"
       responses:
         '201':
           description: Key created
@@ -3665,7 +3665,7 @@ paths:
                 - data
                 properties:
                   data:
-                    "$ref": "#/components/schemas/ProjectKey"
+                    "$ref": "#/components/schemas/IngestionKey"
                   meta:
                     "$ref": "#/components/schemas/ResponseMeta"
         '401':
@@ -3679,16 +3679,16 @@ paths:
       security:
       - bearer_auth:
         - projects:write
-  "/projects/{project_id}/keys/{key_id}":
+  "/projects/{project_id}/ingestion_keys/{ingestion_key_id}":
     get:
-      operationId: getProjectKey
-      summary: Get a project key
+      operationId: getIngestionKey
+      summary: Get an ingestion key
       description: Returns a single ingestion key.
       tags:
-      - Project Keys
+      - Ingestion Keys
       parameters:
       - "$ref": "#/components/parameters/ProjectId"
-      - name: key_id
+      - name: ingestion_key_id
         in: path
         required: true
         description: Key public ID
@@ -3705,7 +3705,7 @@ paths:
                 - data
                 properties:
                   data:
-                    "$ref": "#/components/schemas/ProjectKey"
+                    "$ref": "#/components/schemas/IngestionKey"
                   meta:
                     "$ref": "#/components/schemas/ResponseMeta"
         '401':
@@ -3720,14 +3720,14 @@ paths:
       - bearer_auth:
         - projects:read
     patch:
-      operationId: updateProjectKey
-      summary: Update a project key
+      operationId: updateIngestionKey
+      summary: Update an ingestion key
       description: Updates a key's label. The key value itself cannot be changed.
       tags:
-      - Project Keys
+      - Ingestion Keys
       parameters:
       - "$ref": "#/components/parameters/ProjectId"
-      - name: key_id
+      - name: ingestion_key_id
         in: path
         required: true
         description: Key public ID
@@ -3738,7 +3738,7 @@ paths:
         content:
           application/json:
             schema:
-              "$ref": "#/components/schemas/ProjectKeyInput"
+              "$ref": "#/components/schemas/IngestionKeyInput"
       responses:
         '200':
           description: Success
@@ -3750,7 +3750,7 @@ paths:
                 - data
                 properties:
                   data:
-                    "$ref": "#/components/schemas/ProjectKey"
+                    "$ref": "#/components/schemas/IngestionKey"
                   meta:
                     "$ref": "#/components/schemas/ResponseMeta"
         '401':
@@ -3765,18 +3765,18 @@ paths:
       - bearer_auth:
         - projects:write
     delete:
-      operationId: deleteProjectKey
-      summary: Delete a project key
+      operationId: deleteIngestionKey
+      summary: Delete an ingestion key
       description: 'Deletes an ingestion key. A project''s last key cannot be deleted
         — without one it can no longer receive errors — and that request is refused
         with 403.
 
         '
       tags:
-      - Project Keys
+      - Ingestion Keys
       parameters:
       - "$ref": "#/components/parameters/ProjectId"
-      - name: key_id
+      - name: ingestion_key_id
         in: path
         required: true
         description: Key public ID
@@ -8832,8 +8832,8 @@ components:
           - string
           - 'null'
           description: 'Short identifier used in the check-in''s reporting URL. Null
-            clears it. Renaming it breaks jobs reporting to `…/check_in/<project key>/<slug>`
-            and changes how `PUT /check_ins` matches this check-in.
+            clears it. Renaming it breaks jobs reporting to `…/check_in/<ingestion
+            key>/<slug>` and changes how `PUT /check_ins` matches this check-in.
 
             '
           example: nightly-billing
@@ -9296,7 +9296,7 @@ components:
           - rate_limit_exceeded
           - concurrent_request
           - streams_provisioning
-          - project_key_not_accepted
+          - ingestion_key_not_accepted
           - maintenance_mode
           - invalid_parameter
           - forbidden_attributes
@@ -10367,10 +10367,10 @@ components:
             default) is refused with 403 `feature_unavailable`. Null clears it.
 
             '
-    ProjectKey:
+    IngestionKey:
       type: object
-      description: 'A Project Key: what an app sends errors and events with, set as
-        `api_key` in a notifier''s config. It only sends data; reading or managing
+      description: 'An Ingestion Key: what an app sends errors and events with, set
+        as `api_key` in a notifier''s config. It only sends data; reading or managing
         anything through the API takes an API Token.
 
         '
@@ -10394,7 +10394,7 @@ components:
         key:
           readOnly: true
           type: string
-          description: 'The Project Key value a notifier sends. Returned in full:
+          description: 'The Ingestion Key value a notifier sends. Returned in full:
             unlike an API Token, it''s meant to ship with your application.
 
             '
@@ -10410,7 +10410,7 @@ components:
           type: string
           format: date-time
           description: When the key was created
-    ProjectKeyInput:
+    IngestionKeyInput:
       type: object
       additionalProperties: false
       properties:

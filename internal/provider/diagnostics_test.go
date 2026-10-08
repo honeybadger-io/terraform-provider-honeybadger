@@ -364,11 +364,11 @@ func TestUnknownCreateOutcomeTellsHowToAdopt(t *testing.T) {
 	t.Run("unnamed", func(t *testing.T) {
 		var diags diag.Diagnostics
 		addUnknownCreateOutcome(&diags, createOutcome{
-			TypeName: "honeybadger_project_key", ProjectID: "Xk9mZp",
-			ImportFormat: "<project_id>/<id>", FindHint: "the project's Project Keys",
+			TypeName: "honeybadger_ingestion_key", ProjectID: "Xk9mZp",
+			ImportFormat: "<project_id>/<id>", FindHint: "the project's Ingestion Keys",
 		}, cause)
 		d := diags[0].Detail()
-		for _, want := range []string{"the project's Project Keys", "terraform import", "<project_id>/<id>"} {
+		for _, want := range []string{"the project's Ingestion Keys", "terraform import", "<project_id>/<id>"} {
 			if !strings.Contains(d, want) {
 				t.Errorf("detail %q doesn't contain %q", d, want)
 			}

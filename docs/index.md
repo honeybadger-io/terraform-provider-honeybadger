@@ -18,6 +18,7 @@ The API Token needs the scopes of the resources it manages. An account API Token
 | `honeybadger_check_in` | `checkins:read`, `checkins:write` |
 | `honeybadger_dashboard` | `dashboards:read`, `dashboards:write` |
 | `honeybadger_environment` | `projects:read`, `projects:write` |
+| `honeybadger_ingestion_key` | `projects:read`, `projects:write` |
 | `honeybadger_integration_alert_ops` | `integrations:read`, `integrations:write` |
 | `honeybadger_integration_asana` | `integrations:read`, `integrations:write` |
 | `honeybadger_integration_backlog` | `integrations:read`, `integrations:write` |
@@ -53,7 +54,6 @@ The API Token needs the scopes of the resources it manages. An account API Token
 | `honeybadger_integration_web_hook` | `integrations:read`, `integrations:write` |
 | `honeybadger_integration_zulip` | `integrations:read`, `integrations:write` |
 | `honeybadger_project` | `projects:create`, `projects:read`, `projects:write` |
-| `honeybadger_project_key` | `projects:read`, `projects:write` |
 | `honeybadger_site` | `uptime:read`, `uptime:write` |
 | `honeybadger_status_page` | `status_pages:read`, `status_pages:write` |
 | `honeybadger_team` | `team:read`, `team:write` |
