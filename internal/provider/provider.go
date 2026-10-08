@@ -95,6 +95,7 @@ func (p *honeybadgerProvider) Configure(ctx context.Context, req provider.Config
 	// it would cap every attempt, including long deletes.
 	client := apiv3.NewClient().
 		WithBearerToken(token).
+		WithUserAgent("terraform-provider-honeybadger/" + p.version).
 		WithRequestIDHook(logRequestID).
 		WithRetry(apiv3.RetryPolicy{MaxAttempts: 4, MaxWait: time.Minute})
 	if url != "" {

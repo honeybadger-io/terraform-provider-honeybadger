@@ -101,6 +101,7 @@ type seen struct {
 	mu    sync.Mutex
 	auth  []string
 	paths []string
+	agent []string
 }
 
 // apiServer answers project reads and records each request.
@@ -111,6 +112,7 @@ func apiServer(t *testing.T) (*httptest.Server, *seen) {
 		s.mu.Lock()
 		s.auth = append(s.auth, r.Header.Get("Authorization"))
 		s.paths = append(s.paths, r.URL.Path)
+		s.agent = append(s.agent, r.Header.Get("User-Agent"))
 		s.mu.Unlock()
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"data":{"id":"p1","name":"Project"}}`))
@@ -164,6 +166,21 @@ func TestConfigureUsesConfiguredTokenAndURL(t *testing.T) {
 	}
 	if s.paths[0] != "/v3/projects/p1" {
 		t.Errorf("path = %q, want /v3/projects/p1", s.paths[0])
+	}
+}
+
+// Requests name the provider and its version, so Honeybadger can tell
+// Terraform's traffic apart.
+func TestConfiguredClientIdentifiesTheProvider(t *testing.T) {
+	clearEnv(t)
+	srv, s := apiServer(t)
+
+	resp := configure(t, stringValueOf("hbt_config"), stringValueOf(srv.URL))
+	assertNoDiags(t, resp.Diagnostics)
+	getProject(t, resp)
+
+	if !strings.HasPrefix(s.agent[0], "terraform-provider-honeybadger/test ") {
+		t.Errorf("User-Agent = %q, want it to start with terraform-provider-honeybadger/test", s.agent[0])
 	}
 }
 
