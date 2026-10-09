@@ -142,6 +142,8 @@ github.com/hashicorp/yamux v0.1.2 h1:XtB8kyFOyHXYVFnwT5C3+Bdo8gArse7j2AQ0DA0Uey8
 github.com/hashicorp/yamux v0.1.2/go.mod h1:C+zze2n6e/7wshOZep2A70/aQU6QBRWJO/G6FT1wIns=
 github.com/honeybadger-io/api-go v0.9.1-0.20261008175434-a02a6857a617 h1:yeoXIX6iVZoFhZU4Lsheov0dd2VPDX/oEG/CAIlm3ms=
 github.com/honeybadger-io/api-go v0.9.1-0.20261008175434-a02a6857a617/go.mod h1:8xHktvfvDGEbdQa0iEY4uNnNK/jceI3XLuQ3vdnR/R8=
+github.com/honeybadger-io/api-go v0.9.1-0.20261009182404-c741d09ace5e h1:VRhGve4KXgPQQw+XkXAxNzuVAu1aSza1/ktJUhIgIZM=
+github.com/honeybadger-io/api-go v0.9.1-0.20261009182404-c741d09ace5e/go.mod h1:8xHktvfvDGEbdQa0iEY4uNnNK/jceI3XLuQ3vdnR/R8=
 github.com/huandu/xstrings v1.3.3 h1:/Gcsuc1x8JVbJ9/rlye4xZnVAbEkGauT8lbebqcQws4=
 github.com/huandu/xstrings v1.3.3/go.mod h1:y5/lhBue+AyNmUVz9RLU9xbLR0o4KIIExikq4ovT0aE=
 github.com/imdario/mergo v0.3.11/go.mod h1:jmQim1M+e3UYxmgPu/WyfjB3N3VflVyUjjjwH0dnCYA=
