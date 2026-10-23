@@ -47,7 +47,7 @@ func (p *honeybadgerProvider) Schema(_ context.Context, _ provider.SchemaRequest
 			"api_token": schema.StringAttribute{
 				Optional:  true,
 				Sensitive: true,
-				Description: "A Honeybadger API Token: an `hbt_` personal API Token, an `hba_` account API Token, " +
+				Description: "A Honeybadger API Token: an `hbu_` personal API Token, an `hba_` account API Token, " +
 					"or an OAuth access token. Defaults to `HONEYBADGER_API_TOKEN`, then " +
 					"`HONEYBADGER_PERSONAL_AUTH_TOKEN`.",
 			},

@@ -70,7 +70,7 @@ output "check_in_url" {
 ```
 
 ```sh
-export HONEYBADGER_API_TOKEN=hbt_...
+export HONEYBADGER_API_TOKEN=hbu_...
 terraform apply
 ```
 
@@ -104,7 +104,7 @@ already exists.
 | `api_token` | `HONEYBADGER_API_TOKEN`, then `HONEYBADGER_PERSONAL_AUTH_TOKEN` | none (required) |
 | `api_url` | `HONEYBADGER_API_URL` | `https://app.honeybadger.io` |
 
-`api_token` takes a personal API Token (`hbt_`), an account API Token
+`api_token` takes a personal API Token (`hbu_`), an account API Token
 (`hba_`), or an OAuth access token. Set it through the environment rather than
 in config, so it stays out of your repository.
 
