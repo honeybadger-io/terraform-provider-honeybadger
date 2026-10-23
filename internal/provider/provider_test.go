@@ -73,7 +73,7 @@ func stringValueOf(s string) tftypes.Value { return tftypes.NewValue(tftypes.Str
 // clearEnv keeps the developer's own Honeybadger variables out of a test.
 func clearEnv(t *testing.T) {
 	t.Helper()
-	for _, name := range []string{"HONEYBADGER_API_TOKEN", "HONEYBADGER_PERSONAL_AUTH_TOKEN", "HONEYBADGER_API_URL"} {
+	for _, name := range []string{"HONEYBADGER_API_TOKEN", "HONEYBADGER_API_URL"} {
 		t.Setenv(name, "")
 	}
 }
@@ -213,32 +213,16 @@ func TestConfigureFallsBackToEnvironment(t *testing.T) {
 	}
 }
 
-func TestConfigurePrefersAPITokenOverPersonalAuthToken(t *testing.T) {
+// The MCP server's HONEYBADGER_PERSONAL_AUTH_TOKEN holds a personal token; the
+// provider reads only HONEYBADGER_API_TOKEN, so it isn't picked up by accident.
+func TestConfigureIgnoresPersonalAuthToken(t *testing.T) {
 	clearEnv(t)
-	srv, s := apiServer(t)
-	t.Setenv("HONEYBADGER_API_TOKEN", "hba_new")
-	t.Setenv("HONEYBADGER_PERSONAL_AUTH_TOKEN", "hbt_old")
+	t.Setenv("HONEYBADGER_PERSONAL_AUTH_TOKEN", "hbu_mcp")
 
-	resp := configure(t, nullString, stringValueOf(srv.URL))
-	assertNoDiags(t, resp.Diagnostics)
-	getProject(t, resp)
-
-	if s.auth[0] != "Bearer hba_new" {
-		t.Errorf("Authorization = %q, want HONEYBADGER_API_TOKEN's value", s.auth[0])
-	}
-}
-
-func TestConfigureAcceptsPersonalAuthToken(t *testing.T) {
-	clearEnv(t)
-	srv, s := apiServer(t)
-	t.Setenv("HONEYBADGER_PERSONAL_AUTH_TOKEN", "hbt_mcp")
-
-	resp := configure(t, nullString, stringValueOf(srv.URL))
-	assertNoDiags(t, resp.Diagnostics)
-	getProject(t, resp)
-
-	if s.auth[0] != "Bearer hbt_mcp" {
-		t.Errorf("Authorization = %q, want the MCP server's token variable", s.auth[0])
+	resp := configure(t, nullString, nullString)
+	assertAttrError(t, resp.Diagnostics, "api_token")
+	if resp.ResourceData != nil {
+		t.Error("a client was configured from HONEYBADGER_PERSONAL_AUTH_TOKEN")
 	}
 }
 

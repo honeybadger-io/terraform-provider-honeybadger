@@ -72,5 +72,5 @@ provider "honeybadger" {
 
 ### Optional
 
-- `api_token` (String, Sensitive) A Honeybadger API Token: an `hbu_` personal API Token, an `hba_` account API Token, or an OAuth access token. Defaults to `HONEYBADGER_API_TOKEN`, then `HONEYBADGER_PERSONAL_AUTH_TOKEN`.
+- `api_token` (String, Sensitive) A Honeybadger API Token: an `hbu_` personal API Token, an `hba_` account API Token, or an OAuth access token. Defaults to `HONEYBADGER_API_TOKEN`.
 - `api_url` (String) The Data API host. Defaults to `HONEYBADGER_API_URL`, then `https://app.honeybadger.io`. EU accounts use `https://eu-app.honeybadger.io`.

@@ -48,8 +48,7 @@ func (p *honeybadgerProvider) Schema(_ context.Context, _ provider.SchemaRequest
 				Optional:  true,
 				Sensitive: true,
 				Description: "A Honeybadger API Token: an `hbu_` personal API Token, an `hba_` account API Token, " +
-					"or an OAuth access token. Defaults to `HONEYBADGER_API_TOKEN`, then " +
-					"`HONEYBADGER_PERSONAL_AUTH_TOKEN`.",
+					"or an OAuth access token. Defaults to `HONEYBADGER_API_TOKEN`.",
 			},
 			"api_url": schema.StringAttribute{
 				Optional: true,
@@ -80,7 +79,7 @@ func (p *honeybadgerProvider) Configure(ctx context.Context, req provider.Config
 
 	// Environment fallback applies only to attributes left out of config.
 	if !tokenSet {
-		token = firstSet(os.Getenv("HONEYBADGER_API_TOKEN"), os.Getenv("HONEYBADGER_PERSONAL_AUTH_TOKEN"))
+		token = os.Getenv("HONEYBADGER_API_TOKEN")
 	}
 	if !urlSet {
 		url = os.Getenv("HONEYBADGER_API_URL")
@@ -126,16 +125,6 @@ func configuredString(resp *provider.ConfigureResponse, v types.String, attr, en
 	default:
 		return v.ValueString(), true
 	}
-}
-
-// firstSet returns the first non-empty value.
-func firstSet(values ...string) string {
-	for _, v := range values {
-		if v != "" {
-			return v
-		}
-	}
-	return ""
 }
 
 // logRequestID records the request id of each response that carries one, for

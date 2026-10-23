@@ -101,7 +101,7 @@ already exists.
 
 | Argument | Environment variable | Default |
 | --- | --- | --- |
-| `api_token` | `HONEYBADGER_API_TOKEN`, then `HONEYBADGER_PERSONAL_AUTH_TOKEN` | none (required) |
+| `api_token` | `HONEYBADGER_API_TOKEN` | none (required) |
 | `api_url` | `HONEYBADGER_API_URL` | `https://app.honeybadger.io` |
 
 `api_token` takes a personal API Token (`hbu_`), an account API Token
