@@ -45,7 +45,7 @@ resource "honeybadger_alarm" "errors" {
 ### Optional
 
 - `description` (String) What the alarm watches for, shown with it in Honeybadger. Null clears it.
-- `stream_ids` (Set of String) Streams the query runs against. A set: order is ignored, duplicates are dropped, and it can't be empty. Left out, every current stream in the project, which a read then lists. An ID that isn't one of the project's streams fails the request with 422. Removing it from config keeps the current value.
+- `stream_ids` (Set of String) Streams the query runs against. A set: order is ignored, duplicates are dropped, and it can't be empty. Left out or null, every current stream in the project, which a read then lists. An ID that isn't one of the project's streams fails the request with 422. Removing it from config keeps the current value.
 
 ### Read-Only
 

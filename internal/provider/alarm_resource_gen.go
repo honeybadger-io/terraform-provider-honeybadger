@@ -66,7 +66,7 @@ func alarmResourceSchema() schema.Schema {
 			},
 			"stream_ids": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "Streams the query runs against. A set: order is ignored, duplicates are dropped, and it can't be empty. Left out, every current stream in the project, which a read then lists. An ID that isn't one of the project's streams fails the request with 422. Removing it from config keeps the current value.",
+				MarkdownDescription: "Streams the query runs against. A set: order is ignored, duplicates are dropped, and it can't be empty. Left out or null, every current stream in the project, which a read then lists. An ID that isn't one of the project's streams fails the request with 422. Removing it from config keeps the current value.",
 				Optional:            true,
 				Computed:            true,
 				Validators:          []validator.Set{setvalidator.SizeAtLeast(1)},
@@ -149,7 +149,7 @@ func (m alarmResourceModel) createParams(diags *diag.Diagnostics) apiv3.AlarmCre
 	p.LookbackLag = m.LookbackLag.ValueString()
 	p.Name = m.Name.ValueString()
 	p.Query = m.Query.ValueString()
-	setSlicePtr(&p.StreamIds, m.StreamIds, fromString)
+	createNullableSlice(&p.StreamIds, m.StreamIds, fromString)
 	p.TriggerConfig = orZero(alarmTriggerConfigToAPI(m.TriggerConfig, path.Root("trigger_config"), diags))
 	return p
 }

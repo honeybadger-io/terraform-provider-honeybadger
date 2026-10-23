@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.31.0
 	github.com/hashicorp/terraform-plugin-log v0.11.0
 	github.com/hashicorp/terraform-plugin-testing v1.16.0
-	github.com/honeybadger-io/api-go v0.9.1-0.20261009182404-c741d09ace5e
+	github.com/honeybadger-io/api-go v0.10.0
 	github.com/oapi-codegen/nullable v1.2.0
 	golang.org/x/tools v0.51.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -66,7 +66,7 @@ require (
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
-	github.com/oapi-codegen/runtime v1.6.0 // indirect
+	github.com/oapi-codegen/runtime v1.7.0 // indirect
 	github.com/oasdiff/yaml v0.1.1 // indirect
 	github.com/oasdiff/yaml3 v0.0.14 // indirect
 	github.com/oklog/run v1.2.0 // indirect
