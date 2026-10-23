@@ -9,8 +9,6 @@ the normal way to work: `go.mod` isn't bumped as api-go moves, so a build
 outside the workspace (`GOWORK=off`, or CI) may not compile between releases.
 A release bumps `go.mod` to a tagged api-go and builds with `GOWORK=off`.
 
-Design: `docs/superpowers/specs/2026-10-05-terraform-provider-design.md`.
-
 Resource schemas aren't written by hand. `make generate` reads
 `openapi/bundled.yaml` and `internal/provider/resources.yaml` and writes each
 resource's schema and model to `internal/provider/<name>_resource_gen.go`
