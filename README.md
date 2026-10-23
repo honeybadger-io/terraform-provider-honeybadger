@@ -10,6 +10,10 @@ request, and stand up a new app's whole Honeybadger setup with one
 
 > **Beta.** The provider isn't on the Terraform Registry yet. Until it is,
 > build it locally (see [Trying it now](#trying-it-now)).
+>
+> It uses Honeybadger's new Data API (v3), which is in preview, and needs a
+> new granular API Token. To get access, email
+> [support@honeybadger.io](mailto:support@honeybadger.io).
 
 ## Quick start
 
