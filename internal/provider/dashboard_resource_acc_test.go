@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/honeybadger-io/api-go/apiv3"
 )
 
-func dashboardAccConfig(name, widgets string) string {
+func dashboardAccConfig(name, title, widgets string) string {
 	return accProvider() + fmt.Sprintf(`
 resource "honeybadger_project" "a" {
   name = %[1]q
@@ -18,10 +19,10 @@ resource "honeybadger_project" "a" {
 
 resource "honeybadger_dashboard" "t" {
   project_id = honeybadger_project.a.id
-  title      = %[1]q
-  widgets    = jsonencode([%[2]s])
+  title      = %[2]q
+  widgets    = jsonencode([%[3]s])
 }
-`, name, widgets)
+`, name, title, widgets)
 }
 
 func TestAccDashboard(t *testing.T) {
@@ -36,10 +37,16 @@ func TestAccDashboard(t *testing.T) {
 		ProtoV6ProviderFactories: testFactories,
 		PreCheck:                 func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
-			{Config: dashboardAccConfig(name, alarms+", "+vis)},
-			{Config: dashboardAccConfig(name, alarms+", "+vis+", "+errs), ConfigPlanChecks: expectUpdate(dashboardAddr)},
-			{Config: dashboardAccConfig(name, errs+", "+alarms+", "+vis), ConfigPlanChecks: expectUpdate(dashboardAddr)},
-			{Config: dashboardAccConfig(name, errs+", "+alarms), ConfigPlanChecks: expectUpdate(dashboardAddr)},
+			{Config: dashboardAccConfig(name, name, alarms+", "+vis)},
+			{Config: dashboardAccConfig(name, name, alarms+", "+vis+", "+errs), ConfigPlanChecks: expectUpdate(dashboardAddr)},
+			{Config: dashboardAccConfig(name, name, errs+", "+alarms+", "+vis), ConfigPlanChecks: expectUpdate(dashboardAddr)},
+			{Config: dashboardAccConfig(name, name, errs+", "+alarms), ConfigPlanChecks: expectUpdate(dashboardAddr)},
+			// The web URL carries a slug of the title, so a rename changes it.
+			{
+				Config:           dashboardAccConfig(name, name+" Renamed", errs+", "+alarms),
+				ConfigPlanChecks: expectUpdate(dashboardAddr),
+				Check:            resource.TestMatchResourceAttr(dashboardAddr, "links.web", regexp.MustCompile(`/insights/dashboards/`+name+`-renamed-[A-Za-z0-9]+$`)),
+			},
 			{ResourceName: dashboardAddr, ImportState: true, ImportStateIdFunc: importID(dashboardAddr), ImportStateVerify: true, ImportStateVerifyIgnore: []string{"widgets"}},
 		},
 	})
