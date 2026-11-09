@@ -18,10 +18,10 @@ resource "honeybadger_ingestion_key" "deploy" {
   label      = "deploys"
 }
 
-# The key isn't a secret: it ships in the app, so it can go into the app's
-# config as is.
+# `terraform output -raw deploy_ingestion_key` prints it.
 output "deploy_ingestion_key" {
-  value = honeybadger_ingestion_key.deploy.key
+  value     = honeybadger_ingestion_key.deploy.key
+  sensitive = true
 }
 ```
 
@@ -40,7 +40,7 @@ output "deploy_ingestion_key" {
 
 - `created_at` (String) When the key was created
 - `id` (String) Identifier for this key. Use it in paths.
-- `key` (String) The Ingestion Key value a notifier sends. Returned in full: unlike an API Token, it's meant to ship with your application.
+- `key` (String, Sensitive) The Ingestion Key value a notifier sends. Returned in full: unlike an API Token, it's meant to ship with your application.
 
 ## Import
 

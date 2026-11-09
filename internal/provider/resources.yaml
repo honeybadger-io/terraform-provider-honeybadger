@@ -36,6 +36,7 @@ resources:
     service: IngestionKeys
     api: {model: IngestionKey, create_params: IngestionKeyParams, update_params: IngestionKeyParams}
     find_hint: "the project's Ingestion Keys in Honeybadger"
+    sensitive: [key]
     use_state_for_unknown: [created_at, key]
 
   check_in:

@@ -33,6 +33,7 @@ func ingestionKeyResourceSchema() schema.Schema {
 			"key": schema.StringAttribute{
 				MarkdownDescription: "The Ingestion Key value a notifier sends. Returned in full: unlike an API Token, it's meant to ship with your application.",
 				Computed:            true,
+				Sensitive:           true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"label": schema.StringAttribute{
