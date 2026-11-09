@@ -12,18 +12,22 @@ Get alerts via Zulip group chat. Required scopes: `integrations:read`, `integrat
 ## Example Usage
 
 ```terraform
-# A minimal configuration, generated from the API spec's examples.
-resource "honeybadger_integration_zulip" "example" {
+resource "honeybadger_integration_zulip" "alerts" {
+  project_id = honeybadger_project.app.id
+
   config = {
-    api_key   = var.integration_zulip_config_api_key
+    # One of these is required: zulip_domain for Zulip Cloud
+    # (example.zulipchat.com), or server_url for a self-hosted server.
+    zulip_domain = "example"
+
     bot_email = "honeybadger-bot@example.zulipchat.com"
+    api_key   = var.zulip_api_key
     channel   = "alerts"
     topic     = "Honeybadger"
   }
-  project_id = honeybadger_project.app.id
 }
 
-variable "integration_zulip_config_api_key" {
+variable "zulip_api_key" {
   type      = string
   sensitive = true
 }
@@ -99,7 +103,7 @@ In Terraform v1.5.0 and later, the [`import` block](https://developer.hashicorp.
 ```terraform
 # Import can't read `config.api_key` back: set it in config.
 import {
-  to = honeybadger_integration_zulip.example
+  to = honeybadger_integration_zulip.alerts
   id = "<project_id>/<id>"
 }
 ```
@@ -108,5 +112,5 @@ The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/c
 
 ```shell
 # Import can't read `config.api_key` back: set it in config.
-terraform import honeybadger_integration_zulip.example "<project_id>/<id>"
+terraform import honeybadger_integration_zulip.alerts "<project_id>/<id>"
 ```
