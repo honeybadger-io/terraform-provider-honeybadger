@@ -161,4 +161,4 @@ resources:
     json_required_keys: {widgets: [id]}
     omit:
       updated_at: live data
-    use_state_for_unknown: [created_at, links, is_default, shared]
+    use_state_for_unknown: [created_at, is_default, shared]
