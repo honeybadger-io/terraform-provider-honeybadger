@@ -14,7 +14,9 @@ Resource schemas aren't written by hand. `make generate` reads
 resource's schema and model to `internal/provider/<name>_resource_gen.go`
 (spec section 3.3). To change a schema, change the OpenAPI spec in honeybadger
 (then `make update-spec`) or the resource's entry in `resources.yaml`. Never
-edit a `_gen.go` file.
+edit a `_gen.go` file or `openapi/bundled.yaml`: `make generate` first runs
+`make check-spec`, which fails when the bundle's sha256 isn't the one
+`make update-spec` recorded in `openapi/README.md`.
 
 ## Commands
 
