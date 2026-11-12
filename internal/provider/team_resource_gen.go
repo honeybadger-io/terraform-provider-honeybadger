@@ -34,14 +34,13 @@ func teamResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Unique identifier",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"links": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"web": schema.StringAttribute{
-						MarkdownDescription: "Absolute URL of this resource's page in the Honeybadger web UI, on the web UI's host rather than the API's. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on, on Heroku's host.",
+						MarkdownDescription: "The resource's page in the Honeybadger web UI, as an absolute URL. Resources without a page, such as outages and deploys, don't have `links`. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on.",
 						Computed:            true,
 					},
 				},
@@ -55,7 +54,7 @@ func teamResourceSchema() schema.Schema {
 			},
 			"project_ids": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "IDs of projects this team can access: the whole membership. An ID that isn't a project the caller can see fails the request with 422. A project's create-time `team_id` only attaches it to one team. A set; order is ignored and duplicates are dropped. Defaults to empty.",
+				MarkdownDescription: "IDs of projects this team can access: the whole membership. A project's create-time `team_id` only attaches it to one team. A set; order is ignored and duplicates are dropped. Defaults to empty.",
 				Optional:            true,
 				Computed:            true,
 				Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),

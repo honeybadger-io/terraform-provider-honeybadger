@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -38,9 +37,8 @@ func dashboardResourceSchema() schema.Schema {
 				Optional:            true,
 			},
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Unique identifier",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"is_default": schema.BoolAttribute{
 				MarkdownDescription: "Whether this is the default dashboard",
@@ -50,16 +48,15 @@ func dashboardResourceSchema() schema.Schema {
 			"links": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"web": schema.StringAttribute{
-						MarkdownDescription: "Absolute URL of this resource's page in the Honeybadger web UI, on the web UI's host rather than the API's. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on, on Heroku's host.",
+						MarkdownDescription: "The resource's page in the Honeybadger web UI, as an absolute URL. Resources without a page, such as outages and deploys, don't have `links`. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on.",
 						Computed:            true,
 					},
 				},
 				MarkdownDescription: "Links into the Honeybadger web UI",
 				Computed:            true,
-				PlanModifiers:       []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
 			},
 			"project_id": schema.StringAttribute{
-				MarkdownDescription: "The project's `id`, as a project read returns it.",
+				MarkdownDescription: "Project ID",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},

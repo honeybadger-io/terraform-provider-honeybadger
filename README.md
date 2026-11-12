@@ -65,7 +65,8 @@ resource "honeybadger_team" "backend" {
 }
 
 output "ingestion_key" {
-  value = honeybadger_ingestion_key.app.key
+  value     = honeybadger_ingestion_key.app.key
+  sensitive = true
 }
 
 output "check_in_url" {

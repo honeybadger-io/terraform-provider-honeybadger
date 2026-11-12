@@ -1,12 +1,17 @@
 #!/bin/sh
-# Checks that the provider's copy of the OpenAPI bundle is byte-for-byte the
-# one api-go was generated from (spec section 3.3). A mismatch is a warning
-# during development; with --release it fails.
+# Checks that openapi/bundled.yaml is the bundle make update-spec copied from
+# honeybadger: its sha256 must match the one recorded in openapi/README.md. A
+# mismatch means the file was changed by hand (spec section 3.3).
+#
+# It doesn't compare with api-go's bundle. The generated code uses api-go's
+# types by name, so a build against the api-go in go.mod (GOWORK=off) already
+# fails on a field the two disagree on, and reworded spec text shouldn't need
+# an api-go release.
 set -eu
 
 root=$(cd "$(dirname "$0")/.." && pwd)
-release=false
-[ "${1:-}" = "--release" ] && release=true
+bundle=$root/openapi/bundled.yaml
+readme=$root/openapi/README.md
 
 sha256() {
 	if command -v sha256sum >/dev/null 2>&1; then
@@ -16,27 +21,20 @@ sha256() {
 	fi
 }
 
-apigo=$(cd "$root" && go list -m -f '{{.Dir}}' github.com/honeybadger-io/api-go)
-if [ -z "$apigo" ] || [ ! -f "$apigo/openapi/bundled.yaml.sha256" ]; then
-	echo "check-spec: can't find api-go's bundle checksum (is ../go.work in use?)" >&2
-	exit 1
-fi
-want=$(cat "$apigo/openapi/bundled.yaml.sha256")
-
-if [ ! -f "$root/openapi/bundled.yaml" ]; then
+if [ ! -f "$bundle" ]; then
 	echo "check-spec: openapi/bundled.yaml is missing; run make update-spec" >&2
 	exit 1
 fi
-got=$(sha256 "$root/openapi/bundled.yaml")
+want=$(sed -n 's/^| sha256 | `\([0-9a-f]\{64\}\)` |$/\1/p' "$readme")
+if [ -z "$want" ]; then
+	echo "check-spec: openapi/README.md records no sha256; run make update-spec" >&2
+	exit 1
+fi
+got=$(sha256 "$bundle")
 
 if [ "$got" != "$want" ]; then
-	echo "check-spec: openapi/bundled.yaml ($got) doesn't match api-go's ($want, $apigo)." >&2
-	if $release; then
-		echo "A release needs go.mod to require an api-go built from this bundle: bump it to that tagged version." >&2
-		exit 1
-	fi
-	echo "Copy the same honeybadger bundle into both: make update-spec here, and api-go's own update." >&2
-	echo "check-spec: warning only; a release fails on this" >&2
-	exit 0
+	echo "check-spec: openapi/bundled.yaml ($got) isn't the bundle make update-spec recorded in openapi/README.md ($want)." >&2
+	echo "Don't edit it by hand: change the spec in honeybadger, then run make update-spec." >&2
+	exit 1
 fi
-echo "check-spec: bundle matches api-go ($got)"
+echo "check-spec: bundle matches openapi/README.md ($got)"

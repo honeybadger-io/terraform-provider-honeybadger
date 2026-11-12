@@ -29,9 +29,8 @@ func environmentResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Unique identifier",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "Environment name",
@@ -46,7 +45,7 @@ func environmentResourceSchema() schema.Schema {
 				Default:             booldefault.StaticBool(true),
 			},
 			"project_id": schema.StringAttribute{
-				MarkdownDescription: "The project's `id`, as a project read returns it.",
+				MarkdownDescription: "Project ID",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},

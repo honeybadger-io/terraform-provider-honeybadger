@@ -27,13 +27,13 @@ resource "honeybadger_team" "backend" {
 
 ### Optional
 
-- `project_ids` (Set of String) IDs of projects this team can access: the whole membership. An ID that isn't a project the caller can see fails the request with 422. A project's create-time `team_id` only attaches it to one team. A set; order is ignored and duplicates are dropped. Defaults to empty.
+- `project_ids` (Set of String) IDs of projects this team can access: the whole membership. A project's create-time `team_id` only attaches it to one team. A set; order is ignored and duplicates are dropped. Defaults to empty.
 
 ### Read-Only
 
 - `account_id` (String) ID of the account this team belongs to
 - `created_at` (String) When the team was created
-- `id` (String) Unique identifier
+- `id` (String) The ID of this resource.
 - `links` (Attributes) Links into the Honeybadger web UI (see [below for nested schema](#nestedatt--links))
 
 <a id="nestedatt--links"></a>
@@ -41,7 +41,7 @@ resource "honeybadger_team" "backend" {
 
 Read-Only:
 
-- `web` (String) Absolute URL of this resource's page in the Honeybadger web UI, on the web UI's host rather than the API's. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on, on Heroku's host.
+- `web` (String) The resource's page in the Honeybadger web UI, as an absolute URL. Resources without a page, such as outages and deploys, don't have `links`. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on.
 
 ## Import
 

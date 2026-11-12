@@ -2,7 +2,7 @@
 resource "honeybadger_integration_redmine" "example" {
   config = {
     api_key    = var.integration_redmine_config_api_key
-    server_url = "https://example.com"
+    server_url = "https://redmine.example.com/projects/myapp"
   }
   project_id = honeybadger_project.app.id
 }

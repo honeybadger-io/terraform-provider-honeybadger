@@ -1,2 +1,2 @@
 # Import can't read `config.api_key` back: set it in config.
-terraform import honeybadger_integration_zulip.example "<project_id>/<id>"
+terraform import honeybadger_integration_zulip.alerts "<project_id>/<id>"

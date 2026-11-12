@@ -27,27 +27,27 @@ resource "honeybadger_integration_bitbucket" "example" {
 ### Required
 
 - `config` (Attributes) The type's settings, listed per type in [Integration types](https://docs.honeybadger.io/api/v3/integrations/types/). (see [below for nested schema](#nestedatt--config))
-- `project_id` (String) The project's `id`, as a project read returns it.
+- `project_id` (String) Project ID
 
 ### Optional
 
 - `active` (Boolean) Whether to use the integration. An OAuth integration that's active sends nothing until someone connects it in the web UI at `links.web`. Defaults to `true`.
 - `alarm_alert_ids` (Set of String) IDs of alarms whose alert events this integration receives. Null or empty clears it. A set; order is ignored and duplicates are dropped. Defaults to empty.
 - `alarm_ok_ids` (Set of String) IDs of alarms whose recovery events this integration receives. Null or empty clears it. A set; order is ignored and duplicates are dropped. Defaults to empty.
-- `check_in_ids` (Set of String) Check-ins whose events this integration receives. null follows every check-in in the project, including ones added later; a create that leaves it out does the same. [] follows none, and a list follows just those check-ins. An ID that isn't one of this project's check-ins fails the request with 422. A set; order is ignored and duplicates are dropped.
+- `check_in_ids` (Set of String) Check-ins whose events this integration receives. null follows every check-in in the project, including ones added later; a create that leaves it out does the same. [] follows none, and a list follows just those check-ins. A set; order is ignored and duplicates are dropped.
 - `events` (Set of String) Defaults to `occurred`, less any the plan doesn't include. Valid values: `occurred`, `resolved`, `unresolved`, `rate_exceeded`. Removing it from config keeps the current value.
-- `excluded_environments` (Set of String) Errors from these environments never notify through this integration. Takes precedence over included_environments. Names are stored as given, so an environment can be excluded before it first reports. Null or empty clears it. Applies only on plans with environment settings; changing it on other plans is 403 feature_unavailable. Reads return what's stored. A set; order is ignored and duplicates are dropped. Defaults to empty.
-- `filters` (Attributes List) An ordered list. Each event that has a filter notifies only for errors matching its query. Replaces the stored filters; null or empty clears them. Applies only on plans with integration filters; changing it on other plans is 403 feature_unavailable. Reads return what's stored. Defaults to empty. (see [below for nested schema](#nestedatt--filters))
-- `included_environments` (Set of String) When non-empty, only errors from these environments notify through this integration, including environments that haven't reported yet. Empty means every environment not excluded. Null or empty clears it. Applies only on plans with environment settings; changing it on other plans is 403 feature_unavailable. Reads return what's stored. A set; order is ignored and duplicates are dropped. Defaults to empty.
+- `excluded_environments` (Set of String) Errors from these environments never notify through this integration. Takes precedence over `included_environments`. An environment can be excluded before it first reports. Null or empty clears it. Changing it requires environment settings on the plan. A set; order is ignored and duplicates are dropped. Defaults to empty.
+- `filters` (Attributes List) An ordered list. Each event that has a filter notifies only for errors matching its query. Replaces the stored filters; null or empty clears them. Changing it requires integration filters on the plan. Defaults to empty. (see [below for nested schema](#nestedatt--filters))
+- `included_environments` (Set of String) When non-empty, only errors from these environments notify through this integration, including environments that haven't reported yet. Empty means every environment not excluded. Null or empty clears it. Changing it requires environment settings on the plan. A set; order is ignored and duplicates are dropped. Defaults to empty.
 - `notification_limit` (Number) Maximum notifications in a 10-minute window before flood control. Null removes the limit.
-- `rate` (String) Period the rate_exceeded threshold counts over. Null resets it to wday. Valid values: `min`, `hour`, `wday`, `week`. Defaults to `wday`.
-- `site_ids` (Set of String) Sites whose up and down events this integration receives. null follows every site in the project, including ones added later; a create that leaves it out does the same. [] follows none, and a list follows just those sites. An ID that isn't one of this project's sites fails the request with 422. A set; order is ignored and duplicates are dropped.
-- `threshold` (Number) Number of occurrences before rate_exceeded fires. Null resets it to 100. Defaults to `100`.
+- `rate` (String) Period the `rate_exceeded` threshold counts over. Null resets it to `wday`. Valid values: `min`, `hour`, `wday`, `week`. Defaults to `wday`.
+- `site_ids` (Set of String) Sites whose up and down events this integration receives. null follows every site in the project, including ones added later; a create that leaves it out does the same. [] follows none, and a list follows just those sites. A set; order is ignored and duplicates are dropped.
+- `threshold` (Number) Number of occurrences before `rate_exceeded` fires. Null resets it to 100. Defaults to `100`.
 
 ### Read-Only
 
 - `created_at` (String) When the integration was created
-- `id` (String) Unique identifier
+- `id` (String) The ID of this resource.
 - `links` (Attributes) Links into the Honeybadger web UI (see [below for nested schema](#nestedatt--links))
 
 <a id="nestedatt--config"></a>
@@ -72,7 +72,7 @@ Required:
 
 Read-Only:
 
-- `web` (String) Absolute URL of this resource's page in the Honeybadger web UI, on the web UI's host rather than the API's. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on, on Heroku's host.
+- `web` (String) The resource's page in the Honeybadger web UI, as an absolute URL. Resources without a page, such as outages and deploys, don't have `links`. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on.
 
 ## Import
 

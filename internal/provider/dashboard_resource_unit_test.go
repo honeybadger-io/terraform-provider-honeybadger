@@ -87,6 +87,25 @@ func TestDashboardWidgetChanges(t *testing.T) {
 	})
 }
 
+// Renaming a dashboard is an in-place update that applies cleanly, though
+// Honeybadger's web URL carries a slug of the title and changes with it.
+func TestDashboardRename(t *testing.T) {
+	f := newFakeHoneybadger(t)
+	renamed := strings.Replace(dashboardHCL(f.srv.URL, ""), `"Ops"`, `"Ops Board"`, 1)
+	tfresource.UnitTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testFactories,
+		Steps: []tfresource.TestStep{
+			{Config: dashboardHCL(f.srv.URL, "")},
+			{
+				Config:           renamed,
+				ConfigPlanChecks: expectUpdate(dashboardAddr),
+				Check:            tfresource.TestCheckResourceAttr(dashboardAddr, "links.web", "https://app.honeybadger.io/projects/p1/insights/dashboards/ops-board-x1"),
+			},
+			{Config: renamed, ConfigPlanChecks: emptyPlan},
+		},
+	})
+}
+
 // Review Focus 5: a value the user set, changed in the web UI, shows in the
 // next plan.
 func TestDashboardDrift(t *testing.T) {

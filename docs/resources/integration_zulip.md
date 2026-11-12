@@ -12,18 +12,22 @@ Get alerts via Zulip group chat. Required scopes: `integrations:read`, `integrat
 ## Example Usage
 
 ```terraform
-# A minimal configuration, generated from the API spec's examples.
-resource "honeybadger_integration_zulip" "example" {
+resource "honeybadger_integration_zulip" "alerts" {
+  project_id = honeybadger_project.app.id
+
   config = {
-    api_key   = var.integration_zulip_config_api_key
+    # One of these is required: zulip_domain for Zulip Cloud
+    # (example.zulipchat.com), or server_url for a self-hosted server.
+    zulip_domain = "example"
+
     bot_email = "honeybadger-bot@example.zulipchat.com"
+    api_key   = var.zulip_api_key
     channel   = "alerts"
     topic     = "Honeybadger"
   }
-  project_id = honeybadger_project.app.id
 }
 
-variable "integration_zulip_config_api_key" {
+variable "zulip_api_key" {
   type      = string
   sensitive = true
 }
@@ -35,27 +39,27 @@ variable "integration_zulip_config_api_key" {
 ### Required
 
 - `config` (Attributes) The type's settings, listed per type in [Integration types](https://docs.honeybadger.io/api/v3/integrations/types/). (see [below for nested schema](#nestedatt--config))
-- `project_id` (String) The project's `id`, as a project read returns it.
+- `project_id` (String) Project ID
 
 ### Optional
 
 - `active` (Boolean) Whether to use the integration. An OAuth integration that's active sends nothing until someone connects it in the web UI at `links.web`. Defaults to `true`.
 - `alarm_alert_ids` (Set of String) IDs of alarms whose alert events this integration receives. Null or empty clears it. A set; order is ignored and duplicates are dropped. Defaults to empty.
 - `alarm_ok_ids` (Set of String) IDs of alarms whose recovery events this integration receives. Null or empty clears it. A set; order is ignored and duplicates are dropped. Defaults to empty.
-- `check_in_ids` (Set of String) Check-ins whose events this integration receives. null follows every check-in in the project, including ones added later; a create that leaves it out does the same. [] follows none, and a list follows just those check-ins. An ID that isn't one of this project's check-ins fails the request with 422. A set; order is ignored and duplicates are dropped.
+- `check_in_ids` (Set of String) Check-ins whose events this integration receives. null follows every check-in in the project, including ones added later; a create that leaves it out does the same. [] follows none, and a list follows just those check-ins. A set; order is ignored and duplicates are dropped.
 - `events` (Set of String) Defaults to `occurred`, `assigned`, `up`, `down`, `cert_will_expire`, `check_in_missing`, and `check_in_reporting`, less any the plan doesn't include. Valid values: `occurred`, `rate_exceeded`, `assigned`, `resolved`, `unresolved`, `commented`, `deployed`, `up`, `down`, `cert_will_expire`, `flooded`, `check_in_missing`, `check_in_reporting`, `alarm_alert`, `alarm_ok`, `volume_spike`. Removing it from config keeps the current value.
-- `excluded_environments` (Set of String) Errors from these environments never notify through this integration. Takes precedence over included_environments. Names are stored as given, so an environment can be excluded before it first reports. Null or empty clears it. Applies only on plans with environment settings; changing it on other plans is 403 feature_unavailable. Reads return what's stored. A set; order is ignored and duplicates are dropped. Defaults to empty.
-- `filters` (Attributes List) An ordered list. Each event that has a filter notifies only for errors matching its query. Replaces the stored filters; null or empty clears them. Applies only on plans with integration filters; changing it on other plans is 403 feature_unavailable. Reads return what's stored. Defaults to empty. (see [below for nested schema](#nestedatt--filters))
-- `included_environments` (Set of String) When non-empty, only errors from these environments notify through this integration, including environments that haven't reported yet. Empty means every environment not excluded. Null or empty clears it. Applies only on plans with environment settings; changing it on other plans is 403 feature_unavailable. Reads return what's stored. A set; order is ignored and duplicates are dropped. Defaults to empty.
+- `excluded_environments` (Set of String) Errors from these environments never notify through this integration. Takes precedence over `included_environments`. An environment can be excluded before it first reports. Null or empty clears it. Changing it requires environment settings on the plan. A set; order is ignored and duplicates are dropped. Defaults to empty.
+- `filters` (Attributes List) An ordered list. Each event that has a filter notifies only for errors matching its query. Replaces the stored filters; null or empty clears them. Changing it requires integration filters on the plan. Defaults to empty. (see [below for nested schema](#nestedatt--filters))
+- `included_environments` (Set of String) When non-empty, only errors from these environments notify through this integration, including environments that haven't reported yet. Empty means every environment not excluded. Null or empty clears it. Changing it requires environment settings on the plan. A set; order is ignored and duplicates are dropped. Defaults to empty.
 - `notification_limit` (Number) Maximum notifications in a 10-minute window before flood control. Null removes the limit.
-- `rate` (String) Period the rate_exceeded threshold counts over. Null resets it to wday. Valid values: `min`, `hour`, `wday`, `week`. Defaults to `wday`.
-- `site_ids` (Set of String) Sites whose up and down events this integration receives. null follows every site in the project, including ones added later; a create that leaves it out does the same. [] follows none, and a list follows just those sites. An ID that isn't one of this project's sites fails the request with 422. A set; order is ignored and duplicates are dropped.
-- `threshold` (Number) Number of occurrences before rate_exceeded fires. Null resets it to 100. Defaults to `100`.
+- `rate` (String) Period the `rate_exceeded` threshold counts over. Null resets it to `wday`. Valid values: `min`, `hour`, `wday`, `week`. Defaults to `wday`.
+- `site_ids` (Set of String) Sites whose up and down events this integration receives. null follows every site in the project, including ones added later; a create that leaves it out does the same. [] follows none, and a list follows just those sites. A set; order is ignored and duplicates are dropped.
+- `threshold` (Number) Number of occurrences before `rate_exceeded` fires. Null resets it to 100. Defaults to `100`.
 
 ### Read-Only
 
 - `created_at` (String) When the integration was created
-- `id` (String) Unique identifier
+- `id` (String) The ID of this resource.
 - `links` (Attributes) Links into the Honeybadger web UI (see [below for nested schema](#nestedatt--links))
 
 <a id="nestedatt--config"></a>
@@ -70,8 +74,8 @@ Required:
 
 Optional:
 
-- `server_url` (String) For a self-hosted Zulip server, its HTTPS address (for example, https://chat.example.com). When set, it is used instead of the Zulip Cloud subdomain.
-- `zulip_domain` (String) For Zulip Cloud, your organization's subdomain (`example` for example.zulipchat.com). Leave blank if you run your own Zulip server.
+- `server_url` (String) For a self-hosted Zulip server, its HTTPS address (for example, https://chat.example.com). It must resolve to a public address. When set, it is used instead of the Zulip Cloud subdomain.
+- `zulip_domain` (String) For Zulip Cloud, your organization's subdomain (`example` for example.zulipchat.com). Required unless you run your own Zulip server and set its Server URL instead.
 
 
 <a id="nestedatt--filters"></a>
@@ -88,7 +92,7 @@ Required:
 
 Read-Only:
 
-- `web` (String) Absolute URL of this resource's page in the Honeybadger web UI, on the web UI's host rather than the API's. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on, on Heroku's host.
+- `web` (String) The resource's page in the Honeybadger web UI, as an absolute URL. Resources without a page, such as outages and deploys, don't have `links`. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on.
 
 ## Import
 
@@ -99,7 +103,7 @@ In Terraform v1.5.0 and later, the [`import` block](https://developer.hashicorp.
 ```terraform
 # Import can't read `config.api_key` back: set it in config.
 import {
-  to = honeybadger_integration_zulip.example
+  to = honeybadger_integration_zulip.alerts
   id = "<project_id>/<id>"
 }
 ```
@@ -108,5 +112,5 @@ The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/c
 
 ```shell
 # Import can't read `config.api_key` back: set it in config.
-terraform import honeybadger_integration_zulip.example "<project_id>/<id>"
+terraform import honeybadger_integration_zulip.alerts "<project_id>/<id>"
 ```

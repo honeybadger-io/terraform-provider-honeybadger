@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"regexp"
+	"strings"
 	"sync"
 	"testing"
 
@@ -178,6 +179,9 @@ func (f *fakeHoneybadger) serve(w http.ResponseWriter, r *http.Request) {
 			if ws, ok := obj["widgets"].([]any); ok {
 				obj["widgets"] = f.storedWidgets(ws)
 			}
+			if dashboardPath.MatchString(r.URL.Path) {
+				obj["links"] = dashboardLinks(obj)
+			}
 			writeJSON(w, http.StatusOK, map[string]any{"data": readable(obj)})
 		case http.MethodDelete:
 			delete(f.objects, r.URL.Path)
@@ -250,7 +254,6 @@ func (f *fakeHoneybadger) create(w http.ResponseWriter, collection, projectID, k
 		obj["project_id"] = projectID
 		obj["is_default"], obj["shared"], obj["default_ts"] = false, false, nil
 		obj["updated_at"] = "2026-10-05T00:00:00Z"
-		obj["links"] = map[string]any{"web": "https://app.honeybadger.io/projects/" + projectID + "/insights/dashboards/" + id}
 		obj["widgets"] = []any{}
 	case "teams":
 		obj["account_id"], obj["member_count"] = "a1", 0
@@ -277,8 +280,25 @@ func (f *fakeHoneybadger) create(w http.ResponseWriter, collection, projectID, k
 	if ws, ok := obj["widgets"].([]any); ok {
 		obj["widgets"] = f.storedWidgets(ws)
 	}
+	if kind == "dashboards" {
+		obj["links"] = dashboardLinks(obj)
+	}
 	f.objects[collection+"/"+id] = obj
 	writeJSON(w, http.StatusCreated, map[string]any{"data": readable(obj)})
+}
+
+var (
+	dashboardPath = regexp.MustCompile(`/dashboards/[^/]+$`)
+	notSlug       = regexp.MustCompile(`[^a-z0-9]+`)
+)
+
+// dashboardLinks are a dashboard's links the way Honeybadger builds them
+// (honeybadger ca45e1a0b0): the web URL ends in a slug of the title before
+// the id, so renaming a dashboard changes it.
+func dashboardLinks(obj map[string]any) map[string]any {
+	title, _ := obj["title"].(string)
+	slug := strings.Trim(notSlug.ReplaceAllString(strings.ToLower(title), "-"), "-")
+	return map[string]any{"web": fmt.Sprintf("https://app.honeybadger.io/projects/%s/insights/dashboards/%s-%s", obj["project_id"], slug, obj["id"])}
 }
 
 // writeOnlyConfigKeys are the write-only integration settings of the types

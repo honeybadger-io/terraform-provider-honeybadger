@@ -40,14 +40,14 @@ variable "health_check_token" {
 
 ### Required
 
-- `project_id` (String) The project's `id`, as a project read returns it.
+- `project_id` (String) Project ID
 - `url` (String) Must start with http:// or https://, with no surrounding whitespace.
 
 ### Optional
 
 - `active` (Boolean) Whether monitoring is active. After 740 consecutive failed checks the server sets it to false. Null resets it to true. Defaults to `true`.
-- `frequency` (Number) Minutes between checks. Plans set the most frequent allowed, and a value under it is 403 `feature_unavailable`. Null resets it to 5. Valid values: `1`, `2`, `5`, `15`. Defaults to `5`.
-- `locations` (Set of String) A set of location names to check from. Null or empty means every location. An unknown name is 422. A set; order is ignored and duplicates are dropped. Valid values: `Virginia`, `Frankfurt`, `Singapore`, `London`, `Oregon`. Defaults to empty.
+- `frequency` (Number) Minutes between checks. The plan sets the most frequent allowed. Null resets it to 5. Valid values: `1`, `2`, `5`, `15`. Defaults to `5`.
+- `locations` (Set of String) A set of location names to check from. Null or empty means every location. A set; order is ignored and duplicates are dropped. Valid values: `Virginia`, `Frankfurt`, `Singapore`, `London`, `Oregon`. Defaults to empty.
 - `match` (String) What `match_type` compares against (see SiteMatchType). Required unless `match_type` is `success`, and must be left out with `success`. Null clears it.
 - `match_type` (String) How a check decides the site is up (see SiteMatchType). Null resets it to success. Valid values: `success`, `exact`, `include`, `exclude`, `jmespath`. Defaults to `success`.
 - `name` (String) Name shown for the site in Honeybadger and on status pages. Removing it from config keeps the current value.
@@ -55,13 +55,13 @@ variable "health_check_token" {
 - `request_body` (String, Sensitive) Body to send with the request, up to 32 KB. Null clears it.
 - `request_headers` (Map of String, Sensitive) Headers to send with the request, as header name to value. Replaces the stored headers; null or `{}` clears them. Defaults to empty.
 - `request_method` (String) HTTP method each check sends. Null resets it to GET. Valid values: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`. Defaults to `GET`.
-- `timeout` (Number) Request timeout in seconds, 1 to 120, default 30, and less than the frequency in seconds. Accepted only on accounts with the uptime-timeout feature; otherwise a value other than the current one (on create, the default) is refused with 403 `feature_unavailable`. Null resets it to the default.
+- `timeout` (Number) Request timeout in seconds, 1 to 120, default 30, and less than the frequency in seconds. Changing it requires the uptime timeout feature on the account; without it, only the current value (on create, the default) is accepted. Null resets it to the default.
 - `validate_ssl` (Boolean) Fail the check when the TLS certificate does not validate. Null resets it to true. Defaults to `true`.
 
 ### Read-Only
 
 - `created_at` (String) When the site was created
-- `id` (String) Unique identifier
+- `id` (String) The ID of this resource.
 - `links` (Attributes) Links into the Honeybadger web UI (see [below for nested schema](#nestedatt--links))
 
 <a id="nestedatt--links"></a>
@@ -69,7 +69,7 @@ variable "health_check_token" {
 
 Read-Only:
 
-- `web` (String) Absolute URL of this resource's page in the Honeybadger web UI, on the web UI's host rather than the API's. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on, on Heroku's host.
+- `web` (String) The resource's page in the Honeybadger web UI, as an absolute URL. Resources without a page, such as outages and deploys, don't have `links`. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on.
 
 ## Import
 

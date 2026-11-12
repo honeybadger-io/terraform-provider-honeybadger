@@ -31,15 +31,9 @@ dev:
 	@echo "Built $(DEV_DIR)/terraform-provider-honeybadger. To use it, add this to your Terraform project's .envrc:"
 	@echo "  export TF_CLI_CONFIG_FILE=$(DEV_DIR)/terraformrc"
 
-# Phase 7's release checklist runs this: a release needs the provider and the
-# api-go its go.mod requires (not the local checkout go.work points at) built
-# from the same bundle.
-check-spec-release:
-	GOWORK=off ./scripts/check-spec.sh --release
-
 # specgen before tfplugindocs: the docs are built from the generated schemas.
 generate: check-spec
 	go generate ./internal/...
 	go generate .
 
-.PHONY: default build dev test testacc lint generate update-spec check-spec check-spec-release
+.PHONY: default build dev test testacc lint generate update-spec check-spec

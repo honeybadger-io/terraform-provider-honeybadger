@@ -55,7 +55,7 @@ func integrationLinearResourceSchema() schema.Schema {
 			},
 			"check_in_ids": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "Check-ins whose events this integration receives. null follows every check-in in the project, including ones added later; a create that leaves it out does the same. [] follows none, and a list follows just those check-ins. An ID that isn't one of this project's check-ins fails the request with 422. A set; order is ignored and duplicates are dropped.",
+				MarkdownDescription: "Check-ins whose events this integration receives. null follows every check-in in the project, including ones added later; a create that leaves it out does the same. [] follows none, and a list follows just those check-ins. A set; order is ignored and duplicates are dropped.",
 				Optional:            true,
 			},
 			"config": schema.SingleNestedAttribute{
@@ -77,15 +77,15 @@ func integrationLinearResourceSchema() schema.Schema {
 						Optional:            true,
 					},
 					"linear_project_id": schema.StringAttribute{
-						MarkdownDescription: "The web UI loads the choices from the connected account. Through the API, send the value itself, as that service's API returns it.",
+						MarkdownDescription: "The value that service's API uses for it, usually an ID.",
 						Optional:            true,
 					},
 					"resolved_state_id": schema.StringAttribute{
-						MarkdownDescription: "The web UI loads the choices from the connected account. Through the API, send the value itself, as that service's API returns it.",
+						MarkdownDescription: "The value that service's API uses for it, usually an ID.",
 						Optional:            true,
 					},
 					"team_id": schema.StringAttribute{
-						MarkdownDescription: "The web UI loads the choices from the connected account. Through the API, send the value itself, as that service's API returns it.",
+						MarkdownDescription: "The value that service's API uses for it, usually an ID.",
 						Required:            true,
 					},
 					"title_format": schema.StringAttribute{
@@ -95,7 +95,7 @@ func integrationLinearResourceSchema() schema.Schema {
 						Default:             stringdefault.StaticString("[[project]] Occurred: [class] ([fault_id])"),
 					},
 					"unresolved_state_id": schema.StringAttribute{
-						MarkdownDescription: "We will use this state for new issues and when an existing issue is reopened. The web UI loads the choices from the connected account. Through the API, send the value itself, as that service's API returns it.",
+						MarkdownDescription: "We will use this state for new issues and when an existing issue is reopened. The value that service's API uses for it, usually an ID.",
 						Optional:            true,
 					},
 				},
@@ -117,7 +117,7 @@ func integrationLinearResourceSchema() schema.Schema {
 			},
 			"excluded_environments": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "Errors from these environments never notify through this integration. Takes precedence over included_environments. Names are stored as given, so an environment can be excluded before it first reports. Null or empty clears it. Applies only on plans with environment settings; changing it on other plans is 403 feature_unavailable. Reads return what's stored. A set; order is ignored and duplicates are dropped. Defaults to empty.",
+				MarkdownDescription: "Errors from these environments never notify through this integration. Takes precedence over `included_environments`. An environment can be excluded before it first reports. Null or empty clears it. Changing it requires environment settings on the plan. A set; order is ignored and duplicates are dropped. Defaults to empty.",
 				Optional:            true,
 				Computed:            true,
 				Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
@@ -137,19 +137,18 @@ func integrationLinearResourceSchema() schema.Schema {
 						},
 					},
 				},
-				MarkdownDescription: "An ordered list. Each event that has a filter notifies only for errors matching its query. Replaces the stored filters; null or empty clears them. Applies only on plans with integration filters; changing it on other plans is 403 feature_unavailable. Reads return what's stored. Defaults to empty.",
+				MarkdownDescription: "An ordered list. Each event that has a filter notifies only for errors matching its query. Replaces the stored filters; null or empty clears them. Changing it requires integration filters on the plan. Defaults to empty.",
 				Optional:            true,
 				Computed:            true,
 				Default:             listdefault.StaticValue(types.ListValueMust(types.ObjectType{AttrTypes: integrationLinearFiltersAttrTypes()}, []attr.Value{})),
 			},
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Unique identifier",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"included_environments": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "When non-empty, only errors from these environments notify through this integration, including environments that haven't reported yet. Empty means every environment not excluded. Null or empty clears it. Applies only on plans with environment settings; changing it on other plans is 403 feature_unavailable. Reads return what's stored. A set; order is ignored and duplicates are dropped. Defaults to empty.",
+				MarkdownDescription: "When non-empty, only errors from these environments notify through this integration, including environments that haven't reported yet. Empty means every environment not excluded. Null or empty clears it. Changing it requires environment settings on the plan. A set; order is ignored and duplicates are dropped. Defaults to empty.",
 				Optional:            true,
 				Computed:            true,
 				Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
@@ -157,7 +156,7 @@ func integrationLinearResourceSchema() schema.Schema {
 			"links": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"web": schema.StringAttribute{
-						MarkdownDescription: "Absolute URL of this resource's page in the Honeybadger web UI, on the web UI's host rather than the API's. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on, on Heroku's host.",
+						MarkdownDescription: "The resource's page in the Honeybadger web UI, as an absolute URL. Resources without a page, such as outages and deploys, don't have `links`. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on.",
 						Computed:            true,
 					},
 				},
@@ -170,12 +169,12 @@ func integrationLinearResourceSchema() schema.Schema {
 				Optional:            true,
 			},
 			"project_id": schema.StringAttribute{
-				MarkdownDescription: "The project's `id`, as a project read returns it.",
+				MarkdownDescription: "Project ID",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"rate": schema.StringAttribute{
-				MarkdownDescription: "Period the rate_exceeded threshold counts over. Null resets it to wday. Valid values: `min`, `hour`, `wday`, `week`. Defaults to `wday`.",
+				MarkdownDescription: "Period the `rate_exceeded` threshold counts over. Null resets it to `wday`. Valid values: `min`, `hour`, `wday`, `week`. Defaults to `wday`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString("wday"),
@@ -183,12 +182,12 @@ func integrationLinearResourceSchema() schema.Schema {
 			},
 			"site_ids": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "Sites whose up and down events this integration receives. null follows every site in the project, including ones added later; a create that leaves it out does the same. [] follows none, and a list follows just those sites. An ID that isn't one of this project's sites fails the request with 422. A set; order is ignored and duplicates are dropped.",
+				MarkdownDescription: "Sites whose up and down events this integration receives. null follows every site in the project, including ones added later; a create that leaves it out does the same. [] follows none, and a list follows just those sites. A set; order is ignored and duplicates are dropped.",
 				Optional:            true,
 				Validators:          []validator.Set{setvalidator.ValueStringsAre(stringvalidator.RegexMatches(regexp.MustCompile("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"), "must be a lowercase UUID"))},
 			},
 			"threshold": schema.Int64Attribute{
-				MarkdownDescription: "Number of occurrences before rate_exceeded fires. Null resets it to 100. Defaults to `100`.",
+				MarkdownDescription: "Number of occurrences before `rate_exceeded` fires. Null resets it to 100. Defaults to `100`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             int64default.StaticInt64(100),

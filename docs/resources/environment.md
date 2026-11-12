@@ -25,7 +25,7 @@ resource "honeybadger_environment" "staging" {
 ### Required
 
 - `name` (String) Environment name
-- `project_id` (String) The project's `id`, as a project read returns it.
+- `project_id` (String) Project ID
 
 ### Optional
 
@@ -34,7 +34,7 @@ resource "honeybadger_environment" "staging" {
 ### Read-Only
 
 - `created_at` (String) When the environment was created
-- `id` (String) Unique identifier
+- `id` (String) The ID of this resource.
 
 ## Import
 

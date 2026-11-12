@@ -42,7 +42,7 @@ resource "honeybadger_dashboard" "ops" {
 
 ### Required
 
-- `project_id` (String) The project's `id`, as a project read returns it.
+- `project_id` (String) Project ID
 - `title` (String) Dashboard title
 
 ### Optional
@@ -53,7 +53,7 @@ resource "honeybadger_dashboard" "ops" {
 ### Read-Only
 
 - `created_at` (String) When the dashboard was created
-- `id` (String) Unique identifier
+- `id` (String) The ID of this resource.
 - `is_default` (Boolean) Whether this is the default dashboard
 - `links` (Attributes) Links into the Honeybadger web UI (see [below for nested schema](#nestedatt--links))
 - `shared` (Boolean) Whether the dashboard is shared with all team members
@@ -63,7 +63,7 @@ resource "honeybadger_dashboard" "ops" {
 
 Read-Only:
 
-- `web` (String) Absolute URL of this resource's page in the Honeybadger web UI, on the web UI's host rather than the API's. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on, on Heroku's host.
+- `web` (String) The resource's page in the Honeybadger web UI, as an absolute URL. Resources without a page, such as outages and deploys, don't have `links`. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on.
 
 ## Import
 

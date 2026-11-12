@@ -37,7 +37,7 @@ output "project_id" {
 - `customer_throttle` (Number) Notices accepted per minute before throttling kicks in. Null clears it.
 - `disable_public_links` (Boolean) Disallow shareable public fault links. Null resets it to false. Defaults to `false`.
 - `language` (String) Primary language, used to format backtraces. Null clears it.
-- `purge_days` (Number) Days to retain notices. Accepted only on accounts with custom retention; otherwise a value other than the current one (on create, the default) is refused with 403 `feature_unavailable`. Null clears it. Removing it from config keeps the current value.
+- `purge_days` (Number) Days to retain notices. Changing it requires custom retention on the account; without it, only the current value (on create, the default) is accepted. Null clears it. Removing it from config keeps the current value.
 - `resolve_errors_on_deploy` (Boolean) Resolve every open fault when a deploy is recorded. Null resets it to true. Defaults to `true`.
 - `source_url` (String) Template for linking a backtrace line to your source host. `[file]` and `[line]` are substituted. Null clears it.
 - `user_search_field` (String) Context key identifying the affected user, for when it is not in the default `context.user_email` or `context.user_id`. Null clears it.
@@ -47,7 +47,7 @@ output "project_id" {
 
 - `account_id` (String) ID of the account this project belongs to
 - `created_at` (String) When the project was created
-- `id` (String) Unique identifier
+- `id` (String) The ID of this resource.
 
 ## Import
 

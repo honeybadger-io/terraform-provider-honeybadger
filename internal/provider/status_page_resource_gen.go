@@ -65,7 +65,7 @@ func statusPageResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"domain": schema.StringAttribute{
-				MarkdownDescription: "Custom domain the page is served on. Unique across Honeybadger. An account can set at most 30 domains a week; past that the change is 422. Null clears it.",
+				MarkdownDescription: "Custom domain the page is served on. Unique across Honeybadger. An account can set at most 30 domains a week. Null clears it.",
 				Optional:            true,
 			},
 			"features": schema.SingleNestedAttribute{
@@ -91,7 +91,7 @@ func statusPageResourceSchema() schema.Schema {
 						Optional:            true,
 					},
 				},
-				MarkdownDescription: "Presentation copy and styling. Replaces the whole object; null clears it. Requires advanced status pages to change; refused with 403 `feature_unavailable` otherwise. The default ({}) or the stored value is accepted on any plan. Defaults to empty.",
+				MarkdownDescription: "Presentation copy and styling. Replaces the whole object; null clears it. Changing it requires advanced status pages on the plan; the default ({}) or the stored value is accepted on any plan. Defaults to empty.",
 				Optional:            true,
 				Computed:            true,
 				Default: objectdefault.StaticValue(types.ObjectValueMust(statusPageFeaturesAttrTypes(), map[string]attr.Value{
@@ -107,18 +107,17 @@ func statusPageResourceSchema() schema.Schema {
 				Optional:            true,
 			},
 			"hide_branding": schema.BoolAttribute{
-				MarkdownDescription: "Requires advanced status pages to change; refused with 403 `feature_unavailable` otherwise. The default (false) or the stored value is accepted on any plan. Null resets it to false. Defaults to `false`.",
+				MarkdownDescription: "Changing it requires advanced status pages on the plan; the default (false) or the stored value is accepted on any plan. Null resets it to false. Defaults to `false`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
 			},
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Unique identifier",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"incidents_enabled": schema.BoolAttribute{
-				MarkdownDescription: "Whether the page shows incidents. Requires status page incidents on the plan; changing it otherwise is 403 `feature_unavailable`. On create, defaults to whether the plan has them. Null resets it to that same create default. Removing it from config keeps the current value.",
+				MarkdownDescription: "Whether the page shows incidents. Changing it requires status page incidents on the plan. On create, defaults to whether the plan has them. Null resets it to that same create default. Removing it from config keeps the current value.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
@@ -126,7 +125,7 @@ func statusPageResourceSchema() schema.Schema {
 			"links": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"web": schema.StringAttribute{
-						MarkdownDescription: "Absolute URL of this resource's page in the Honeybadger web UI, on the web UI's host rather than the API's. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on, on Heroku's host.",
+						MarkdownDescription: "The resource's page in the Honeybadger web UI, as an absolute URL. Resources without a page, such as outages and deploys, don't have `links`. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on.",
 						Computed:            true,
 					},
 				},
@@ -159,7 +158,7 @@ func statusPageResourceSchema() schema.Schema {
 				Sensitive:           true,
 			},
 			"password_protected": schema.BoolAttribute{
-				MarkdownDescription: "Requires advanced status pages and password protection on the plan to change; refused with 403 `feature_unavailable` otherwise. The default (false) or the stored value is accepted on any plan. Turning it on needs a username and password, sent or already stored, or it's 422. Null resets it to false. Defaults to `false`.",
+				MarkdownDescription: "Changing it requires advanced status pages and password protection on the plan; the default (false) or the stored value is accepted on any plan. Turning it on needs a username and password, sent or already stored. Null resets it to false. Defaults to `false`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),

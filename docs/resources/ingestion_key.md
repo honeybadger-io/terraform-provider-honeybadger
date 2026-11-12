@@ -3,12 +3,12 @@
 page_title: "honeybadger_ingestion_key Resource - honeybadger"
 subcategory: ""
 description: |-
-  The key your app uses to send data to Honeybadger, set as ingestion_key in the client's config (api_key in older clients). It can't call the Data API; use an API Token for that. Required scopes: projects:read, projects:write.
+  The key your app uses to send data to Honeybadger, set as ingestion_key in the client's config (api_key in older clients). It can't authenticate to this API; use an API token for that. Required scopes: projects:read, projects:write.
 ---
 
 # honeybadger_ingestion_key (Resource)
 
-The key your app uses to send data to Honeybadger, set as `ingestion_key` in the client's config (`api_key` in older clients). It can't call the Data API; use an API Token for that. Required scopes: `projects:read`, `projects:write`.
+The key your app uses to send data to Honeybadger, set as `ingestion_key` in the client's config (`api_key` in older clients). It can't authenticate to this API; use an API token for that. Required scopes: `projects:read`, `projects:write`.
 
 ## Example Usage
 
@@ -18,10 +18,10 @@ resource "honeybadger_ingestion_key" "deploy" {
   label      = "deploys"
 }
 
-# The key isn't a secret: it ships in the app, so it can go into the app's
-# config as is.
+# `terraform output -raw deploy_ingestion_key` prints it.
 output "deploy_ingestion_key" {
-  value = honeybadger_ingestion_key.deploy.key
+  value     = honeybadger_ingestion_key.deploy.key
+  sensitive = true
 }
 ```
 
@@ -30,7 +30,7 @@ output "deploy_ingestion_key" {
 
 ### Required
 
-- `project_id` (String) The project's `id`, as a project read returns it.
+- `project_id` (String) Project ID
 
 ### Optional
 
@@ -40,7 +40,7 @@ output "deploy_ingestion_key" {
 
 - `created_at` (String) When the key was created
 - `id` (String) Identifier for this key. Use it in paths.
-- `key` (String) The Ingestion Key value a notifier sends. Returned in full: unlike an API Token, it's meant to ship with your application.
+- `key` (String, Sensitive) The Ingestion Key value a notifier sends. Returned in full: unlike an API Token, it's meant to ship with your application.
 
 ## Import
 

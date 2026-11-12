@@ -38,19 +38,19 @@ resource "honeybadger_alarm" "errors" {
 - `evaluation_period` (String) Window each evaluation covers. At least 1m and less than a week (`w` units are refused).
 - `lookback_lag` (String) How far behind now the window ends, allowing for ingestion delay
 - `name` (String) Alarm name
-- `project_id` (String) The project's `id`, as a project read returns it.
+- `project_id` (String) Project ID
 - `query` (String) BadgerQL evaluated on each check
 - `trigger_config` (Attributes) What turns the alarm on. Sent whole: on update, a `trigger_config` replaces the stored one rather than merging into it. (see [below for nested schema](#nestedatt--trigger_config))
 
 ### Optional
 
 - `description` (String) What the alarm watches for, shown with it in Honeybadger. Null clears it.
-- `stream_ids` (Set of String) Streams the query runs against. A set: order is ignored, duplicates are dropped, and it can't be empty. Left out or null, every current stream in the project, which a read then lists. An ID that isn't one of the project's streams fails the request with 422. Removing it from config keeps the current value.
+- `stream_ids` (Set of String) Streams the query runs against. A set: order is ignored, duplicates are dropped, and it can't be empty. Left out or null, set to the project's current streams. Removing it from config keeps the current value.
 
 ### Read-Only
 
 - `created_at` (String) When the alarm was created
-- `id` (String) The alarm's ID
+- `id` (String) The ID of this resource.
 
 <a id="nestedatt--trigger_config"></a>
 ### Nested Schema for `trigger_config`
