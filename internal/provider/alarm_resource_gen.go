@@ -42,9 +42,8 @@ func alarmResourceSchema() schema.Schema {
 				Validators:          []validator.String{stringvalidator.RegexMatches(regexp.MustCompile("^\\d+[smhd]$"), "must match ^\\d+[smhd]$")},
 			},
 			"id": schema.StringAttribute{
-				MarkdownDescription: "The alarm's ID",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"lookback_lag": schema.StringAttribute{
 				MarkdownDescription: "How far behind now the window ends, allowing for ingestion delay",
@@ -56,7 +55,7 @@ func alarmResourceSchema() schema.Schema {
 				Required:            true,
 			},
 			"project_id": schema.StringAttribute{
-				MarkdownDescription: "The project's `id`, as a project read returns it.",
+				MarkdownDescription: "Project ID",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
@@ -66,7 +65,7 @@ func alarmResourceSchema() schema.Schema {
 			},
 			"stream_ids": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "Streams the query runs against. A set: order is ignored, duplicates are dropped, and it can't be empty. Left out or null, every current stream in the project, which a read then lists. An ID that isn't one of the project's streams fails the request with 422. Removing it from config keeps the current value.",
+				MarkdownDescription: "Streams the query runs against. A set: order is ignored, duplicates are dropped, and it can't be empty. Left out or null, set to the project's current streams. Removing it from config keeps the current value.",
 				Optional:            true,
 				Computed:            true,
 				Validators:          []validator.Set{setvalidator.SizeAtLeast(1)},

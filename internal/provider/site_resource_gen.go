@@ -44,21 +44,20 @@ func siteResourceSchema() schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"frequency": schema.Int64Attribute{
-				MarkdownDescription: "Minutes between checks. Plans set the most frequent allowed, and a value under it is 403 `feature_unavailable`. Null resets it to 5. Valid values: `1`, `2`, `5`, `15`. Defaults to `5`.",
+				MarkdownDescription: "Minutes between checks. The plan sets the most frequent allowed. Null resets it to 5. Valid values: `1`, `2`, `5`, `15`. Defaults to `5`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             int64default.StaticInt64(5),
 				Validators:          []validator.Int64{int64validator.OneOf(1, 2, 5, 15)},
 			},
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Unique identifier",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"links": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"web": schema.StringAttribute{
-						MarkdownDescription: "Absolute URL of this resource's page in the Honeybadger web UI, on the web UI's host rather than the API's. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on, on Heroku's host.",
+						MarkdownDescription: "The resource's page in the Honeybadger web UI, as an absolute URL. Resources without a page, such as outages and deploys, don't have `links`. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on.",
 						Computed:            true,
 					},
 				},
@@ -68,7 +67,7 @@ func siteResourceSchema() schema.Schema {
 			},
 			"locations": schema.SetAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "A set of location names to check from. Null or empty means every location. An unknown name is 422. A set; order is ignored and duplicates are dropped. Valid values: `Virginia`, `Frankfurt`, `Singapore`, `London`, `Oregon`. Defaults to empty.",
+				MarkdownDescription: "A set of location names to check from. Null or empty means every location. A set; order is ignored and duplicates are dropped. Valid values: `Virginia`, `Frankfurt`, `Singapore`, `London`, `Oregon`. Defaults to empty.",
 				Optional:            true,
 				Computed:            true,
 				Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
@@ -98,7 +97,7 @@ func siteResourceSchema() schema.Schema {
 				Validators:          []validator.Int64{int64validator.AtLeast(1)},
 			},
 			"project_id": schema.StringAttribute{
-				MarkdownDescription: "The project's `id`, as a project read returns it.",
+				MarkdownDescription: "Project ID",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
@@ -124,7 +123,7 @@ func siteResourceSchema() schema.Schema {
 				Validators:          []validator.String{stringvalidator.OneOf("GET", "POST", "PUT", "PATCH", "DELETE")},
 			},
 			"timeout": schema.Int64Attribute{
-				MarkdownDescription: "Request timeout in seconds, 1 to 120, default 30, and less than the frequency in seconds. Accepted only on accounts with the uptime-timeout feature; otherwise a value other than the current one (on create, the default) is refused with 403 `feature_unavailable`. Null resets it to the default.",
+				MarkdownDescription: "Request timeout in seconds, 1 to 120, default 30, and less than the frequency in seconds. Changing it requires the uptime timeout feature on the account; without it, only the current value (on create, the default) is accepted. Null resets it to the default.",
 				Optional:            true,
 			},
 			"url": schema.StringAttribute{

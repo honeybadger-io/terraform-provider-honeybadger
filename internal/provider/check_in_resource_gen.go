@@ -35,7 +35,7 @@ func checkInResourceSchema() schema.Schema {
 				Optional:            true,
 			},
 			"cron_timezone": schema.StringAttribute{
-				MarkdownDescription: "Timezone the cron schedule is evaluated in. A Rails time zone name, not an IANA identifier — `Central Time (US & Canada)`, not `America/Chicago`, which is rejected. Required when `schedule_type` is `cron`. Null resets it to `UTC`. Defaults to `UTC`.",
+				MarkdownDescription: "Timezone the cron schedule is evaluated in. A time zone name as the web app lists them, not an IANA identifier — `Central Time (US & Canada)`, not `America/Chicago`, which is rejected. Required when `schedule_type` is `cron`. Null resets it to `UTC`. Defaults to `UTC`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString("UTC"),
@@ -49,21 +49,20 @@ func checkInResourceSchema() schema.Schema {
 				Validators:          []validator.String{stringvalidator.RegexMatches(regexp.MustCompile("^(\\d+ (second|minute|hour|day|week|month|year)s?)( \\d+ (second|minute|hour|day|week|month|year)s?)*$|^\\d\\d:\\d\\d:\\d\\d$"), "must be a period such as \"5 minutes\", \"1 hour 30 minutes\" or \"01:30:00\"")},
 			},
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Unique identifier",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "Display name. Null clears it; an unnamed check-in shows its ID.",
 				Optional:            true,
 			},
 			"project_id": schema.StringAttribute{
-				MarkdownDescription: "The project's `id`, as a project read returns it.",
+				MarkdownDescription: "Project ID",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"report_period": schema.StringAttribute{
-				MarkdownDescription: "How often a report is expected, for `simple` schedules. Required unless `schedule_type` is `cron`, and may not be zero. A duration such as `5 minutes`, `1 hour 30 minutes` or `01:30:00`. Reads return the canonical long form (`1 week` reads `7 days`); every form a read returns can be written back. Compare periods by duration, not text.",
+				MarkdownDescription: "How often a report is expected, for `simple` schedules. Required unless `schedule_type` is `cron`, and may not be zero. A duration such as `5 minutes`, `1 hour 30 minutes` or `01:30:00`. Returned in long form: `1 week` comes back as `7 days`.",
 				Optional:            true,
 				CustomType:          customtypes.PeriodType{},
 				Validators:          []validator.String{stringvalidator.RegexMatches(regexp.MustCompile("^(\\d+ (second|minute|hour|day|week|month|year)s?)( \\d+ (second|minute|hour|day|week|month|year)s?)*$|^\\d\\d:\\d\\d:\\d\\d$"), "must be a period such as \"5 minutes\", \"1 hour 30 minutes\" or \"01:30:00\"")},

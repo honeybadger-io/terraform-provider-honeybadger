@@ -3,12 +3,12 @@
 page_title: "honeybadger_ingestion_key Resource - honeybadger"
 subcategory: ""
 description: |-
-  The key your app uses to send data to Honeybadger, set as ingestion_key in the client's config (api_key in older clients). It can't call the Data API; use an API Token for that. Required scopes: projects:read, projects:write.
+  The key your app uses to send data to Honeybadger, set as ingestion_key in the client's config (api_key in older clients). It can't authenticate to this API; use an API token for that. Required scopes: projects:read, projects:write.
 ---
 
 # honeybadger_ingestion_key (Resource)
 
-The key your app uses to send data to Honeybadger, set as `ingestion_key` in the client's config (`api_key` in older clients). It can't call the Data API; use an API Token for that. Required scopes: `projects:read`, `projects:write`.
+The key your app uses to send data to Honeybadger, set as `ingestion_key` in the client's config (`api_key` in older clients). It can't authenticate to this API; use an API token for that. Required scopes: `projects:read`, `projects:write`.
 
 ## Example Usage
 
@@ -30,7 +30,7 @@ output "deploy_ingestion_key" {
 
 ### Required
 
-- `project_id` (String) The project's `id`, as a project read returns it.
+- `project_id` (String) Project ID
 
 ### Optional
 

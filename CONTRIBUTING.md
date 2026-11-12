@@ -69,8 +69,9 @@ Alarm tests also need Opticon and Sidekiq running locally: Opticon evaluates
 alarms (without it the API answers 503), and Sidekiq sets up a new project's
 streams (without it an alarm create waits, then fails).
 
-Before a full run, raise the token account's rate limit in the local stack. A
-run makes 150–250 requests; the default is 360 an hour:
+A full run makes 150–250 requests. The default rate limit, 3,600 an hour,
+covers about a dozen runs; for more back to back, raise the token account's
+limit in the local stack:
 
     bin/rails runner 'Account.find(ID).update!(api_hits_per_hour: 5000)'
 

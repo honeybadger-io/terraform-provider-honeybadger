@@ -45,16 +45,16 @@ output "status_page_admin_url" {
 ### Optional
 
 - `check_ins` (Attributes List) Check-ins listed on the page, in page order, replacing the current list. Null or empty removes every check-in. Defaults to empty. (see [below for nested schema](#nestedatt--check_ins))
-- `domain` (String) Custom domain the page is served on. Unique across Honeybadger. An account can set at most 30 domains a week; past that the change is 422. Null clears it.
-- `features` (Attributes) Presentation copy and styling. Replaces the whole object; null clears it. Requires advanced status pages to change; refused with 403 `feature_unavailable` otherwise. The default ({}) or the stored value is accepted on any plan. Defaults to empty. (see [below for nested schema](#nestedatt--features))
+- `domain` (String) Custom domain the page is served on. Unique across Honeybadger. An account can set at most 30 domains a week. Null clears it.
+- `features` (Attributes) Presentation copy and styling. Replaces the whole object; null clears it. Changing it requires advanced status pages on the plan; the default ({}) or the stored value is accepted on any plan. Defaults to empty. (see [below for nested schema](#nestedatt--features))
 - `google_analytics_id` (String) A Google Analytics measurement ID for the page. Null clears it.
-- `hide_branding` (Boolean) Requires advanced status pages to change; refused with 403 `feature_unavailable` otherwise. The default (false) or the stored value is accepted on any plan. Null resets it to false. Defaults to `false`.
-- `incidents_enabled` (Boolean) Whether the page shows incidents. Requires status page incidents on the plan; changing it otherwise is 403 `feature_unavailable`. On create, defaults to whether the plan has them. Null resets it to that same create default. Removing it from config keeps the current value.
+- `hide_branding` (Boolean) Changing it requires advanced status pages on the plan; the default (false) or the stored value is accepted on any plan. Null resets it to false. Defaults to `false`.
+- `incidents_enabled` (Boolean) Whether the page shows incidents. Changing it requires status page incidents on the plan. On create, defaults to whether the plan has them. Null resets it to that same create default. Removing it from config keeps the current value.
 - `message_body` (String) The message banner's text. Null clears it.
 - `message_enabled` (Boolean) Shows the message banner. Null resets it to false. Defaults to `false`.
 - `message_title` (String) The message banner's title. Null clears it.
 - `password` (String, Sensitive) Basic-auth password when password protected. Never returned. Requires advanced status pages and password protection on the plan.
-- `password_protected` (Boolean) Requires advanced status pages and password protection on the plan to change; refused with 403 `feature_unavailable` otherwise. The default (false) or the stored value is accepted on any plan. Turning it on needs a username and password, sent or already stored, or it's 422. Null resets it to false. Defaults to `false`.
+- `password_protected` (Boolean) Changing it requires advanced status pages and password protection on the plan; the default (false) or the stored value is accepted on any plan. Turning it on needs a username and password, sent or already stored. Null resets it to false. Defaults to `false`.
 - `search_engine_indexing_disabled` (Boolean) Asks search engines not to index the page. Null resets it to false. Defaults to `false`.
 - `sites` (Attributes List) Sites listed on the page, in page order, replacing the current list. Null or empty removes every site. Defaults to empty. (see [below for nested schema](#nestedatt--sites))
 - `username` (String) Basic-auth user when password protected. Requires advanced status pages and password protection on the plan.
@@ -63,7 +63,7 @@ output "status_page_admin_url" {
 
 - `account_id` (String) ID of the account this status page belongs to
 - `created_at` (String) When the status page was created
-- `id` (String) Unique identifier
+- `id` (String) The ID of this resource.
 - `links` (Attributes) Links into the Honeybadger web UI (see [below for nested schema](#nestedatt--links))
 - `url` (String) URL of the status page
 
@@ -110,7 +110,7 @@ Optional:
 
 Read-Only:
 
-- `web` (String) Absolute URL of this resource's page in the Honeybadger web UI, on the web UI's host rather than the API's. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on, on Heroku's host.
+- `web` (String) The resource's page in the Honeybadger web UI, as an absolute URL. Resources without a page, such as outages and deploys, don't have `links`. For a project provisioned through Heroku, error, notice and comment links go through Heroku's single sign-on.
 
 ## Import
 

@@ -11,6 +11,6 @@ definitions it was built from.
 | | |
 | --- | --- |
 | Source | `honeybadger/openapi/v3/bundled.yaml` |
-| Sources built from | `master` @ `6c74034ed9` |
-| Copied | 2026-10-23 |
-| sha256 | `60514c2d555e383ff7dd3cc6c26ecc81e59f08076be927051bd6f82a2bdb4849` |
+| Sources built from | `master` @ `b5c72c6763` |
+| Copied | 2026-11-12 |
+| sha256 | `82e8043ae536cb99155d1a6e16306008adad3d9786754238100f00bcaffab499` |

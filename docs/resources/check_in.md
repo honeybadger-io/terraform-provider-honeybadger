@@ -32,22 +32,22 @@ output "nightly_check_in_url" {
 
 ### Required
 
-- `project_id` (String) The project's `id`, as a project read returns it.
+- `project_id` (String) Project ID
 
 ### Optional
 
 - `cron_schedule` (String) Cron expression, required when `schedule_type` is `cron`.
-- `cron_timezone` (String) Timezone the cron schedule is evaluated in. A Rails time zone name, not an IANA identifier — `Central Time (US & Canada)`, not `America/Chicago`, which is rejected. Required when `schedule_type` is `cron`. Null resets it to `UTC`. Defaults to `UTC`.
+- `cron_timezone` (String) Timezone the cron schedule is evaluated in. A time zone name as the web app lists them, not an IANA identifier — `Central Time (US & Canada)`, not `America/Chicago`, which is rejected. Required when `schedule_type` is `cron`. Null resets it to `UTC`. Defaults to `UTC`.
 - `grace_period` (String) How long after the expected time before the check-in is considered missing. Same format as `report_period`; zero is `00:00:00`. Null resets it to zero. Defaults to `00:00:00`.
 - `name` (String) Display name. Null clears it; an unnamed check-in shows its ID.
-- `report_period` (String) How often a report is expected, for `simple` schedules. Required unless `schedule_type` is `cron`, and may not be zero. A duration such as `5 minutes`, `1 hour 30 minutes` or `01:30:00`. Reads return the canonical long form (`1 week` reads `7 days`); every form a read returns can be written back. Compare periods by duration, not text.
+- `report_period` (String) How often a report is expected, for `simple` schedules. Required unless `schedule_type` is `cron`, and may not be zero. A duration such as `5 minutes`, `1 hour 30 minutes` or `01:30:00`. Returned in long form: `1 week` comes back as `7 days`.
 - `schedule_type` (String) Switching to `simple` clears `cron_schedule` and resets `cron_timezone` to `UTC`; switching to `cron` clears `report_period`. Valid values: `simple`, `cron`. Defaults to `simple`.
 - `slug` (String) Short identifier used in the check-in's reporting URL. Null clears it. Renaming it breaks jobs reporting to `…/check_in/<ingestion key>/<slug>` and changes how `PUT /check_ins` matches this check-in.
 
 ### Read-Only
 
 - `created_at` (String) When the check-in was created
-- `id` (String) Unique identifier
+- `id` (String) The ID of this resource.
 - `report_url` (String) URL to ping when the task completes
 
 ## Import
