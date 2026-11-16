@@ -2,8 +2,10 @@ name: Tests
 
 # Manual only until a release bumps go.mod to a pushed api-go: CI can't see the
 # local api-go this provider develops against (spec sections 3.2 and 8.4).
+# release.yml also calls it, so a tag only publishes after these jobs pass.
 on:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
