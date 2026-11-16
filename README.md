@@ -8,20 +8,14 @@ Write your monitoring next to the service it watches, review it in a pull
 request, and stand up a new app's whole Honeybadger setup with one
 `terraform apply`.
 
-> **Beta.** The provider isn't on the Terraform Registry yet. Until it is,
-> build it locally (see [Trying it now](#trying-it-now)).
->
-> It uses Honeybadger's new Data API (v3), which is in preview, and needs a
-> new granular API Token. To get access, email
-> [support@honeybadger.io](mailto:support@honeybadger.io).
-
 ## Quick start
 
 ```terraform
 terraform {
   required_providers {
     honeybadger = {
-      source = "honeybadger-io/honeybadger"
+      source  = "honeybadger-io/honeybadger"
+      version = "~> 0.1"
     }
   }
 }
@@ -76,6 +70,7 @@ output "check_in_url" {
 
 ```sh
 export HONEYBADGER_API_TOKEN=hbu_...
+terraform init
 terraform apply
 ```
 
@@ -145,28 +140,12 @@ import {
 Run `terraform plan -generate-config-out=generated.tf` to have Terraform write
 the matching config for you.
 
-## Trying it now
-
-Until the provider is on the registry, build it and point Terraform at the
-build:
-
-```sh
-git clone https://github.com/honeybadger-io/terraform-provider-honeybadger
-cd terraform-provider-honeybadger
-make dev
-export TF_CLI_CONFIG_FILE="$PWD/.dev/terraformrc"
-```
-
-Then run `terraform plan` and `terraform apply` in your own project; skip
-`terraform init`. Applying changes real objects in your Honeybadger account,
-so start in a test project. [CONTRIBUTING.md](CONTRIBUTING.md#trying-it-with-your-own-terraform)
-has the details.
-
 ## Requirements
 
 - [Terraform](https://developer.hashicorp.com/terraform/install) 1.0 or later
   (1.5 or later for `import` blocks)
-- [Go](https://go.dev/doc/install) 1.27 or later, to build the provider
+- [Go](https://go.dev/doc/install) 1.27 or later, only to build the provider
+  from source (see [CONTRIBUTING.md](CONTRIBUTING.md))
 
 ## How it's built
 
