@@ -18,6 +18,8 @@ jobs:
 
   goreleaser:
     needs: test
+    # The signing key lives in this environment, which only v* tags can use.
+    environment: release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
