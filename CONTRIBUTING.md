@@ -10,6 +10,9 @@ CI runs before opening a pull request:
 
     GOWORK=off make generate lint test
 
+Commit anything `make generate` changes; CI fails if regenerating leaves a
+diff.
+
 When a pull request needs api-go changes that aren't released yet, a
 maintainer pushes the api-go branch to `honeybadger-io/api-go` and pins its
 commit (a commit only in a fork won't resolve):
