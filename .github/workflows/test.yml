@@ -1,9 +1,12 @@
 name: Tests
 
-# Manual only until a release bumps go.mod to a pushed api-go: CI can't see the
-# local api-go this provider develops against (spec sections 3.2 and 8.4).
-# release.yml also calls it, so a tag only publishes after these jobs pass.
+# Builds against the api-go pinned in go.mod (GOWORK=off). A pull request that
+# needs unreleased api-go pins its commit; see CONTRIBUTING.md. release.yml
+# also calls it, so a tag only publishes after these jobs pass.
 on:
+  pull_request:
+  push:
+    branches: [main]
   workflow_dispatch:
   workflow_call:
 
