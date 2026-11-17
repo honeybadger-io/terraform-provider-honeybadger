@@ -4,10 +4,22 @@
 
 The provider lives in `honeybadger/mcp/terraform-provider-honeybadger`, next to
 `api-go` and `honeybadger-mcp-server`. `../go.work` lists all three, so a local
-build uses your api-go checkout, including commits that aren't pushed. That's
-the normal way to work: `go.mod` isn't bumped as api-go moves, so a build
-outside the workspace (`GOWORK=off`, or CI) may not compile between releases.
-A release bumps `go.mod` to a tagged api-go and builds with `GOWORK=off`.
+build uses your api-go checkout, including commits that aren't pushed. CI
+builds with `GOWORK=off`, against the api-go pinned in `go.mod`, so run what
+CI runs before opening a pull request:
+
+    GOWORK=off make generate lint test
+
+Commit anything `make generate` changes; CI fails if regenerating leaves a
+diff.
+
+When a pull request needs api-go changes that aren't released yet, a
+maintainer pushes the api-go branch to `honeybadger-io/api-go` and pins its
+commit (a commit only in a fork won't resolve):
+
+    GOWORK=off go get github.com/honeybadger-io/api-go@<commit>
+
+Before a release, bump the pin to the tagged api-go.
 
 Resource schemas aren't written by hand. `make generate` reads
 `openapi/bundled.yaml` and `internal/provider/resources.yaml` and writes each
@@ -54,7 +66,8 @@ registry again. `examples/resources/` has a config for every resource.
 ## Tests
 
 `make test` runs the unit tests. They use an in-memory fake of the API, so
-they need no Honeybadger account; run them before opening a pull request.
+they need no Honeybadger account. CI runs them, with the build, lint and
+generated-code checks, on every pull request and before every release.
 
 ## Acceptance tests (maintainers)
 
